@@ -29,6 +29,18 @@ reconstruction. (4) Test-set-driven best-of-many-hypotheses layer
 selection with no correction for the number of hypotheses tried, verified
 in a second published paper's released code.
 
+We treat these as four mechanisms rather than one, because they occur at
+four different, independently-fixable pipeline stages -- feature
+construction, hyperparameter selection, checkpoint selection, and final
+architecture selection -- and detecting or preventing one does nothing
+to detect or prevent the others; a single generic "avoid data leakage"
+check does not tell a practitioner which of these four places in their
+own pipeline to inspect. The shared root logical structure (evaluation
+labels influencing a choice, then that choice reported as free) is real
+and is what unifies them as one family; the four-way split exists for
+practical, checklist-level actionability, not because we claim four
+disjoint theoretical phenomena.
+
 These four mechanisms differ sharply in severity and in verifiability,
 and a reader should weight them accordingly. Mechanisms (1) and (2) are
 the authors' own prior, unpublished pipelines, retroactively recognized
@@ -401,6 +413,17 @@ the false-positive rate from testing four capacities. Sorted ascending,
 the four p-values are 0.0075, 0.0151, 0.0772, 0.3089, tested against
 thresholds $\alpha/4, \alpha/3, \alpha/2, \alpha$ in turn. 128 units and
 48 units both survive; 384 and 16 units do not.
+
+**Scope of this correction, stated plainly.** This Holm-Bonferroni
+correction is applied within the four-capacity sweep only. It is not
+applied jointly across this sweep, the separate real-feature check
+(\S4.3), the FP16-vs-AWQ quantization control, and the CLEAN\_MATCHED-
+vs-PLACEBO anomaly test elsewhere in this paper -- a reader applying a
+single family-wise correction across all of this paper's reported
+p-values, rather than treating each analysis as its own family, would
+be applying a more conservative standard than we do here. We do not
+claim our within-analysis correction choices are the only defensible
+ones.
 
 We also compute a minimum detectable effect (MDE): the smallest true gap
 this design could reliably detect at 80\% power and two-sided
