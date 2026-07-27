@@ -1,0 +1,95 @@
+{
+  "DetectLLMHallucination": {
+    "n_py_files": 19,
+    "P1_full_dataset_fit_no_split": [],
+    "P2_cv_selection_no_held_out_eval": [],
+    "P3_checkpoint_reuses_test_var": [],
+    "P4_test_argmax_no_correction": [],
+    "any_flag": false
+  },
+  "HallucinationPatternDetection": {
+    "n_py_files": 35,
+    "P1_full_dataset_fit_no_split": [
+      {
+        "file": "src/visualization/embed_viz.py",
+        "line": 70,
+        "snippet": "coords = tsne.fit_transform(X)"
+      },
+      {
+        "file": "src/visualization/embed_viz.py",
+        "line": 91,
+        "snippet": "coords = reducer.fit_transform(X)"
+      },
+      {
+        "file": "src/visualization/embed_viz.py",
+        "line": 103,
+        "snippet": "coords = pca.fit_transform(X)"
+      }
+    ],
+    "P2_cv_selection_no_held_out_eval": [],
+    "P3_checkpoint_reuses_test_var": [],
+    "P4_test_argmax_no_correction": [],
+    "any_flag": true
+  },
+  "MultiHaluDet": {
+    "n_py_files": 17,
+    "P1_full_dataset_fit_no_split": [],
+    "P2_cv_selection_no_held_out_eval": [],
+    "P3_checkpoint_reuses_test_var": [],
+    "P4_test_argmax_no_correction": [],
+    "any_flag": false
+  },
+  "hallucination_probes": {
+    "n_py_files": 26,
+    "P1_full_dataset_fit_no_split": [],
+    "P2_cv_selection_no_held_out_eval": [],
+    "P3_checkpoint_reuses_test_var": [],
+    "P4_test_argmax_no_correction": [],
+    "any_flag": false
+  },
+  "halluscope": {
+    "n_py_files": 19,
+    "P1_full_dataset_fit_no_split": [],
+    "P2_cv_selection_no_held_out_eval": [],
+    "P3_checkpoint_reuses_test_var": [],
+    "P4_test_argmax_no_correction": [],
+    "any_flag": false
+  },
+  "haloscope": {
+    "n_py_files": 14,
+    "P1_full_dataset_fit_no_split": [],
+    "P2_cv_selection_no_held_out_eval": [],
+    "P3_checkpoint_reuses_test_var": [],
+    "P4_test_argmax_no_correction": [
+      {
+        "file": "hal_det_llama.py",
+        "line": 595,
+        "snippet": "test_scores = np.mean(np.matmul(embed_generated_test[:,returned_results['best_layer'],:],"
+      },
+      {
+        "file": "hal_det_llama.py",
+        "line": 697,
+        "snippet": "embed_generated_test[:, best_layer_over_thres[argmax_index], :]).cuda())"
+      },
+      {
+        "file": "hal_det_opt.py",
+        "line": 606,
+        "snippet": "test_scores = np.mean(np.matmul(embed_generated_test[:,returned_results['best_layer'],:],"
+      },
+      {
+        "file": "hal_det_opt.py",
+        "line": 708,
+        "snippet": "embed_generated_test[:, best_layer_over_thres[argmax_index], :]).cuda())"
+      }
+    ],
+    "any_flag": true
+  },
+  "semantic-entropy-probes": {
+    "n_py_files": 14,
+    "P1_full_dataset_fit_no_split": [],
+    "P2_cv_selection_no_held_out_eval": [],
+    "P3_checkpoint_reuses_test_var": [],
+    "P4_test_argmax_no_correction": [],
+    "any_flag": false
+  }
+}

@@ -1,0 +1,209 @@
+# A checklist for label-information leakage in hidden-state hallucination probing
+
+Derived from four case studies in this paper: two internal (HaRP's nested-
+CV feature leakage; GUARDIAN's CV-based layer-selection optimism) and two
+external (MultiHaluDet's per-fold checkpoint-selection leakage; the
+quantized-LLM paper's test-set-driven best-layer selection). All four are
+instances of the same root hazard -- **using the evaluation labels, even
+indirectly, to make a choice, then reporting the resulting metric as if
+that choice were free** -- surfacing through four structurally different
+mechanisms. This is the paper's reusable, actionable contribution: a set
+of concrete questions a researcher (or reviewer) can ask of any hidden-
+state hallucination-detection pipeline to identify which, if any, of these
+four mechanisms it is vulnerable to.
+
+## The four mechanisms, as questions to ask of a pipeline
+
+### 1. Full-dataset fit-then-score leakage (severity: SEVERE — Case Study 1)
+**Ask:** Is there any feature (a probe's predicted probability, a class
+centroid, a fitted classifier's margin/embedding) that was computed by
+fitting *something* on the full dataset's labels, before an outer
+cross-validation loop later "holds out" a fold of that same dataset?
+**Red flag pattern:** `feature_column = model.fit(X_all, y_all).predict(X_all)`,
+followed later by `cross_validate(other_model, features_including_that_column, y_all, cv=...)`.
+**Fix:** recompute the feature out-of-fold -- refit the inner
+model/centroid using only the current fold's training indices, and only
+score it on that fold's held-out indices.
+**Measured severity (this paper, Case Study 1):** +0.19 AUROC inflation
+(0.962 leaked -> 0.771 corrected), on real Qwen 2.5 3B hidden-state data.
+
+### 2. Per-fold checkpoint-selection leakage (severity: MECHANISM REAL AND CODE-VERIFIED; SMALL, CAPACITY-INCONSISTENT RESIDUAL ONCE BUDGET- AND SEED-MATCHED — Case Study 3)
+**Ask:** Inside a CV fold, is a model trained across multiple epochs/steps,
+with the "best" checkpoint chosen by evaluating on the *same* fold's
+held-out indices whose features/predictions later get used downstream as
+if they were clean out-of-fold outputs?
+**Red flag pattern:** `for epoch in range(N): ... if auc(val_idx) > best: keep_checkpoint()`,
+followed by `oof_features[val_idx] = extract(kept_checkpoint, val_idx)`.
+**Fix:** carve out a *third*, disjoint split from the training data
+specifically for checkpoint/epoch selection, so the fold whose features
+get reused downstream never influences which checkpoint is kept. **A
+second, easy-to-miss fix requirement, learned the hard way in this
+paper's own reconstruction (see lesson 5 below): if your "clean" control
+condition also trains on less data than the leaky one because of the
+carve-out, budget-match it (retrain on the full data for the epoch count
+chosen from the carve-out) before comparing leaky vs. clean, or the
+comparison is confounded by training-data budget, not leakage.**
+**Measured severity (this paper, Case Study 3, controlled synthetic
+reconstruction, corrected calibration and budget-matched control, n=100
+seeds, capacities 16/48/128/384):** the original (budget-confounded)
+LEAKY-CLEAN gap is statistically significant at all four capacities
+tested (+0.0044 to +0.0059 AUROC, p=0.0008-0.0058) but shows no clear
+capacity trend. Once training-data budget \emph{and} random seed are
+both matched (LEAKY vs. CLEAN_MATCHED -- an earlier draft matched budget
+but not seed, and wrongly found no significant residual anywhere), the
+gap is significant at 2 of 4 capacities (48 and 128 units, p=0.015 and
+0.008), not significant at 16 units (gap $\approx$0), and borderline at
+384 units (p=0.077). Three earlier drafts of this checklist entry (one
+claiming "not significant even pooled," one claiming "significant,
+confirmed real, capacity-growing," one claiming "not significant
+anywhere once budget-matched") were each wrong in a different way, fixed
+only by adding the missing control at each step -- including, in the
+final round, catching that the budget-matching fix itself had introduced
+an unmatched random seed. The mechanism itself remains real and
+code-verified in the audited pipeline; the final, best-supported estimate
+of its severity in this reconstruction is a small, real, but
+capacity-inconsistent residual, not a null and not a clean capacity-growing
+trend.
+
+### 3. Test-set-driven multiple-hypothesis selection (severity: UNQUANTIFIED HERE, MECHANISM CONFIRMED — Case Study 4)
+**Ask:** Is a "best" layer, probe type, or model configuration chosen by
+taking the argmax of a metric computed on the *same test set* that gets
+reported as the paper's headline number, across many (layers x seeds x
+configs) candidates, with no correction for the number of things tried?
+**Red flag pattern:** `for layer in all_layers: results[layer] = eval_on_test(...)`,
+then `best = max(results, key=results.get)` and `report(results[best])`.
+**Fix:** either select the best configuration using a validation split
+disjoint from the test set, or apply a multiple-comparisons-aware
+correction (e.g., report the test AUROC of the layer chosen by a
+validation-only criterion, not the test-set argmax).
+**Measured severity:** not quantified in this paper (would require
+re-extracting hidden states from the audited 7B-scale models); the
+mechanism itself is code-verified.
+
+### 4. Selection-based optimism in cross-validated hyperparameter choice (severity: 18.8 AUROC points, one demonstrated instance — Case Study 2)
+**Ask:** Was a hyperparameter (a layer, a regularization strength, a
+threshold) chosen by maximizing a cross-validated metric, and is that same
+CV number then reported as the model's performance, without a further,
+genuinely held-out evaluation at the chosen setting?
+**Red flag pattern:** `best_layer = argmax(cv_auroc_per_layer)`, then
+`report(cv_auroc[best_layer])` with no separate held-out check.
+**Fix:** after selecting via CV, evaluate exactly once more on a disjoint
+held-out set that played no role in the selection, and report that number
+as the headline result.
+**Measured severity (this paper, Case Study 2):** 18.8 AUROC points
+(CV-selection number 0.804 vs. true held-out 0.616) at N=700, GUARDIAN's
+own Mistral-7B pipeline.
+
+## Using this checklist
+
+For any hidden-state hallucination/factuality-probing paper (your own, or
+one you are reviewing), work through the four questions above in order.
+None of them require re-running the paper's experiments to *ask* -- each
+is answerable by reading the training/evaluation code directly, the way
+all four case studies in this paper were identified. Quantifying the
+resulting inflation, if you choose to, requires either the paper's
+released code+data (Case Studies 1-3) or a controlled, difficulty-
+calibrated synthetic reconstruction of the specific mechanism when the
+original compute scale isn't reproducible (Case Study 3's approach,
+generalizable to any of the four patterns).
+
+## A fifth, cross-cutting lesson: quantifying a mechanism needs a placebo, not just a clean/leaky pair
+
+Case Study 3's own reconstruction taught us this the hard way, via
+independent adversarial review. A first attempt at quantifying mechanism
+2 (Section 4.2) reported a capacity-dependent gap between a LEAKY
+condition (checkpoint selected on the reused fold) and a CLEAN condition
+(checkpoint selected on a disjoint carve-out) that grew with model
+capacity but was individually non-significant at every tested capacity
+(n=10 seeds, all p >= 0.105). Independent review correctly flagged two
+distinct unresolved questions this pattern could not distinguish: (a) is
+the effect simply underpowered, or genuinely absent, and (b) is a growing
+gap evidence of genuine label-peeking, or just generic capacity-driven
+*variance* in any checkpoint-selection process (even a clean one) as
+models get larger? A CLEAN-only control cannot answer (b), because CLEAN
+still uses real, non-permuted labels -- it is a *different, non-leaky*
+mechanism, not a *zero-signal* baseline.
+
+We resolved both by adding a third condition, PLACEBO: checkpoint
+selection using the same held-out fold and capacity as LEAKY, but with
+the selection labels randomly permuted -- identical variance profile,
+**zero *selection*-signal, not zero signal overall: PLACEBO still trains
+via ordinary gradient descent on the real, unpermuted training labels
+(`y_train[tr_idx]`); only the checkpoint-selection criterion sees
+permuted labels (`y_val_permuted`), which is why its mean AUROC sits at
+0.727-0.738 across the four tested capacities (`results/corrected_capacity_placebo_sweep.json`),
+not 0.5.** Re-running at 10x the seed count (n=100) at the
+flagship capacity found the LEAKY-CLEAN gap statistically significant
+(p=0.0385), and we initially reported this as confirming a genuine,
+modest leak.
+
+**A third round of review found this was still wrong, in two further
+ways -- both worth stating as their own lessons.**
+
+**Lesson 5a: verify your calibration formula's inversion, not just its
+target value.** The synthetic task's difficulty was calibrated via
+AUROC = Phi(sqrt(J)/2) -- inverted to solve for a target J from a desired
+AUROC of 0.80. That formula is wrong: it is the equal-prior Bayes-
+*accuracy* identity, not the binormal AUROC identity, which is
+Phi(sqrt(J/2)). The two coincide only if 2 = sqrt(2), which they do not.
+Using the wrong inversion, our "0.80-AUROC task" was actually an
+0.883-AUROC task -- consistent with the ~0.87-0.88 AUROCs we observed and
+did not think to double-check against the intended 0.80. **If your
+severity estimate depends on calibrating a synthetic task to a target
+difficulty via a closed-form identity, verify the achieved AUROC matches
+the intended one empirically, not just that the formula "ran."**
+
+**Lesson 5b: a clean/leaky comparison must also match training-data
+budget, or the comparison measures data quantity, not leakage.** Our
+CLEAN condition selected its checkpoint using a disjoint carve-out of the
+training fold -- which meant CLEAN trained on ~15% less data than LEAKY
+at every capacity. Adding a budget-matched control (CLEAN_MATCHED: same
+disjoint-fold epoch selection, but retrained from scratch on the same
+full data budget as LEAKY) and rerunning the full capacity sweep at
+n=100 seeds throughout, under the corrected calibration, initially found
+the budget-matched gap was **not significant at any capacity**
+(p=0.07-0.36) -- an apparent resolution.
+
+**Lesson 5c: a "fixed" control must itself be checked for new confounds
+it may have introduced.** A fourth round of review caught that
+CLEAN_MATCHED's from-scratch retraining used a *different random seed*
+than LEAKY and CLEAN, adding an independent source of variance that
+diluted the budget-matched comparison's own power -- the "no significant
+residual anywhere" conclusion was itself partly an artifact of the fix's
+implementation, not purely of the training-budget correction. Matching
+the seed (so CLEAN_MATCHED differs from LEAKY only in epoch-count
+provenance, not also in weight initialization) and rerunning gives the
+actual result: the budget-matched gap is significant (surviving
+Holm-Bonferroni correction across the four capacities tested) at 2 of 4
+capacities (48 and 128 units), not significant at 16 units (gap
+$\approx$0, below this capacity's minimum detectable effect), and
+underpowered rather than confidently null at 384 units. **A fix for one confound is not
+exempt from introducing another; re-derive or spot-check every random
+seed, split, or initialization that changes between your "leaky" and
+"clean" conditions, not only the one variable you set out to control.**
+What looked, after lesson 5's placebo, like a confirmed genuine leak, and
+then (before lesson 5c) like entirely a training-budget artifact, turned
+out to be a small, real, but capacity-inconsistent residual -- neither
+of the two cleaner-sounding intermediate conclusions.
+
+**Recommendation for anyone quantifying a suspected leakage mechanism via
+synthetic reconstruction:** report power (or run enough seeds to reach
+it) before drawing a trend conclusion from individually non-significant
+numbers; verify your calibration formula's inversion empirically, not
+just algebraically; match training-data budget between clean and leaky
+conditions before attributing any gap to leakage; check that the fix
+introduced to match one variable (e.g. training budget) did not
+introduce a new one (e.g. a different random seed); and include a
+permuted-label placebo alongside any clean/leaky pair to separate genuine
+peeking from generic capacity-driven variance. Each of these five
+controls was independently necessary in this paper's own reconstruction
+-- missing any single one produced a confident-sounding but wrong
+conclusion, and it took four separate rounds of independent adversarial
+review to accumulate all five. Also check your own pre-registered
+decision rule against the final data rather than narrating past it: ours
+returns \texttt{MIXED}, and we report that rather than a cleaner-sounding
+"confirmed" or "refuted" story. This is the checklist's own recursive
+lesson, now demonstrated rather than merely asserted: an audit of leakage
+severity is itself vulnerable to under-powered, miscalibrated,
+budget-confounded, seed-confounded, or un-controlled claims if it isn't
+held to the same standard it asks of the papers it audits.

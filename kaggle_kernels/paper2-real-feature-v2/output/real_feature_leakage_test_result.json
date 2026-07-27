@@ -1,0 +1,44 @@
+{
+  "model": "TheBloke/Mistral-7B-Instruct-v0.2-AWQ",
+  "n_samples": 400,
+  "n_seeds": 100,
+  "capacity": 128,
+  "feature_dim": 414,
+  "hall_rate": 0.49250000000000005,
+  "mean_aucs": {
+    "leaky": 0.9831957473420887,
+    "clean": 0.9804065040650407,
+    "clean_matched": 0.9805816135084428,
+    "placebo": 0.9830581613508441
+  },
+  "gaps": {
+    "leaky_minus_placebo": {
+      "mean_a": 0.9831957473420887,
+      "mean_b": 0.9830581613508441,
+      "mean_gap": 0.00013758599124451986,
+      "std_gap": 0.00841869030775159,
+      "wilcoxon_p": 0.9177962540589946
+    },
+    "clean_minus_placebo": {
+      "mean_a": 0.9804065040650407,
+      "mean_b": 0.9830581613508441,
+      "mean_gap": -0.002651657285803637,
+      "std_gap": 0.009255518648031607,
+      "wilcoxon_p": 0.006390251976808825
+    },
+    "clean_matched_minus_placebo": {
+      "mean_a": 0.9805816135084428,
+      "mean_b": 0.9830581613508441,
+      "mean_gap": -0.0024765478424015053,
+      "std_gap": 0.009373113330074194,
+      "wilcoxon_p": 0.011498729050274157
+    },
+    "leaky_minus_clean_matched": {
+      "mean_a": 0.9831957473420887,
+      "mean_b": 0.9805816135084428,
+      "mean_gap": 0.0026141338336460253,
+      "std_gap": 0.008252259425791176,
+      "wilcoxon_p": 0.0011505904260600756
+    }
+  }
+}

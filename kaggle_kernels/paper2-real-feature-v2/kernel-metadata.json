@@ -1,0 +1,15 @@
+{
+  "id": "chakrivijayarao/paper2-real-feature-v2",
+  "title": "paper2-real-feature-v2",
+  "code_file": "run_real_feature_leakage_test.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}
