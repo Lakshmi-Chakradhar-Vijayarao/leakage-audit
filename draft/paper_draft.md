@@ -189,18 +189,35 @@ also-recent thread of methodological critique targets two adjacent
 problems, not evaluation-protocol leakage. First: benchmark-construction
 artifacts, where question/answer pool overlap or construction choices
 bias apparent detector performance, independent of any modeling choice.
+Most directly, PARALLAX (arXiv 2605.17028) runs a large-scale audit --
+22 detection methods, 12 open-source models across 6 architectural
+families, 6 corpora -- and finds that four of six corpora embed the
+ground-truth answer directly in the input prompt, letting a naive
+text-similarity baseline reach near-perfect detection without touching
+model internals at all; once this and related artifacts are controlled
+for, most established baselines fall to near chance, with supervised
+upper-layer hidden-state probes among the few consistent exceptions.
+This is independent, larger-scale, external evidence that the general
+concern this paper raises about the field's reported AUROCs -- that
+apparent progress is frequently a protocol or construction artifact
+rather than a genuine detection capability -- generalizes well beyond
+the four case studies audited here, even though PARALLAX's specific
+mechanism (ground-truth-in-prompt benchmark construction) is distinct
+from every leakage mechanism this paper documents (all of which concern
+a downstream selection step, not the benchmark's own construction).
 Second: label-quality issues, where commonly-used surface-form
 correctness metrics (ROUGE-L, exact match) diverge sharply from human or
 LLM-judge assessments of actual factual correctness. Both are real and
 complementary to this paper's concern. A hallucination detector's
 reported AUROC can be inflated simultaneously by evaluation-protocol
-leakage (this paper's subject) and by benchmark artifacts or label noise
-(a separate, already-documented concern). Fixing the leakage patterns we
-identify does not, by itself, address label-quality problems in the
-underlying dataset.
+leakage (this paper's subject), benchmark-construction artifacts
+(PARALLAX's subject), and label noise (a separate, already-documented
+concern). Fixing the leakage patterns we
+identify does not, by itself, address label-quality or
+benchmark-construction problems in the underlying dataset.
 
-**Pretraining-data contamination of evaluation benchmarks.** Added,
-final-audit pass: a distinct, fast-growing 2023-2026 thread studies a
+**Pretraining-data contamination of evaluation benchmarks.**
+A distinct, fast-growing 2023-2026 thread studies a
 different question. It asks whether an LLM's *pretraining corpus*
 overlapped with a benchmark's test questions or answers. This overlap
 inflates apparent capability or accuracy, independent of any
@@ -255,7 +272,7 @@ K-fold" is not itself a fix for this family of hazards.
 
 ## 4. Four Case Studies
 
-**Evidentiary status, updated post-final-audit.** These four case
+**Evidentiary status.** These four case
 studies were not originally equally verifiable by a reader of this
 repository, and an earlier draft of this paper said so plainly. Case
 Studies 3 (MultiHaluDet) and 4 (quantized-LLM paper) are external,
@@ -435,7 +452,7 @@ We also compute a minimum detectable effect (MDE): the smallest true gap
 this design could reliably detect at 80\% power and two-sided
 $\alpha=0.05$. This requires the per-seed gap standard deviation for the
 budget-matched LEAKY$-$CLEAN\_MATCHED comparison. These stds are
-$0.0071$-$0.0135$ across capacities. (Corrected post-final-audit: an
+$0.0071$-$0.0135$ across capacities. (Corrected: an
 earlier draft's wording, "$0.007$-$0.017$ across capacities," conflated
 this column with the larger, budget-confounded LEAKY$-$CLEAN column's
 stds, which do reach $0.017$ at 384 units.) The resulting MDE is roughly
@@ -491,14 +508,14 @@ correction to get right, each wrong in a different way (full history in
 Appendix A); that history is itself the paper's strongest argument for
 the checklist in \S5.**
 
-**Closed, post-review (round 6): a real-hidden-state validation of the
+**A real-hidden-state validation of the
 synthetic severity estimate.** This closes an open question rather than
 leaving it open: does the synthetic estimate hold on real geometry, not
 just a Gaussian toy? We extracted real features from MultiHaluDet's own,
 publicly-released feature-extraction code (`extract_features`,
 `src/data/feature_extractor.py`). We copied this code with only cosmetic
 changes: a bare `except:` narrowed to `except Exception:`, and stripped
-type hints and formatting (corrected post-final-audit from an earlier,
+type hints and formatting (corrected from an earlier,
 imprecise "copied verbatim" description). No logic was altered; the code
 is already model-agnostic, so no functional adaptation was needed. We
 used their own default model (`mistral-7b`) and their own data loader's
@@ -506,8 +523,7 @@ exact HuggingFace fallback (`pminervini/HaluEval`, config `qa_samples`),
 on $n=400$ real samples. For Kaggle GPU tractability, we used
 TheBloke/Mistral-7B-Instruct-v0.2-AWQ, a 4-bit quantized checkpoint.
 
-Two substitutions here are disclosed tractability compromises. **Fixed,
-final-audit pass:** both the dataset and the model checkpoint are now
+Two substitutions here are disclosed tractability compromises. **Fixed:** both the dataset and the model checkpoint are now
 pinned to a specific HuggingFace revision hash in our code
 (`code/03_real_feature_leakage_test.py`: model revision
 `f970a2bb8`, dataset revision `12a856119`), closing what was previously
@@ -547,7 +563,7 @@ identical effect size ($+0.0026$ vs.\ the earlier $+0.0028$). It falls
 inside the $+0.0009$-to-$+0.0034$ range the synthetic sweep estimated
 across capacities.
 
-**Correction, elite-review follow-up: capacity 128 was mislabeled in
+**Correction: capacity 128 was mislabeled in
 code as "this paper's flagship configuration."** It is not -- \S4.3's
 own synthetic sweep (\texttt{code/02c\_placebo\_and\_power\_check.py},
 \texttt{02d\_corrected\_capacity\_placebo\_sweep.py}) designates capacity
@@ -618,7 +634,7 @@ We still do not think this means checkpoint-selection leakage is not
 real on real data -- the LEAKY-vs-CLEAN\_MATCHED gap (below) is a
 different comparison and survives independently.
 
-**Closed, elite-review follow-up: the anomaly has a confirmed mechanistic
+**The anomaly has a confirmed mechanistic
 account, and it is not the one we originally hypothesized.** Our
 original hypothesis -- that CLEAN\_MATCHED trains on less data than
 PLACEBO, from the 15\% early-stopping hold-out -- does not survive a
@@ -680,7 +696,7 @@ construction artifact of the CLEAN\_MATCHED control specifically, not
 a challenge to the checkpoint-reuse severity estimate LEAKY-vs-
 CLEAN\_MATCHED itself measures.
 
-**Correction, elite-review follow-up: "confirmed mechanism" overstates
+**Correction: "confirmed mechanism" overstates
 what a per-seed correlation establishes.** $r=-0.594$ ($p=7.5\times10^{-11}$)
 is a strong association across 100 seeds, not an intervention. We did
 not force a range of fixed epoch counts on CLEAN\_MATCHED and observe
@@ -703,7 +719,7 @@ is a correlational account, not a confirmed causal mechanism in the
 interventional sense, and we did not run the epoch-forcing experiment
 that would upgrade it to one.
 
-**Closed, elite-review follow-up: the AWQ-vs-full-precision substitution
+**The AWQ-vs-full-precision substitution
 disclosed above is now bounded, not merely disclosed.** We extracted the
 identical features on the same first 50 HaluEval samples using the full-
 precision checkpoint MultiHaluDet's own pipeline actually defaults to
@@ -722,7 +738,7 @@ not settle MultiHaluDet's exact 98.55\% AUROC inflation: their full
 classifier, 10$\times$ our sample size, and their exact training regime
 remain untested.
 
-**Correction, elite-review follow-up: a single 5-fold-CV logistic-regression
+**A single 5-fold-CV logistic-regression
 point estimate at $n=50$ is weaker rigor than every other comparison in
 this paper.** We reran the identical FP16-vs-AWQ comparison through this
 paper's own capacity-128 SweepMLP/\texttt{train\_to\_best\_checkpoint}
@@ -761,7 +777,7 @@ did not re-quantify this mechanism's severity -- doing so requires
 re-extracting hidden states from 7B-scale models, outside this paper's
 budget -- but flag it as a fourth, structurally distinct pattern worth
 watching for in this literature independently of the other three.
-**Checked, elite-review follow-up: we confirmed this is not a data
+**We confirmed this is not a data
 availability issue we could have closed cheaply.** Their public repo
 ships only summary result tables (\texttt{results/tables/*.csv}), not
 the underlying per-layer hidden-state arrays \texttt{saplma\_probe\_per\_layer}
@@ -787,7 +803,7 @@ correspond to the four mechanisms above:
    with that same CV number then reported as performance, with no further
    genuinely held-out check?
 
-**Added, final-audit pass: we tried to automate this checklist, and the
+**We tried to automate this checklist, and the
 attempt itself is the useful result.** We built a regex-based scanner
 for the four patterns above and ran it against 7 real, external
 hidden-state-probing repositories found via targeted search
@@ -871,7 +887,7 @@ and missed the guilty one.
 
 ## 6. Discussion
 
-**Data and code availability, updated post-final-audit.** All code,
+**Data and code availability.** All code,
 cached result JSONs, and the paper source are publicly available at
 `https://github.com/Lakshmi-Chakradhar-Vijayarao/leakage-audit`.
 Case Studies 3
@@ -903,7 +919,7 @@ four leakage mechanisms makes no claimed difference to deployment cost.
 The paper's value is entirely in correcting reported detection metrics,
 not in reducing compute.
 
-**Added, final-audit pass: an inflated AUROC is not a purely academic
+**An inflated AUROC is not a purely academic
 problem -- it is a downstream compute-and-labor cost, even though we do
 not quantify that cost here.** A hallucination detector deployed at a
 reported AUROC that is actually several points lower (Case Study 2's
@@ -949,14 +965,14 @@ smaller model changes. Case Study 3's mechanism is different in kind.
 But it is not different in the way any single earlier draft of this
 paper claimed.
 
-**Correction (fourth review round):** we previously reported, in
+**Correction:** we previously reported, in
 sequence, two now-withdrawn claims about this mechanism's severity.
 First, that it "itself scales with model capacity" -- retracted after
-round 3 found a calibration bug and a training-budget confound. Second,
+finding a calibration bug and a training-budget confound. Second,
 that it was "not statistically distinguishable from a training-budget
-confound at any capacity" -- retracted after round 4 found the
+confound at any capacity" -- retracted after finding the
 budget-matching fix had itself introduced an unmatched random seed that
-diluted power.
+diluted power. The full round-by-round history is in Appendix A.
 
 The properly budget-\emph{and}-seed-matched result is this: a small,
 real residual gap reaches significance at 2 of the 4 capacities tested
@@ -1152,13 +1168,13 @@ disclose.
 
 ## References
 
-Added, final-audit pass: this paper previously cited every source only
-inline, with no consolidated bibliography -- not submittable in that
-state, by this project's own standard (see the companion
-agentic-failures paper's identical fix). Full citations below, compiled
+Full citations below, compiled
 from exactly the bibliographic detail already verified in-text; HaRP and
 GUARDIAN (Case Studies 1-2) are this paper's own pipelines, not external
 publications, and are not separately listed here.
+
+PARALLAX (2026). Separating Genuine Hallucination Detection from
+Benchmark Construction Artifacts. arXiv 2605.17028.
 
 Kaufman, S., Rosset, S., & Perlich, C. (2012). Leakage in Data Mining:
 Formulation, Detection, and Avoidance. *Proceedings of the 18th ACM
