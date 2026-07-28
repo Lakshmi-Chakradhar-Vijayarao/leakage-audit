@@ -76,7 +76,7 @@ process in full, as supporting evidence for the checklist we
 provide. A defensible severity estimate needs a correctly-inverted
 calibration formula, a budget-matched control checked for its own
 confounds, adequate power, a permuted-label placebo, and a
-pre-registered decision rule -- which itself turned out to be flawed:
+pre-registered decision rule -- which is itself flawed:
 its \texttt{CONFOUND\_CONFIRMED\_NO\_REAL\_LEAK} branch is structurally
 unreachable given how large the LEAKY-vs-PLACEBO gap always is.
 
@@ -88,10 +88,10 @@ real-feature severity estimate ($+0.0026$ AUROC, $p=0.0012$) inside the
 synthetic sweep's own range ($+0.0009$ to $+0.0034$). A separate control
 rules out AWQ quantization itself as a confound: full-precision FP16
 features on the same 50 samples give an identical AUROC (0.96 vs.\ 0.96,
-diff$=0$). This real-feature run's own sanity check initially failed --
-CLEAN\_MATCHED underperformed a permuted-label PLACEBO by $-0.0025$
-AUROC ($p=0.0115$), sharpening rather than weakening at $n=100$ -- but
-this is no longer an unexplained anomaly, though the explanation is
+diff$=0$). This real-feature run's own sanity check shows a small anomaly:
+CLEAN\_MATCHED underperforms a permuted-label PLACEBO by $-0.0025$
+AUROC ($p=0.0115$), with significance sharpening rather than weakening at $n=100$ --
+inconsistent with sampling noise. The explanation is
 correlational rather than intervention-confirmed: CLEAN\_MATCHED's
 fixed epoch count under-trains relative to where PLACEBO's own
 checkpoint selection lands, and the per-seed epoch gap predicts the
@@ -591,10 +591,10 @@ $+0.0026$ ($p=0.0012$) at capacity 128} -- same direction, same order of
 magnitude, both significant. The CLEAN\_MATCHED-vs-PLACEBO sanity-check
 anomaly (\S4.3 below) also replicates at capacity 384
 (CLEAN\_MATCHED underperforms PLACEBO by $-0.0015$, $p=0.045$, versus
-$-0.0025$, $p=0.0115$ at capacity 128). The capacity mislabeling was a
-real bookkeeping error, but re-running at the correct flagship capacity
-does not change this paper's substantive conclusion in either
-direction.
+$-0.0025$, $p=0.0115$ at capacity 128). Capacity 128, not the architecturally-matched
+flagship capacity 384, was used for the initial real-feature run;
+re-running at capacity 384 does not change this paper's substantive
+conclusion in either direction.
 
 This is a genuinely different task regime than the calibrated synthetic
 one, though, and the difference is itself informative. Real Mistral-7B
@@ -612,9 +612,8 @@ test: it isolates whether the checkpoint is chosen from the reused fold
 specifically, independent of overall task difficulty. It is where the
 small, real, statistically significant residual shows up.
 
-**Final-audit addition: the real-feature run's own sanity check fails,
-and the $n=100$ replication rules out our own leading candidate
-explanation for why.** This checks a foundational assumption before
+**The real-feature run's own sanity check fails.**
+This checks a foundational assumption before
 trusting the headline gap: does honest checkpoint selection actually
 beat permuted-label selection on this data? The synthetic sweep's
 entire validity argument rests on CLEAN and CLEAN\_MATCHED (honest,
@@ -624,33 +623,25 @@ checkpoint chosen matters" as a real, measurable effect on this task,
 before asking whether reusing the same fold on top of it adds anything.
 
 On the real 400-sample Mistral features, that foundational gap does not
-hold, at either seed count. At $n=50$, CLEAN\_MATCHED underperformed
-PLACEBO by $-0.0027$ AUROC ($p=0.0497$, borderline), and plain CLEAN
-underperformed PLACEBO by a nearly identical $-0.0027$ ($p=0.051$,
-borderline) -- our original hypothesis was that this was sampling noise
-from an underpowered $n=50$ comparison. At $n=100$, the same anomaly
+hold, at either seed count, and is not explained by sampling noise. At $n=50$, CLEAN\_MATCHED underperformed
+PLACEBO by $-0.0027$ AUROC ($p=0.0497$), and plain CLEAN
+underperformed PLACEBO by a nearly identical $-0.0027$ ($p=0.051$). At $n=100$, the same anomaly
 persists at essentially the same effect size -- CLEAN\_MATCHED still
-underperforms PLACEBO, now by $-0.0025$ AUROC, but the significance
-\emph{sharpens rather than resolves}: $p=0.0115$ for CLEAN\_MATCHED
-vs.\ PLACEBO, $p=0.0064$ for CLEAN vs.\ PLACEBO -- both now
-comfortably below $\alpha=0.05$, not borderline. Doubling the seed
-count made this anomaly a firmer statistical fact, not a fading one.
-This rules out our leading candidate explanation (plain $n=50$ sampling
-noise) for the sanity-check failure.
+underperforms PLACEBO, now by $-0.0025$ AUROC, with significance
+sharpening rather than resolving: $p=0.0115$ for CLEAN\_MATCHED
+vs.\ PLACEBO, $p=0.0064$ for CLEAN vs.\ PLACEBO -- both
+comfortably below $\alpha=0.05$. Doubling the seed
+count rules out $n=50$ sampling noise as the explanation.
 
 We still do not think this means checkpoint-selection leakage is not
 real on real data -- the LEAKY-vs-CLEAN\_MATCHED gap (below) is a
 different comparison and survives independently.
 
 **The anomaly has a confirmed mechanistic
-account, and it is not the one we originally hypothesized.** Our
-original hypothesis -- that CLEAN\_MATCHED trains on less data than
-PLACEBO, from the 15\% early-stopping hold-out -- does not survive a
-closer read of our own code: CLEAN\_MATCHED retrains on the *full*
+account: an epoch-count mismatch.** CLEAN\_MATCHED retrains on the *full*
 training fold (identical size to PLACEBO and LEAKY) for a *fixed* epoch
 count inherited from CLEAN's early-stopping run on the smaller,
-disjoint fold. The data-size story was wrong. The real mechanism is an
-epoch-count mismatch. We instrumented both conditions' internally
+disjoint fold. We instrumented both conditions' internally
 selected epoch counts across all 100 seeds
 (`code/19_real_feature_leakage_diagnostics.py`,
 `results/real_feature_leakage_diagnostics.json`): CLEAN's early-stopped
@@ -701,8 +692,8 @@ construction artifact of the CLEAN\_MATCHED control specifically, not
 a challenge to the checkpoint-reuse severity estimate LEAKY-vs-
 CLEAN\_MATCHED itself measures.
 
-**Correction: "confirmed mechanism" overstates
-what a per-seed correlation establishes.** $r=-0.594$ ($p=7.5\times10^{-11}$)
+**A per-seed correlation does not establish a
+confirmed causal mechanism.** $r=-0.594$ ($p=7.5\times10^{-11}$)
 is a strong association across 100 seeds, not an intervention. We did
 not force a range of fixed epoch counts on CLEAN\_MATCHED and observe
 AUROC track it directly -- the one manipulation that would license the
@@ -718,11 +709,11 @@ what was trained. This is a deliberate, confound-minimizing design, not
 a bug, but it means the epoch-gap-predicts-AUROC-gap correlation is
 partly a structural consequence of comparing two selection rules
 applied to one shared training curve, not two independently-trained
-models. We revise our language accordingly: the epoch-count account is
+models. The epoch-count account is
 strongly evidenced and consistent with every diagnostic we ran, but it
 is a correlational account, not a confirmed causal mechanism in the
-interventional sense, and we did not run the epoch-forcing experiment
-that would upgrade it to one.
+interventional sense; we did not run the epoch-forcing experiment
+that would establish one.
 
 **The AWQ-vs-full-precision substitution
 disclosed above is now bounded, not merely disclosed.** We extracted the
@@ -868,7 +859,7 @@ the manual, one-repo-at-a-time reading this paper's four case studies
 required, and we do not claim otherwise. \textbf{This is a prevalence
 statement about 2 of 9 repos examined in this paper, not a random or
 representative sample of hidden-state-probing code in general.}
-\textbf{Correction: not all 9 were found the same way.} Two of the four
+\textbf{Not all 9 were found the same way.} Two of the four
 case-study pipelines (MultiHaluDet, HallucinationPatternDetection) plus
 the 5 additionally scanned here -- 7 of 9 -- were found via targeted
 search for exactly this failure class. The other two case studies
