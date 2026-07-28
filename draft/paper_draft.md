@@ -289,15 +289,14 @@ Case Studies 1 (HaRP) and 2 (GUARDIAN) are this paper's own prior,
 unpublished pipelines -- built by the authors in the course of other
 work and only retroactively recognized as carrying these leakage
 patterns (\S1). Their severity numbers (+0.19 AUROC; 18.8 AUROC points)
-were originally reported on the authors' own account alone, with the
+are traceable to the exact
 training scripts and logs that produced them
 (\texttt{experiments/09\_train\_estimator\_v2.py},
 \texttt{src/authorization/failure\_estimator.py}, and related files, for
 HaRP; \texttt{experiments/02\_layer\_sweep.py} and related files for
-GUARDIAN) not included in the original replication package. We have
-since released the relevant code and result logs for both projects as
-two additional public repositories (see Data and Code Availability,
-\S6), so a reader can now independently verify all four case studies
+GUARDIAN), released as
+two public repositories (see Data and Code Availability,
+\S6), so a reader can independently verify all four case studies
 end to end from what is shipped, not just Case Studies 3-4. Neither
 HaRP nor GUARDIAN was run through the automated scanner in \S5, since
 both were built and their leaks discovered before that scanner existed
@@ -534,11 +533,10 @@ exact HuggingFace fallback (`pminervini/HaluEval`, config `qa_samples`),
 on $n=400$ real samples. For Kaggle GPU tractability, we used
 TheBloke/Mistral-7B-Instruct-v0.2-AWQ, a 4-bit quantized checkpoint.
 
-Two substitutions here are disclosed tractability compromises. **Fixed:** both the dataset and the model checkpoint are now
+Two substitutions here are disclosed tractability compromises. Both the dataset and the model checkpoint are
 pinned to a specific HuggingFace revision hash in our code
 (`code/03_real_feature_leakage_test.py`: model revision
-`f970a2bb8`, dataset revision `12a856119`), closing what was previously
-an unpinned-reproducibility gap. The AWQ checkpoint remains a
+`f970a2bb8`, dataset revision `12a856119`). The AWQ checkpoint remains a
 third-party requantization of MultiHaluDet's actual default
 (`mistralai/Mistral-7B-Instruct-v0.2`), not the original full-precision
 weights -- that substitution is disclosed, not fixed by pinning.
@@ -715,8 +713,7 @@ is a correlational account, not a confirmed causal mechanism in the
 interventional sense; we did not run the epoch-forcing experiment
 that would establish one.
 
-**The AWQ-vs-full-precision substitution
-disclosed above is now bounded, not merely disclosed.** We extracted the
+**The AWQ-vs-full-precision substitution is bounded.** We extracted the
 identical features on the same first 50 HaluEval samples using the full-
 precision checkpoint MultiHaluDet's own pipeline actually defaults to
 (\texttt{mistralai/Mistral-7B-Instruct-v0.2}, FP16) and compared 5-fold-CV
@@ -1030,13 +1027,13 @@ significant anywhere, possibly entirely a budget artifact" one (Appendix A
 documents why a defensible estimate here requires several controls to hold
 simultaneously).
 
-That two-step reversal-and-partial-reversal is itself a data point. This
-paper needed to re-derive one number three times: across an inverted
-calibration formula, an unmatched training budget, and then an unmatched
-random seed in the very fix meant to address the budget confound. Only
-after checking its own pre-registered decision rule -- which returns
-\texttt{MIXED}, not a cleaner verdict -- did the number settle. That
-repeated need is the strongest argument in the paper for the checklist we
+That two-step reversal-and-partial-reversal is itself a data point. A
+defensible severity estimate for this mechanism requires simultaneously
+correct handling of the calibration formula, training-budget matching,
+and seed matching (Appendix A documents how each can independently
+fail), checked against a pre-registered decision rule that itself
+returns \texttt{MIXED}, not a cleaner verdict. That difficulty
+is the strongest argument in the paper for the checklist we
 provide, more so than any of the four mechanisms in isolation.
 
 The checklist lets researchers and reviewers in this fast-growing
