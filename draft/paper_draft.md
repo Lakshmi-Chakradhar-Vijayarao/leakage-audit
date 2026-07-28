@@ -41,15 +41,18 @@ and is what unifies them as one family; the four-way split exists for
 practical, checklist-level actionability, not because we claim four
 disjoint theoretical phenomena.
 
-These four mechanisms differ sharply in severity and in verifiability,
-and a reader should weight them accordingly. Mechanisms (1) and (2) are
-the authors' own prior, unpublished pipelines, retroactively recognized
-as carrying these patterns; their severity numbers (+0.19 AUROC; 18.8
-AUROC points) are real but rest on the authors' own account and are not
-independently auditable from what ships with this paper. Mechanisms (3)
-and (4) are externally published, code-available systems verified
-directly against pinned third-party commits, and this paper's audit
-scripts and result logs for them are included in full. The two severity
+These four mechanisms differ sharply in severity, and a reader should
+weight the two severity numbers below accordingly even though all four
+mechanisms are now independently verifiable. Mechanisms (1) and (2) are
+the authors' own prior, unpublished pipelines (HaRP, GUARDIAN),
+retroactively recognized as carrying these patterns; their severity
+numbers (+0.19 AUROC; 18.8 AUROC points) are traceable to the exact
+training scripts and result logs that produced them, now released
+alongside this paper (see Data and Code Availability) rather than
+resting on narrative report alone. Mechanisms (3) and (4) are
+externally published, code-available systems verified directly against
+pinned third-party commits, and this paper's audit scripts and result
+logs for them are included in full. The two severity
 numbers below are also not on the same scale even within this stronger
 evidentiary tier: mechanism (1)'s +0.19 is an effect size on real hidden
 states, while mechanism (3)'s severity is measured on a linear-Gaussian
@@ -252,27 +255,30 @@ K-fold" is not itself a fix for this family of hazards.
 
 ## 4. Four Case Studies
 
-**Evidentiary status, elite-review follow-up, stated before any
-number.** These four case studies are not equally verifiable by a
-reader of this repository. Case Studies 3 (MultiHaluDet) and 4
-(quantized-LLM paper) are external, published, code-available systems:
-their claimed leaks are demonstrated against pinned commits of publicly
-released third-party code, and this paper's own audit scripts and
-results JSON are included here in full. Case Studies 1 (HaRP) and 2
-(GUARDIAN) are this paper's own prior, unpublished pipelines -- built
-by the authors in the course of other work and only retroactively
-recognized as carrying these leakage patterns (\S1). Their severity
-numbers (+0.19 AUROC; 18.8 AUROC points) are real, and we stand behind
-them, but the training scripts and logs that produced them
-(referenced in \texttt{draft/worked\_examples.md} as
-\texttt{experiments/09\_train\_estimator\_v2.py},
-\texttt{src/authorization/failure\_estimator.py}, and related files)
-are not included in this replication package, and neither pipeline was
-run through the automated scanner in \S5. A reader can independently
-verify Case Studies 3-4 end to end from what is shipped here; Case
-Studies 1-2 currently rest on the authors' own account of their own
-prior, unaudited-by-a-third-party work, and should be weighted
-accordingly.
+**Evidentiary status, updated post-final-audit.** These four case
+studies were not originally equally verifiable by a reader of this
+repository, and an earlier draft of this paper said so plainly. Case
+Studies 3 (MultiHaluDet) and 4 (quantized-LLM paper) are external,
+published, code-available systems: their claimed leaks are demonstrated
+against pinned commits of publicly released third-party code, and this
+paper's own audit scripts and results JSON are included here in full.
+Case Studies 1 (HaRP) and 2 (GUARDIAN) are this paper's own prior,
+unpublished pipelines -- built by the authors in the course of other
+work and only retroactively recognized as carrying these leakage
+patterns (\S1). Their severity numbers (+0.19 AUROC; 18.8 AUROC points)
+were originally reported on the authors' own account alone, with the
+training scripts and logs that produced them
+(\texttt{experiments/09\_train\_estimator\_v2.py},
+\texttt{src/authorization/failure\_estimator.py}, and related files, for
+HaRP; \texttt{experiments/02\_layer\_sweep.py} and related files for
+GUARDIAN) not included in the original replication package. We have
+since released the relevant code and result logs for both projects as
+two additional public repositories (see Data and Code Availability,
+\S6), so a reader can now independently verify all four case studies
+end to end from what is shipped, not just Case Studies 3-4. Neither
+HaRP nor GUARDIAN was run through the automated scanner in \S5, since
+both were built and their leaks discovered before that scanner existed
+-- this is a scope note, not an evidentiary gap.
 
 ### 4.1 Case Study 1 (severe): Full-dataset fit-then-score leakage — HaRP
 
@@ -865,18 +871,25 @@ and missed the guilty one.
 
 ## 6. Discussion
 
-**Data and code availability, elite-review follow-up.** All code,
+**Data and code availability, updated post-final-audit.** All code,
 cached result JSONs, and the paper source are publicly available at
 `https://github.com/Lakshmi-Chakradhar-Vijayarao/leakage-audit`.
 Case Studies 3
 (MultiHaluDet) and 4 (quantized-LLM paper) are fully reproducible from
 what ships with this paper: pinned third-party commits, our audit
 scripts, and the resulting JSON logs are all included. Case Studies 1
-(HaRP) and 2 (GUARDIAN) are not independently reproducible from this
-package -- the training scripts and logs behind their severity numbers
-(+0.19 AUROC; 18.8 AUROC points) are not included, and neither pipeline
-was ever run through the §5 scanner (see §4's evidentiary-status note
-for the full accounting). The regex linter referenced in §5 is included
+(HaRP) and 2 (GUARDIAN) are now also independently reproducible: the
+relevant training scripts and result logs behind their severity numbers
+(+0.19 AUROC; 18.8 AUROC points) are released as two additional public
+repositories,
+`https://github.com/Lakshmi-Chakradhar-Vijayarao/harp-leakage-case-study`
+and
+`https://github.com/Lakshmi-Chakradhar-Vijayarao/guardian-leakage-case-study`
+respectively -- each containing only the subset of the original project
+relevant to the specific leakage finding this paper reports, not the
+full original codebase. Neither pipeline was ever run through the §5
+scanner, since both were built and their leaks discovered before that
+scanner existed (see §4's evidentiary-status note). The regex linter referenced in §5 is included
 in full and is reproducible against the shipped case studies; it is
 also, per §5's own results, a confirmed non-detector on this corpus
 (0 true positives, 2 false negatives on the corpus's own known bugs),
