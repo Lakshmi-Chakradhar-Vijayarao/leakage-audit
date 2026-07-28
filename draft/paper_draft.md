@@ -416,6 +416,13 @@ capacity, plus the two pairwise gaps and their p-values.
 | 128 | 0.7604 | 0.7555 | 0.7571 | 0.7309 | +0.0049 (0.0008) | **+0.0034 (0.008)** |
 | 384 | 0.7533 | 0.7474 | 0.7506 | 0.7350 | +0.0059 (0.0012) | +0.0027 (0.077) |
 
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.75\textwidth]{figures/capacity-sweep.pdf}
+\caption{Mean AUROC for the four conditions (LEAKY, CLEAN, CLEAN\_MATCHED, PLACEBO) across all four tested capacities, visualizing the table above. LEAKY, CLEAN, and CLEAN\_MATCHED cluster tightly together at every capacity, all clearly above PLACEBO -- confirming that honest checkpoint selection is itself strongly informative -- while the gap that constitutes the actual leakage severity (LEAKY vs.\ CLEAN\_MATCHED) is visually small relative to this overall separation, consistent with the severity estimate of +0.0009 to +0.0034 AUROC reported in the text.}
+\label{fig:capacity-sweep}
+\end{figure}
+
 (AUROC columns are means across 100 seeds. Both CLEAN and CLEAN_MATCHED
 beat PLACEBO decisively at every capacity, p$<$0.0001 throughout --
 CLEAN_MATCHED$-$PLACEBO gaps range +0.0156 to +0.0330. This confirms
