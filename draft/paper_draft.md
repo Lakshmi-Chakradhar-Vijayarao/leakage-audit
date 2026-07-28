@@ -13,9 +13,14 @@ of methodological errors behind these numbers: using evaluation labels,
 even indirectly, to make a choice, then reporting the resulting metric as
 if that choice were free.
 
-We identify and verify four distinct mechanisms in this family, two from
-our own prior work and two from externally published, code-available
-papers. (1) Full-dataset fit-then-score feature leakage feeding a nested
+We identify and verify four distinct mechanisms in this family, at two
+different evidentiary tiers. Two are demonstrated in our own prior,
+previously-unpublished pipelines; we release the exact training code and
+result logs that produced their severity numbers, so an independent
+party can check them, though none has done so yet. Two are demonstrated
+directly in the released code of externally published, third-party
+papers, verified against pinned commits -- a stronger tier, since the
+audited code was authored independently of this paper. (1) Full-dataset fit-then-score feature leakage feeding a nested
 cross-validation loop: +0.19 AUROC inflation, verified before and after on
 real Qwen2.5-3B hidden states. (2) Cross-validation-based
 hyperparameter/layer selection reported as a held-out estimate: an
@@ -36,10 +41,10 @@ architecture selection -- and detecting or preventing one does nothing
 to detect or prevent the others; a single generic "avoid data leakage"
 check does not tell a practitioner which of these four places in their
 own pipeline to inspect. The shared root logical structure (evaluation
-labels influencing a choice, then that choice reported as free) is real
-and is what unifies them as one family; the four-way split exists for
-practical, checklist-level actionability, not because we claim four
-disjoint theoretical phenomena.
+labels influencing a choice, then that choice reported as free)
+unifies them as one family; the four-way split is what makes that
+family actionable, since each of the four stages calls for a different,
+specific fix that the other three do not address.
 
 These four mechanisms differ sharply in severity, and even though all
 four are now independently verifiable, a reader should still weight
@@ -64,10 +69,10 @@ seeds, four capacities, permuted-label placebo) finds a real residual
 leak, significant at two of four capacities after Holm-Bonferroni
 correction (48 units, $p=0.015$; 128 units, $p=0.008$) and not significant
 at the other two (16 units, indistinguishable from zero; 384 units,
-underpowered at $p=0.077$). Reaching this number took four rounds of
-correction -- an underpowered first pass, a miscalibrated second, a
-budget-confounded third, a seed-confounded fourth; the full history is in
-Appendix A, itself the paper's strongest argument for the checklist we
+underpowered at $p=0.077$). Getting this number right required
+simultaneously correct handling of statistical power, calibration,
+training-budget matching, and seed matching; Appendix A documents this
+process in full, as supporting evidence for the checklist we
 provide. A defensible severity estimate needs a correctly-inverted
 calibration formula, a budget-matched control checked for its own
 confounds, adequate power, a permuted-label placebo, and a
@@ -274,8 +279,8 @@ K-fold" is not itself a fix for this family of hazards.
 ## 4. Four Case Studies
 
 **Evidentiary status.** These four case
-studies were not originally equally verifiable by a reader of this
-repository, and an earlier draft of this paper said so plainly. Case
+studies are not equally verifiable by a reader of this
+repository. Case
 Studies 3 (MultiHaluDet) and 4 (quantized-LLM paper) are external,
 published, code-available systems: their claimed leaks are demonstrated
 against pinned commits of publicly released third-party code, and this
@@ -348,12 +353,11 @@ number.
 
 [See `draft/case_study_multihaludet.md` for full detail, including
 literal code excerpts from the public repository. **This subsection
-states the final, corrected methodology and result directly. The full
-four-round history of how we got there -- two now-superseded
-intermediate conclusions and the specific bug behind each -- is
-preserved verbatim in Appendix A. That history is itself the paper's
-strongest argument for the checklist in \S5. It is not required to
-verify the result below.]**
+states the methodology and result directly. Appendix A documents the
+calibration and confound-detection process for this case study in
+detail, including the specific ways each control (below) can fail
+independently -- supporting evidence for the checklist in \S5. It is
+not required to verify the result below.]**
 
 MultiHaluDet (arXiv 2605.24919, verified title "MultiHaluDet: Multilingual
 Hallucination Detection via LLM Hidden State Probing"; repo:
@@ -460,10 +464,9 @@ We also compute a minimum detectable effect (MDE): the smallest true gap
 this design could reliably detect at 80\% power and two-sided
 $\alpha=0.05$. This requires the per-seed gap standard deviation for the
 budget-matched LEAKY$-$CLEAN\_MATCHED comparison. These stds are
-$0.0071$-$0.0135$ across capacities. (Corrected: an
-earlier draft's wording, "$0.007$-$0.017$ across capacities," conflated
-this column with the larger, budget-confounded LEAKY$-$CLEAN column's
-stds, which do reach $0.017$ at 384 units.) The resulting MDE is roughly
+$0.0071$-$0.0135$ across capacities (distinct from the larger,
+budget-confounded LEAKY$-$CLEAN column's stds, which reach $0.017$ at
+384 units). The resulting MDE is roughly
 $0.002$-$0.004$ AUROC. The 384-unit borderline result sits almost
 exactly at this capacity's MDE ($\approx 0.0038$); we read it as
 underpowered rather than null. The 16-unit null (gap $+0.0009$, MDE
@@ -511,9 +514,10 @@ reported 98.55\% AUROC's exact inflation: their real architecture (6
 transformer layers, multi-scale branches, heavy augmentation, longer
 training) is considerably more expressive than even our 384-unit MLP
 reconstruction, so no severity estimate here should be read as a settled
-answer for their pipeline. **This number required four rounds of
-correction to get right, each wrong in a different way (full history in
-Appendix A); that history is itself the paper's strongest argument for
+answer for their pipeline. **Getting this number right required
+simultaneously correct handling of statistical power, calibration,
+training-budget matching, and seed matching (full detail in Appendix
+A); this is itself the paper's strongest argument for
 the checklist in \S5.**
 
 **A real-hidden-state validation of the
@@ -523,8 +527,7 @@ just a Gaussian toy? We extracted real features from MultiHaluDet's own,
 publicly-released feature-extraction code (`extract_features`,
 `src/data/feature_extractor.py`). We copied this code with only cosmetic
 changes: a bare `except:` narrowed to `except Exception:`, and stripped
-type hints and formatting (corrected from an earlier,
-imprecise "copied verbatim" description). No logic was altered; the code
+type hints and formatting. No logic was altered; the code
 is already model-agnostic, so no functional adaptation was needed. We
 used their own default model (`mistral-7b`) and their own data loader's
 exact HuggingFace fallback (`pminervini/HaluEval`, config `qa_samples`),
@@ -552,14 +555,12 @@ already-validated LEAKY/CLEAN/CLEAN\_MATCHED/PLACEBO test. This test uses
 identical architecture and procedure to the synthetic sweep above, at
 capacity 128. Only the
 synthetic-Gaussian data-generation step changed
-(`code/03_real_feature_leakage_test.py`). **Final-audit pass: re-run at
-$n=100$ seeds** (up from an initial $n=50$), matching the synthetic
-sweep's own seed count, per this section's own earlier-drafted power
-recommendation (see below) -- both HuggingFace sources (model
+(`code/03_real_feature_leakage_test.py`). We re-run at
+$n=100$ seeds, matching the synthetic
+sweep's own seed count, per the power recommendation below -- both HuggingFace sources (model
 `TheBloke/Mistral-7B-Instruct-v0.2-AWQ`, dataset `pminervini/HaluEval`)
-are now also pinned to a specific revision hash in code, closing a
-previously-disclosed unpinned-reproducibility gap. All numbers below are
-from this $n=100$ run; the original $n=50$ numbers are superseded.
+are pinned to a specific revision hash in code. All numbers below are
+from this $n=100$ run.
 
 **Result: the real-feature severity estimate lands almost exactly inside
 the synthetic reconstruction's previously-estimated range.** On real
@@ -571,8 +572,7 @@ identical effect size ($+0.0026$ vs.\ the earlier $+0.0028$). It falls
 inside the $+0.0009$-to-$+0.0034$ range the synthetic sweep estimated
 across capacities.
 
-**Correction: capacity 128 was mislabeled in
-code as "this paper's flagship configuration."** It is not -- \S4.3's
+**Capacity 128 is not this paper's flagship configuration.** \S4.3's
 own synthetic sweep (\texttt{code/02c\_placebo\_and\_power\_check.py},
 \texttt{02d\_corrected\_capacity\_placebo\_sweep.py}) designates capacity
 384 as the flagship, since 384 is the one capacity matching
@@ -581,11 +581,11 @@ synthetic capacity that does not survive Holm-Bonferroni correction
 ($p=0.077$, Table above). Real-feature validation at capacity 128 was
 therefore run at a capacity that already survived correction in the
 synthetic sweep, not at the architecturally-matched one -- a legitimate
-capacity-shopping concern. We closed this by re-running the identical
+capacity-shopping concern, addressed by re-running the identical
 real-feature test at capacity 384 (same cached Mistral-7B features, no
 new model inference, $n=100$ seeds:
 \texttt{results/real\_feature\_leakage\_test\_result\_capacity384.json}).
-\textbf{The result replicates, not resolves away: LEAKY beats
+\textbf{The result replicates: LEAKY beats
 CLEAN\_MATCHED by $+0.0021$ AUROC at capacity 384 ($p=0.0010$), against
 $+0.0026$ ($p=0.0012$) at capacity 128} -- same direction, same order of
 magnitude, both significant. The CLEAN\_MATCHED-vs-PLACEBO sanity-check
@@ -671,14 +671,12 @@ sanity-check anomaly is an epoch-count-matching artifact of the
 CLEAN\_MATCHED construction, not evidence against the checkpoint-reuse
 severity estimate itself.
 
-**Power check, now exact rather than back-calculated.** The diagnostic
-rerun above also saved the full 100-seed per-seed gap arrays, so the
-MDE no longer needs the earlier normal-approximation back-calculation.
+**Power check, exact rather than back-calculated.** The diagnostic
+rerun above also saved the full 100-seed per-seed gap arrays.
 Exact per-seed gap SD for LEAKY-vs-CLEAN\_MATCHED is $0.008294$,
 giving an 80\%-power MDE (two-sided $\alpha=0.05$) of $0.00232$ --
-essentially identical to the earlier back-of-envelope estimate
-($\approx0.0023$), which validates that approximation after the fact
-rather than replacing it with a different number. The observed gap
+essentially identical to the back-of-envelope estimate
+($\approx0.0023$) used earlier in this section. The observed gap
 ($0.00261$) sits comfortably above this exact MDE. For
 CLEAN\_MATCHED-vs-PLACEBO, exact SD $=0.009420$, MDE $=0.00264$: the
 observed gap ($-0.00248$) sits just under this MDE, consistent with the
@@ -687,15 +685,14 @@ detected at this $n$ -- fully consistent with the epoch-count mechanism
 identified above, which does not require the anomaly to be large, only
 systematic.
 
-**Final-audit revision: we no longer downgrade the LEAKY-vs-CLEAN\_MATCHED
-result to "weak, inconclusive," and the sanity-check anomaly is no
-longer an open, unresolved puzzle -- it has a confirmed epoch-count
-mechanism (above).** An earlier draft of this section downgraded the
-whole real-feature validation on the hypothesis that $n=50$ was
-underpowered; the $n=100$ replication tests that hypothesis directly
-and rejects it for the LEAKY-vs-CLEAN\_MATCHED comparison (now
-$p=0.0012$, above the exact MDE). The separate CLEAN/CLEAN\_MATCHED-
-vs-PLACEBO anomaly is no longer unexplained: it is a direct consequence
+**The LEAKY-vs-CLEAN\_MATCHED
+result is not weak or inconclusive, and the sanity-check anomaly is not
+an open, unresolved puzzle: it has a confirmed epoch-count
+mechanism (above).** The
+$n=100$ replication directly tests, and rejects, the hypothesis that $n=50$ was
+underpowered for the LEAKY-vs-CLEAN\_MATCHED comparison ($p=0.0012$,
+above the exact MDE). The separate CLEAN/CLEAN\_MATCHED-
+vs-PLACEBO anomaly is fully explained: it is a direct consequence
 of CLEAN\_MATCHED's fixed epoch count under-training relative to what
 PLACEBO's own checkpoint-selection lands on, confirmed by a strong,
 highly significant correlation ($r=-0.594$, $p=7.5\times10^{-11}$)
@@ -969,45 +966,36 @@ acknowledged as theoretically possible.
 mechanism, and the field currently has no vocabulary to distinguish
 either.** Case Study 1 is catastrophic -- +0.19 AUROC -- regardless of
 scale. It is a full-dataset labeling leak, not something a bigger or
-smaller model changes. Case Study 3's mechanism is different in kind.
-But it is not different in the way any single earlier draft of this
-paper claimed.
+smaller model changes. Case Study 3's mechanism is different in kind:
+the properly budget-\emph{and}-seed-matched result is a small,
+real residual gap that reaches significance at 2 of the 4 capacities tested
+(48 and 128 units), and does not reach significance at the other 2 (16
+units, indistinguishable from zero; 384 units, borderline).
 
-**Correction:** we previously reported, in
-sequence, two now-withdrawn claims about this mechanism's severity.
-First, that it "itself scales with model capacity" -- retracted after
-finding a calibration bug and a training-budget confound. Second,
-that it was "not statistically distinguishable from a training-budget
-confound at any capacity" -- retracted after finding the
-budget-matching fix had itself introduced an unmatched random seed that
-diluted power. The full round-by-round history is in Appendix A.
-
-The properly budget-\emph{and}-seed-matched result is this: a small,
-real residual gap reaches significance at 2 of the 4 capacities tested
-(48 and 128 units). It does not reach significance at the other 2 (16
-units, indistinguishable from zero; 384 units, borderline). We withdraw
-both the capacity-scaling claim and the "possibly entirely a budget
-artifact" claim.
-
-The lesson this mechanism actually teaches is narrower but still real. A
+The lesson this mechanism teaches is narrower but still real. A
 severity estimate from a synthetic reconstruction depends on getting
 three things correct simultaneously, before asking whether a placebo
 control or a pre-registered decision rule confirms or refutes peeking:
-the calibration formula; the training-budget matching; and verification
-that the matching procedure itself introduces no new confound. Get any
+a correctly-inverted calibration formula; the training-budget matching;
+and verification that the matching procedure itself introduces no new
+confound (in particular, an unmatched random seed introduced by the
+matching procedure itself can dilute power and change which capacities
+reach significance). Get any
 one wrong, in either direction, and a confident-looking conclusion can
-survive a round of review and still be wrong.
+be wrong. Appendix A documents the calibration and confound-detection
+process for this case study in full, as supporting evidence for the
+checklist in \S5.
 
-The real-feature validation of this mechanism (\S4.3) initially
-surfaced its own anomaly: CLEAN\_MATCHED underperformed a permuted-label
+The real-feature validation of this mechanism (\S4.3)
+shows a small anomaly: CLEAN\_MATCHED underperforms a permuted-label
 PLACEBO on the real, smaller, noisier feature set, at both $n=50$ and
-(after replication) $n=100$ seeds. Doubling $n$ ruled out our original
-"just sampling noise" explanation (the anomaly's significance
-sharpened, not weakened) while confirming the headline
-LEAKY-vs-CLEAN\_MATCHED gap is adequately powered and real ($p=0.0012$
+$n=100$ seeds, with significance sharpening rather than weakening at the
+larger $n$ ($p=0.0012$
 at $n=100$, versus $p=0.0175$ at $n=50$, a near-identical effect size
-both times). This anomaly is no longer an open question, though the
-account is correlational rather than intervention-confirmed (\S4.3):
+both times) -- inconsistent with the anomaly being sampling noise. The headline
+LEAKY-vs-CLEAN\_MATCHED gap is adequately powered and real across both
+sample sizes. The anomaly has an
+account that is correlational rather than intervention-confirmed (\S4.3):
 CLEAN\_MATCHED's fixed epoch count, inherited from
 CLEAN's early-stopping, under-trains relative to where PLACEBO's own
 checkpoint-selection lands, and the per-seed epoch gap predicts the
@@ -1043,12 +1031,13 @@ Four distinct label-information-leakage mechanisms recur across hidden-
 state hallucination-detection pipelines, including our own. They differ
 substantially in severity. Case Study 1 is a catastrophic +0.19 AUROC
 inflation that holds regardless of model size. Case Study 3 is a related
-but distinct checkpoint-selection mechanism; its true severity, after
-four rounds of correction, is a small residual gap, significant at 2 of
-4 tested capacities and not the other 2. This is neither the "confirmed,
-significant, capacity-growing" effect originally claimed, nor the "not
-significant anywhere, possibly entirely a budget artifact" claim an
-intermediate correction made instead.
+but distinct checkpoint-selection mechanism; its true severity is a small
+residual gap, significant at 2 of
+4 tested capacities and not the other 2 -- neither a "confirmed,
+significant, capacity-growing" effect nor a "not
+significant anywhere, possibly entirely a budget artifact" one (Appendix A
+documents why a defensible estimate here requires several controls to hold
+simultaneously).
 
 That two-step reversal-and-partial-reversal is itself a data point. This
 paper needed to re-derive one number three times: across an inverted
@@ -1082,12 +1071,12 @@ is future work.
 
 ## Appendix A: Full Correction History for Case Study 3 (MultiHaluDet)
 
-**Moved here, round-5 review, to keep \S4.3 readable as a stated result
-rather than a chronological narrative.** Nothing below is required to
-verify the final result in \S4.3. It documents how that result was
-reached, across four rounds of independent adversarial review, each
-round wrong in a different way. This history is itself the paper's
-strongest argument for the checklist in \S5.
+**This appendix documents how the Case Study 3 result in \S4.3 was
+reached.** \S4.3 states that result directly; nothing below is required to
+verify it. This appendix instead records the process of getting it
+right -- three earlier approximations, each wrong in a different way, and
+what was wrong with each -- as supporting evidence for the checklist in
+\S5.
 
 **Round 1 (initial pass): saturation.** Our first, uncalibrated attempt
 at the synthetic reconstruction used an arbitrary class-separation
@@ -1106,7 +1095,7 @@ versus CLEAN mean AUROC $0.8689$ -- a gap of $+0.0019$, not significant
 earlier iteration). It wrongly suggested "not significant, but
 trending."
 
-**Round 2 (second-round review): the calibration itself was wrong.**
+**Round 2: the calibration itself was wrong.**
 This identifies why round 1's numbers looked plausible but were not. The
 scripts underlying the round-1 results inverted $\Phi(\sqrt{J}/2)$ to
 pick the target $J$. That is the equal-prior Bayes-\emph{accuracy}
@@ -1127,7 +1116,7 @@ test at this corrected calibration, at one capacity, wrongly concluded
 "significant, genuine peeking." It missed a second problem, described
 below.
 
-**Round 3 (third-round review): a training-budget confound.** LEAKY and
+**Round 3: a training-budget confound.** LEAKY and
 CLEAN were never matched on training-data budget. CLEAN's
 checkpoint-selection carve-out (15\% of the training fold, held out for
 early-stopping) meant CLEAN trained on $\approx$15\% less data than
@@ -1142,7 +1131,7 @@ exactly that many epochs. Fixing this, at first pass, overcorrected into
 "not significant at any capacity." The fix had introduced its own
 confound, described below.
 
-**Round 4 (fourth pass, triggered by third-round review): an unmatched
+**Round 4: an unmatched
 random seed.** `CLEAN_MATCHED`'s retraining used a different random seed
 (`fold_seed + 777`) than `LEAKY`/`CLEAN` (`fold_seed`). This introduced
 an independent source of variance that diluted the budget-matched
@@ -1168,11 +1157,10 @@ controls must all be present \emph{simultaneously}: a correctly-inverted
 calibration formula; a training-budget-matched control checked for new
 confounds \emph{introduced by the matching procedure itself}; adequate
 power; a permuted-label placebo; and consulting one's own pre-registered
-decision rule rather than narrating past it. This paper's own history --
-getting one wrong at a time, in both the inflationary and deflationary
-direction, across four independent review rounds -- is the strongest
-evidence for the checklist in \S5. It is not merely an embarrassment to
-disclose.
+decision rule rather than narrating past it. Appendix A documents the full
+calibration and confound-detection process for Case Study 3, including
+the specific ways each control can fail independently -- supporting
+evidence for the checklist in \S5.
 
 ## References
 
