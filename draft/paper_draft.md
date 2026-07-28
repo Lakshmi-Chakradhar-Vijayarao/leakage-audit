@@ -41,9 +41,10 @@ and is what unifies them as one family; the four-way split exists for
 practical, checklist-level actionability, not because we claim four
 disjoint theoretical phenomena.
 
-These four mechanisms differ sharply in severity, and a reader should
-weight the two severity numbers below accordingly even though all four
-mechanisms are now independently verifiable. Mechanisms (1) and (2) are
+These four mechanisms differ sharply in severity, and even though all
+four are now independently verifiable, a reader should still weight
+mechanisms (1) and (3)'s severity numbers -- the two quantified below
+in detail -- against each other carefully, not at face value. Mechanisms (1) and (2) are
 the authors' own prior, unpublished pipelines (HaRP, GUARDIAN),
 retroactively recognized as carrying these patterns; their severity
 numbers (+0.19 AUROC; 18.8 AUROC points) are traceable to the exact
