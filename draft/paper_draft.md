@@ -38,7 +38,11 @@ under this stricter test larger, not smaller ($+0.0143$ to $+0.0198$,
 $p<0.0001$ at both tested capacities) -- evidence against, though not a
 definitive exclusion of, this alternative explanation, since the control
 condition's own behavior is itself not fully explained. A real-Mistral-7B-feature
-replication lands inside the synthetic estimate's range.
+test of the same mechanism, corrected for an architecture mismatch a
+review caught (Appendix A), finds no significant gap, at a power
+sufficient to detect an effect as small as the synthetic estimate's own
+lower bound -- evidence against this severity estimate transferring to
+real hidden-state features at this scale.
 
 We provide a checklist covering all four mechanisms and test whether it
 can be automated: a regex-based scanner over 9 repositories (2 confirmed
@@ -295,33 +299,37 @@ control's own behavior is flagged here rather than left unremarked.
 
 **Real-feature validation.** Feeding real Mistral-7B/HaluEval features
 ($n=400$, MultiHaluDet's own unmodified feature-extraction code, a 4-bit
-AWQ checkpoint pinned to a fixed revision) through the identical
-LEAKY/CLEAN\_MATCHED/PLACEBO test gives LEAKY beating CLEAN\_MATCHED by
-$+0.0026$ AUROC ($p=0.0012$, $n=100$ seeds), inside the synthetic sweep's
-estimated range, and replicating at the architecturally-matched capacity
-384 ($+0.0021$, $p=0.0010$). One sanity check on this real-feature run
-does fail: CLEAN\_MATCHED underperforms PLACEBO by $-0.0025$
-($p=0.0115$), sharpening rather than weakening with more seeds. This
-traces to an epoch-count mismatch, not a challenge to the headline
-result: CLEAN\_MATCHED's epoch count is fixed from an earlier,
-smaller-budget run, while PLACEBO adaptively drifts to a later,
-better-fit epoch even against meaningless permuted labels (mean epoch
-17.7 vs.\ 12.18, $p=0.012$); the per-seed epoch gap predicts the AUROC
-gap directly ($r=-0.594$, $p=7.5\times10^{-11}$). This account is
-correlational, not an intervention-confirmed causal mechanism. A separate
-FP16-vs-AWQ control on the same 50 samples finds identical AUROC (0.9600
-both), ruling out quantization as the source of either result. Appendix
-A documents this diagnostic and two further robustness checks (an exact,
-not back-of-envelope, minimum-detectable-effect calculation, and a
+AWQ checkpoint pinned to a fixed revision) through the same 5-fold
+out-of-fold-plus-meta-learner LEAKY/CLEAN\_MATCHED/PLACEBO architecture
+used in the synthetic sweep above -- not the single-fold variant an
+earlier version of this test substituted, caught during review (Appendix
+A) -- gives LEAKY beating CLEAN\_MATCHED by only $+0.0002$ AUROC
+($p=0.56$, $n=100$ seeds) at capacity 128 and $+0.0001$ ($p=0.96$) at
+capacity 384: not significant at either tested capacity.
+CLEAN\_MATCHED vs.\ PLACEBO is likewise not significant ($-0.0006$,
+$p=0.39$; $-0.0002$, $p=0.76$). This is not an underpowered null: the
+corrected architecture's per-seed gap SD ($0.0031$-$0.0032$) gives an
+80\%-power minimum-detectable-effect (MDE) of $0.00087$-$0.00090$, at or
+below the synthetic sweep's own estimated severity floor ($+0.0009$), so
+this test is powered to detect an effect as small as the synthetic
+estimate's own lower bound and finds none. A separate FP16-vs-AWQ control
+on the same 50 samples finds identical AUROC (0.9600 both), ruling out
+quantization as a confound in either the original or corrected version of
+this test. Appendix A documents the earlier, architecturally-mismatched
+version of this test, how the mismatch was caught, the diagnostic
+conclusions it invalidates, and a further robustness check (a
 resampled-effect-size reanalysis of the FP16-vs-AWQ control) in full.
 
 **Bottom line.** The mechanism itself -- checkpoint choice as a function
 of the reused fold's own labels -- is unambiguous and code-verified. Its
 quantified severity, once budget- and seed-matched, is small ($+0.0009$
-to $+0.0034$ AUROC on the synthetic sweep, $+0.0021$ to $+0.0034$ on real
-features) and significant at most but not all tested capacities, and this
-significance strengthens under the stricter adaptive-selection control
-above. This does not settle MultiHaluDet's own 98.55\% AUROC's exact
+to $+0.0034$ AUROC on the synthetic sweep) and significant at most but not
+all tested capacities, and this significance strengthens under the
+stricter adaptive-selection control above. A real-feature test at
+adequate power (above) does not corroborate this severity range
+transferring to real Mistral-7B/HaluEval hidden states, so it should be
+read as a property of the calibrated synthetic reconstruction, not yet
+shown to generalize. This does not settle MultiHaluDet's own 98.55\% AUROC's exact
 inflation: their real architecture (6 transformer layers, multi-scale,
 heavy augmentation) is considerably more expressive than this
 reconstruction. Getting this number right required simultaneously correct
@@ -391,7 +399,7 @@ tellingly, the scanner missed both known true positives in this corpus:
 Case Study 4's bug is a plain loop with neither an "argmax" token nor a
 "test"-named variable at the selection site; Case Study 3's bug selects
 on `best_auc`/`best_model`, not the `checkpoint`/`best_epoch` keywords the
-scanner looks for. Zero true positives among 5 newly-scanned repos, two
+scanner looks for. Zero true positives among 7 newly-scanned repos, two
 false negatives on the two known positives, seven-for-seven false
 positives on its raw hits: at this level of tooling, an automated scanner
 is not a substitute for manual, one-repo-at-a-time reading.
@@ -457,11 +465,13 @@ questions; our reconstruction of Case Study 3 supports a small, positive
 estimate at 2 of 4 tested capacities, and MultiHaluDet's actual
 architecture (6 transformer layers, multi-scale, heavy augmentation) is
 more expressive still, so this should not be over-read in either
-direction for their pipeline. The real-feature validation is also
+direction for their pipeline. The real-feature test (\S4.3) is also
 single-dataset, single-language ($n=400$ HaluEval English `qa_samples`
 only), despite MultiHaluDet's own contribution being explicitly
-multilingual; whether this severity estimate holds in non-English
-configurations is untested.
+multilingual, and it finds no significant severity on this one dataset
+even though powered to detect the synthetic estimate's own lower bound;
+whether the synthetic severity estimate holds on other, non-English, or
+larger real datasets remains untested rather than confirmed or excluded.
 
 ## 7. Conclusion
 
@@ -483,10 +493,13 @@ subfield ask precise, mechanism-specific questions of a pipeline's
 evaluation protocol, replacing "did you use cross-validation correctly"
 as a single, undifferentiated concern.
 
-This paper audits seven external repositories, of which two are
-confirmed positive -- too small a sample to support any claim about how
-common these four mechanisms are across the wider literature, and we do
-not make one. A pre-registered audit applying this checklist to a fixed,
+This paper audits nine repositories in total: two manually-confirmed
+positive case studies (§4.1-4.2) and seven additional, externally-sourced
+repositories scanned with an automated checklist (§5), which surfaced no
+new confirmed positives among those seven -- too small a sample to
+support any claim about how common these four mechanisms are across the
+wider literature, and we do not make one. A pre-registered audit applying
+this checklist to a fixed,
 defined sample of 15-20 externally published probing papers, selected
 before any of them are examined, is planned as follow-on work; that
 protocol is already drafted.
@@ -519,6 +532,31 @@ making an early "not significant at any capacity" reading partly an
 artifact of the fix's own procedure. Matching the seed as well gives the
 result now stated in §4.3.
 
+**A fourth issue, on the real-feature test specifically, caught during
+review: an architecture mismatch.** `code/03_real_feature_leakage_test.py`'s
+docstring claimed its LEAKY/CLEAN\_MATCHED/PLACEBO test used "identical
+architecture ... to `code/02d_corrected_capacity_placebo_sweep.py`." It
+did not: 02d performs a genuine 5-fold cross-validation loop, pools
+out-of-fold (OOF) features from all five folds, and fits a downstream
+logistic-regression meta-learner on the pooled OOF features before
+evaluating on the held-out test set; `03` (and the later diagnostic
+rerun, `code/19_real_feature_leakage_diagnostics.py`, which reused the
+same architecture to investigate the anomaly below) instead took only the
+first of five folds, trained a single MLP on it, and evaluated that one
+model's raw output directly on the test set -- a materially different,
+higher-variance pipeline that happened to produce a significant
+$+0.0026$ AUROC gap ($p=0.0012$) on real features. Rerunning with the
+actual 02d architecture
+(`code/25_real_feature_leakage_test_corrected_architecture.py`, same
+cached real Mistral-7B features, no new inference) gives $+0.0002$ AUROC
+($p=0.56$, capacity 128) and $+0.0001$ ($p=0.96$, capacity 384) -- not
+significant at either capacity, and the exact-MDE and epoch-count
+diagnostics below, both built on the mismatched architecture's output, no
+longer describe anything the corrected data show. This is a fourth
+instance of the same lesson this appendix documents: a single
+confirmatory-looking number is not sufficient without checking that the
+procedure producing it actually matches the one it is claimed to match.
+
 **The lesson this demonstrates about itself, not just argues for.** A
 single confirmatory-looking or null-looking number is not sufficient to
 close a leakage-severity question, even at adequate seed count and with a
@@ -541,17 +579,23 @@ the branch is structurally unreachable, so the rule can only ever return
 is a flawed pre-registration, not a rigor credential; `MIXED` is the
 honest label for what the data show.
 
-**Exact, not back-of-envelope, minimum detectable effect.** A diagnostic
-rerun (`code/19_real_feature_leakage_diagnostics.py`) saved full per-seed
-gap arrays for the real-feature validation. Exact per-seed gap SD for
-LEAKY-vs-CLEAN\_MATCHED is $0.008294$, giving an 80\%-power MDE (two-sided
-$\alpha=0.05$) of $0.00232$ -- essentially identical to the
-back-of-envelope estimate used in §4.3 ($\approx0.0023$). The observed gap
-($0.00261$) sits comfortably above this exact MDE. For
-CLEAN\_MATCHED-vs-PLACEBO, exact SD $=0.009420$, MDE $=0.00264$: the
-observed gap ($-0.00248$) sits just under this MDE, consistent with the
-sanity-check anomaly being real but modest rather than certain to be
-detected at this $n$.
+**Exact, not back-of-envelope, minimum detectable effect (corrected
+architecture).** The corrected real-feature rerun
+(`code/25_real_feature_leakage_test_corrected_architecture.py`) saves
+full per-seed gap arrays. Exact per-seed gap SD for
+LEAKY-vs-CLEAN\_MATCHED is $0.003095$ (capacity 128), giving an
+80\%-power MDE (two-sided $\alpha=0.05$) of $0.00087$ -- at or below the
+synthetic sweep's own estimated severity floor of $+0.0009$. The observed
+gap ($+0.0002$) sits well under this MDE. For CLEAN\_MATCHED-vs-PLACEBO,
+exact SD $=0.004242$, MDE $=0.00119$; the observed gap ($-0.0006$) again
+sits under this MDE. Both nulls are therefore adequately powered, not
+underpowered non-findings: this test could have detected an effect at the
+low end of the synthetic estimate's own range and did not. (The earlier,
+architecturally-mismatched version of this test had a substantially
+larger per-seed SD -- $0.008294$ and $0.009420$ for the two comparisons --
+consistent with the single-fold pipeline's higher variance; that
+version's MDE and significant gap are both artifacts of the mismatch
+documented above, not a property of the underlying mechanism.)
 
 **A single point estimate is weaker rigor than every other comparison in
 this paper.** The FP16-vs-AWQ quantization control (§4.3) was originally a
@@ -566,27 +610,26 @@ with the original point estimate's conclusion, now with an effect-size
 distribution rather than a single number
 (`results/fp16_vs_awq_control_matched_architecture.json`).
 
-**Epoch-count mechanism behind the CLEAN\_MATCHED-vs-PLACEBO sanity-check
-anomaly (§4.3).** Instrumented epoch counts across 100 seeds
-(`code/19_real_feature_leakage_diagnostics.py`) show CLEAN's
-early-stopped checkpoint averages epoch $12.18$, while PLACEBO's
+**The epoch-count mechanism below described a superseded architecture's
+anomaly, and no longer applies.** Under the earlier, single-fold
+architecture, CLEAN\_MATCHED underperformed PLACEBO by $-0.0025$
+($p=0.0115$), which we traced to an epoch-count selection difference:
+instrumented epoch counts across 100 seeds
+(`code/19_real_feature_leakage_diagnostics.py`) showed CLEAN's
+early-stopped checkpoint averaging epoch $12.18$, while PLACEBO's
 checkpoint-selection -- even against permuted, meaningless validation
-labels -- averages epoch $17.7$ ($p=0.012$): with no real stopping signal
-to act on, PLACEBO's selection drifts toward later, better-fit-to-$X$
-epochs, while CLEAN's genuine early-stopping on a smaller, noisier
-held-out slice stops sooner. The per-seed epoch gap predicts the AUROC
-gap directly ($r=-0.594$, $p=7.5\times10^{-11}$): a structural consequence
-of CLEAN\_MATCHED's fixed epoch count under-training relative to where
-PLACEBO's own selection lands, not a challenge to the LEAKY-vs-CLEAN\_MATCHED
-severity estimate. This account is correlational, not an
-intervention-confirmed causal mechanism (we did not force a range of
-fixed epoch counts on CLEAN\_MATCHED and observe AUROC track it
-directly); LEAKY, CLEAN\_MATCHED, and PLACEBO share an identical random
-seed and identical training data, differing only in which epoch along
-one shared training trajectory gets selected -- a deliberate,
-confound-minimizing design that also means the epoch-gap correlation is
-partly structural to that shared-trajectory comparison, not from two
-independently-trained models.
+labels -- averaged epoch $17.7$ ($p=0.012$, per-seed epoch gap predicting
+the AUROC gap directly at $r=-0.594$, $p=7.5\times10^{-11}$). Under the
+corrected 5-fold-OOF architecture (above), this gap is $-0.0006$
+($p=0.39$, capacity 128) and not significant: the anomaly this mechanism
+was built to explain was itself an artifact of the single-fold
+architecture's higher variance, not a property of the underlying
+checkpoint-selection mechanism. We retain this diagnostic here, clearly
+marked as describing the superseded architecture, because it demonstrates
+the same point as the rest of this appendix: an unexplained
+sanity-check anomaly should be run down before being narrated past, and
+in this instance running it down further -- via the architecture-mismatch
+check above -- also resolved the anomaly itself.
 
 ## References
 

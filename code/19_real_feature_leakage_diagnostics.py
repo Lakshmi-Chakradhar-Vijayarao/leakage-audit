@@ -30,6 +30,16 @@ model loading, no re-extraction needed:
    values per seed and reports their paired distribution and correlation
    with the AUC gap, to test this mechanism directly rather than leaving
    it as an untested hypothesis.
+
+CORRECTION (post-review): this script reuses code/03's single-fold
+architecture, which does not match code/02d_corrected_capacity_placebo_sweep.py
+(see the correction note in code/03_real_feature_leakage_test.py). Under
+the corrected 5-fold-OOF-plus-meta-learner architecture
+(code/25_real_feature_leakage_test_corrected_architecture.py), the
+CLEAN_MATCHED-vs-PLACEBO anomaly this script investigates is not
+significant and does not reproduce. The epoch-count mechanism documented
+below is retained for the historical record (Appendix A) but does not
+describe the paper's reported result.
 """
 import json
 from pathlib import Path

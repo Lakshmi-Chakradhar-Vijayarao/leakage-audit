@@ -20,14 +20,26 @@ classifier with mixup/cutmix/EMA/SWA/contrastive/focal-loss (that remains
 future work -- a faithful reproduction of an unfamiliar, complex training
 loop is a much larger undertaking with real risk of subtle bugs). Instead,
 the REAL extracted features are fed into this paper's own already-validated
-LEAKY/CLEAN/CLEAN_MATCHED/PLACEBO checkpoint-selection-leakage test
-(identical architecture/calibration/procedure to
-code/02d_corrected_capacity_placebo_sweep.py), replacing only the
-synthetic-Gaussian data-generation step with real data. This directly
-answers the "is this a real-hidden-state effect or a toy-data artifact"
-question, at a smaller N and fewer seeds than the full synthetic sweep
-(tractable within one Kaggle session), disclosed as a bounded, honest
-middle ground between the synthetic reconstruction and a full replication.
+LEAKY/CLEAN/CLEAN_MATCHED/PLACEBO checkpoint-selection-leakage test,
+replacing only the synthetic-Gaussian data-generation step with real data.
+This directly answers the "is this a real-hidden-state effect or a
+toy-data artifact" question, at a smaller N and fewer seeds than the full
+synthetic sweep (tractable within one Kaggle session), disclosed as a
+bounded, honest middle ground between the synthetic reconstruction and a
+full replication.
+
+CORRECTION (post-review): despite the claim originally here, this
+script's run_one_seed() does NOT use identical architecture/calibration/
+procedure to code/02d_corrected_capacity_placebo_sweep.py. It trains on
+only the first of five StratifiedKFold folds and evaluates that one
+model's raw output directly, instead of 02d's actual pipeline (5-fold
+out-of-fold feature pooling + downstream logistic-regression
+meta-learner). This mismatch is documented and fixed in
+code/25_real_feature_leakage_test_corrected_architecture.py, which is the
+version of this test the paper now reports (Appendix A). This script and
+code/19_real_feature_leakage_diagnostics.py are retained for the
+historical record only and should not be cited as the paper's real-feature
+result.
 """
 import os, sys, json, gc, time, subprocess
 
