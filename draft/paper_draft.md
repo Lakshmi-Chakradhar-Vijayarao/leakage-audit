@@ -37,7 +37,12 @@ reuse from "having adaptive checkpoint selection at all," finds the gap
 under this stricter test larger, not smaller ($+0.0143$ to $+0.0198$,
 $p<0.0001$ at both tested capacities) -- evidence against, though not a
 definitive exclusion of, this alternative explanation, since the control
-condition's own behavior is itself not fully explained. A real-Mistral-7B-feature
+condition's own behavior is itself not fully explained. A second
+generative process, replacing the isotropic-Gaussian calibration with a
+real, anisotropic covariance structure fit from real hidden-state
+features, replicates the severity gap and is if anything larger at the
+two higher tested capacities -- evidence against the isotropic assumption
+being responsible for the estimate. A real-Mistral-7B-feature
 test of the same mechanism, corrected for an architecture mismatch a
 review caught (Appendix A), finds no significant gap, at a power
 sufficient to detect an effect as small as the synthetic estimate's own
@@ -297,6 +302,35 @@ above -- the comparison that counts against the alternative explanation
 is LEAKY vs.\ CLEAN\_MATCHED\_ADAPTIVE, which holds regardless -- but the
 control's own behavior is flagged here rather than left unremarked.
 
+**A second, structurally different generative process.** The sweep above
+draws each class from an isotropic Gaussian (identity covariance, classes
+differing only in a constant mean offset) -- a reasonable calibration
+device, but a toy-model artifact is a live alternative explanation if the
+severity estimate depends on that assumption rather than being a property
+of the underlying leakage mechanism. We built a second generative process
+that keeps the controlled, repeatable sweep design but replaces the
+covariance structure: fit the real pooled within-class covariance and
+mean-difference direction from the real Mistral-7B/HaluEval features
+already used below, then rescale the mean difference (keeping the real,
+anisotropic, correlated covariance shape exactly as observed) to hit the
+same AUROC$=0.80$ calibration target via the binormal identity
+(`code/27_anisotropic_covariance_capacity_sweep.py`, $n=100$ seeds, same
+four capacities). The severity gap **replicates and is, if anything,
+larger** at the two higher capacities: LEAKY vs.\ CLEAN\_MATCHED is
+$+0.0082$ ($p=0.007$, capacity 128, vs.\ $+0.0034$ under the isotropic
+sweep) and $+0.0099$ ($p=0.009$, capacity 384, vs.\ $+0.0027$,
+not significant, under the isotropic sweep) -- both now significant where
+capacity 384 previously was not. At the two lower capacities the pattern
+shifts rather than disappearing: LEAKY vs.\ CLEAN\_MATCHED weakens
+(capacity 16: $+0.0000$, $p=0.85$; capacity 48: $+0.0016$, $p=0.22$), but
+CLEAN\_MATCHED vs.\ PLACEBO becomes significant instead ($+0.0084$,
+$p=0.015$; $+0.0080$, $p=0.010$) -- some real gap is present at every
+capacity under one comparison or the other, not concentrated only where
+the isotropic sweep found it. This is evidence against the
+isotropic-covariance assumption being responsible for the severity
+estimate; a more realistic covariance structure does not shrink or
+eliminate it.
+
 **Real-feature validation.** Feeding real Mistral-7B/HaluEval features
 ($n=400$, MultiHaluDet's own unmodified feature-extraction code, a 4-bit
 AWQ checkpoint pinned to a fixed revision) through the same 5-fold
@@ -320,16 +354,36 @@ version of this test, how the mismatch was caught, the diagnostic
 conclusions it invalidates, and a further robustness check (a
 resampled-effect-size reanalysis of the FP16-vs-AWQ control) in full.
 
+**A pre-registered decision rule that cannot return "no leak."** Before
+running the sweep, we pre-registered a rule classifying each capacity as
+`GENUINE_LEAK_CONFIRMED`, `CONFOUND_CONFIRMED_NO_REAL_LEAK`, or `MIXED`
+from the placebo-relative gaps. Its `CONFOUND_CONFIRMED_NO_REAL_LEAK`
+branch, meant to fire if the data supported "no real leak," turns out to
+be structurally unreachable: it requires
+leaky\_minus\_placebo $p>0.05$, but that comparison is significant at
+$p<10^{-8}$ at every capacity in every version of this experiment. The
+rule can therefore only ever return `GENUINE_LEAK_CONFIRMED` or `MIXED`
+-- it returns `MIXED` at all four capacities here -- never a clean "no
+leak" verdict, regardless of what the underlying data show. This is a
+flaw in the pre-registration itself, not a rigor credential, and we
+flag it here rather than let a reader take "pre-registered" as license
+to trust the classification without checking it; Appendix A documents
+the full analysis.
+
 **Bottom line.** The mechanism itself -- checkpoint choice as a function
 of the reused fold's own labels -- is unambiguous and code-verified. Its
 quantified severity, once budget- and seed-matched, is small ($+0.0009$
 to $+0.0034$ AUROC on the synthetic sweep) and significant at most but not
 all tested capacities, and this significance strengthens under the
-stricter adaptive-selection control above. A real-feature test at
-adequate power (above) does not corroborate this severity range
+stricter adaptive-selection control above, and again (if anything, more
+strongly) under a second generative process replacing the isotropic
+calibration with a real, anisotropic covariance structure. A real-feature
+test at adequate power (above) does not corroborate this severity range
 transferring to real Mistral-7B/HaluEval hidden states, so it should be
-read as a property of the calibrated synthetic reconstruction, not yet
-shown to generalize. This does not settle MultiHaluDet's own 98.55\% AUROC's exact
+read as a property of the calibrated synthetic reconstruction -- robust to
+the specific covariance assumption used to build it, but not yet shown to
+generalize to real hidden states at this scale. This does not settle
+MultiHaluDet's own 98.55\% AUROC's exact
 inflation: their real architecture (6 transformer layers, multi-scale,
 heavy augmentation) is considerably more expressive than this
 reconstruction. Getting this number right required simultaneously correct
