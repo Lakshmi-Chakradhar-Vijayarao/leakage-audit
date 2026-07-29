@@ -35,8 +35,9 @@ $+0.0034$ AUROC, significant at two of four capacities after
 Holm-Bonferroni correction. A fifth control condition, isolating fold
 reuse from "having adaptive checkpoint selection at all," finds the gap
 under this stricter test larger, not smaller ($+0.0143$ to $+0.0198$,
-$p<0.0001$ at both tested capacities) -- ruling out the most plausible
-alternative explanation for the effect. A real-Mistral-7B-feature
+$p<0.0001$ at both tested capacities) -- evidence against, though not a
+definitive exclusion of, this alternative explanation, since the control
+condition's own behavior is itself not fully explained. A real-Mistral-7B-feature
 replication lands inside the synthetic estimate's range.
 
 We provide a checklist covering all four mechanisms and test whether it
@@ -275,8 +276,22 @@ gap, not smaller -- and CLEAN\_MATCHED\_ADAPTIVE itself underperforms the
 blind CLEAN\_MATCHED control ($-0.0164$, $p<0.0001$). At capacity 384 the
 same pattern holds and is significant ($+0.0143$, $p<0.0001$), where the
 original comparison was only borderline. This alternative explanation is
-not supported: the residual tracks fold reuse specifically, not adaptive
-selection in general.
+not supported by this test: LEAKY beats CLEAN\_MATCHED\_ADAPTIVE by more,
+not less, than it beats CLEAN\_MATCHED, which is inconsistent with "any
+adaptive selection helps" as the driver.
+
+CLEAN\_MATCHED\_ADAPTIVE's own underperformance relative to the blind
+CLEAN\_MATCHED control is itself unexpected and not fully explained --
+selecting against genuine, honestly held-out signal should not do worse
+than blindly reusing an epoch count learned from a separate, smaller-budget
+run. The most likely account, by analogy with the epoch-count mechanism
+identified below for the CLEAN\_MATCHED-vs-PLACEBO anomaly, is that
+adaptive selection against a small (15\%) carve-out is itself a noisy
+selection signal, a different phenomenon from the fold-reuse question
+this control was built to isolate. This does not weaken the conclusion
+above -- the comparison that counts against the alternative explanation
+is LEAKY vs.\ CLEAN\_MATCHED\_ADAPTIVE, which holds regardless -- but the
+control's own behavior is flagged here rather than left unremarked.
 
 **Real-feature validation.** Feeding real Mistral-7B/HaluEval features
 ($n=400$, MultiHaluDet's own unmodified feature-extraction code, a 4-bit
