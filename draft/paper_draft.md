@@ -409,17 +409,15 @@ both directions.
 ## 6. Discussion
 
 **Data and code availability.** All code, cached result JSONs, and the
-paper source are public at
-`https://github.com/Lakshmi-Chakradhar-Vijayarao/leakage-audit`. Case
+paper source are included in the anonymized supplementary material for
+double-blind review, and will be released as public GitHub repositories
+under the authors' names upon publication (three repositories: one for
+the main audit and checklist, and one each for Case Studies 1 and 2,
+each containing only the subset of the original project relevant to the
+specific finding reported, not the full original codebase). Case
 Studies 3 and 4 are fully reproducible from what ships with this paper:
 pinned third-party commits, our audit scripts, and the resulting JSON
-logs. Case Studies 1 and 2 are independently reproducible via two
-additional public repositories,
-`https://github.com/Lakshmi-Chakradhar-Vijayarao/harp-leakage-case-study`
-and
-`https://github.com/Lakshmi-Chakradhar-Vijayarao/guardian-leakage-case-study`,
-each containing only the subset of the original project relevant to the
-specific finding reported, not the full original codebase. The regex
+logs. The regex
 linter in §5 is included in full and is, per its own results, a confirmed
 non-detector on this corpus (0 true positives, 2 false negatives on the
 corpus's own known bugs) -- included for transparency, not as a working
