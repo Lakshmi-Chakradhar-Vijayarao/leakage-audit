@@ -440,15 +440,13 @@ estimate; any severity number this paper reports translates directly into
 a cost multiplier at whatever volume and review cost a practitioner
 actually has.
 
-**This audit's central lesson recurs across three companion studies from
-the same project**, none sharing a leakage mechanism with the four case
-studies here: a geometric-certificate paper finds a near-saturated
-hallucination benchmark is mostly explained by answer length, not
-truthfulness; an FFN-mechanism paper finds a cross-architecture component
-comparison reverses once an instruction-tuned model is queried with its
-correct chat template; an agentic-failure taxonomy finds a hidden-state
-"early-warning" signal is mostly a difficulty readout once tested
-directly. All four studies share one discipline: a claimed severity or
+**This audit's central lesson recurs in related, independently-conducted
+work** examining hidden-state signals and benchmark severity estimates
+in adjacent areas of LLM evaluation, none sharing a leakage mechanism
+with the four case studies here: an initially plausible signal or
+benchmark result substantially weakens or changes character once a
+specific confound is directly tested, rather than merely acknowledged as
+possible. This paper shares that discipline: a claimed severity or
 signal is not established until the confounds that could produce it for
 free have been named and tested, not merely acknowledged as possible.
 
