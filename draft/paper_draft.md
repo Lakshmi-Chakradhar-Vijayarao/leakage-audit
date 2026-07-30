@@ -6,78 +6,38 @@ Independent Researcher
 
 ## Abstract
 
-Linear and shallow-MLP probes on LLM hidden states are a standard tool for
-hallucination detection, with reported AUROCs routinely exceeding 0.90. We
-identify five distinct mechanisms by which evaluation labels leak into
-these numbers, each requiring a different fix: (1) full-dataset
-fit-then-score feature leakage feeding a nested cross-validation loop
-(+0.19 AUROC inflation, verified in our own prior pipeline, HaRP); (2)
-cross-validation-based hyperparameter selection reported as held-out
-performance (an 18.8-point gap between the CV-selected and true held-out
-AUROC, in a second pipeline of ours, GUARDIAN); (3) per-fold checkpoint
-selection using the same fold later reused as "out-of-fold" features,
-verified directly in a published multilingual hallucination-detection
-pipeline's (MultiHaluDet) released code; (4) test-set-driven
-best-of-many-layers selection with no multiplicity correction, verified in
-a second published paper's code; (5) test-set-driven decision-threshold
-selection, found in the same MultiHaluDet pipeline audited for Mechanism
-3 -- a distinct choice (which operating point to report at, not which
-feature/checkpoint/layer to use) that turns out to be substantially more
-severe than Mechanism 3 once both are actually measured.
+Linear and shallow-MLP probes on LLM hidden states are a standard
+hallucination-detection tool, with reported AUROCs routinely exceeding
+0.90. We identify five distinct mechanisms by which evaluation labels
+leak into these numbers: (1) full-dataset fit-then-score feature leakage
+(+0.19 AUROC, our own pipeline, HaRP); (2) cross-validation-based layer
+selection reported as held-out performance (an 18.8-point gap, our own
+pipeline, GUARDIAN -- a full 32-layer sweep shows this is typical of the
+selection procedure, not a fluke of one layer); (3) per-fold checkpoint
+selection that reuses the same fold as "out-of-fold" features, verified
+in a published pipeline (MultiHaluDet); (4) test-set-driven layer
+selection with no multiplicity correction, verified in a second
+published paper; (5) test-set-driven decision-threshold selection, found
+in the same pipeline audited for Mechanism 3 -- and substantially more
+severe once both are measured on the same harness.
 
-Mechanisms (1)-(2) are demonstrated in our own previously-unpublished
-pipelines; we release the training code and logs for independent
-verification, though none has been done yet. Mechanisms (3)-(5) are
-verified against pinned commits of externally-authored code -- a stronger
-evidentiary tier.
+Severity differs sharply by mechanism, not by pipeline. Mechanism 1 is
+catastrophic regardless of scale. Mechanism 3's severity is small under
+a checkpoint-selection-only harness (+0.0009 to +0.0034 AUROC) but
+roughly 5x larger once we model the pipeline's actual training loop (an
+LR scheduler and early stopping both reacting to the same validation
+fold). Mechanism 5 is an order of magnitude more severe than Mechanism 3
+and far more statistically decisive. While deriving Mechanism 3's
+severity estimate, we found that our own measurement instrument had
+committed exactly the leakage pattern this paper audits for -- a
+full-dataset calibration transform evaluated across the split it was fit
+on -- and fixed it: the paper's own thesis, surfacing in its own
+tooling.
 
-Severity differs sharply and is not comparable across mechanisms.
-Mechanism (1) is catastrophic regardless of scale. Mechanism (3)'s
-severity, quantified via a calibrated synthetic reconstruction ($n=100$
-seeds, four capacities, budget- and seed-matched), is small: $+0.0009$ to
-$+0.0034$ AUROC, significant at two of four capacities after
-Holm-Bonferroni correction. A fifth control condition, isolating fold
-reuse from "having adaptive checkpoint selection at all," finds the gap
-under this stricter test larger, not smaller ($+0.0143$ to $+0.0198$,
-$p<0.0001$ at both tested capacities) -- evidence against, though not a
-definitive exclusion of, this alternative explanation, since the control
-condition's own behavior is itself not fully explained. A second
-generative process, replacing the isotropic-Gaussian calibration with a
-real, anisotropic covariance structure fit from real hidden-state
-features, replicates the severity gap at most tested capacities and is
-if anything larger at capacity 128 -- evidence against the isotropic
-assumption alone being responsible for the estimate. A real-Mistral-7B-feature
-test of the same mechanism, corrected for an architecture mismatch and,
-in turn, a calibration procedure found to leak label information across
-its own train/test split (Appendix A), still cannot be forced onto the
-synthetic sweep's $0.80$ operating point once that leak is fixed (it
-saturates near $0.96$-$0.97$ instead) -- but with the leak removed, this
-is now a verified property of the real features' residual structure
-rather than an artifact, and the test's own internal comparison, at its
-own achieved operating point, is trustworthy: LEAKY beats
-CLEAN\_MATCHED by $+0.0021$ (capacity 128) and $+0.0022$ (capacity 384),
-both significant and both directionally consistent with, though not
-numerically comparable to (given the operating-point mismatch), the
-synthetic sweep's severity range. This paper's primary severity estimate
-for Mechanism 3 still rests on the two synthetic sweeps, which share
-neither problem this test encountered. Mechanism 5, quantified on the
-same calibrated synthetic harness, is substantially larger: F1 gaps of
-$+0.0058$ to $+0.0322$ across five operating points (all $p<10^{-17}$,
-$n=200$ seeds), roughly an order of magnitude more severe than Mechanism
-3 at every operating point tested, and far more statistically decisive
--- direct evidence, from two mechanisms found in the same audited
-pipeline, that severity genuinely differs by mechanism rather than being
-a property of "this pipeline" as a whole.
-
-We provide a checklist covering all five mechanisms and test whether it
-can be automated: a regex-based scanner (covering the original four
-patterns; Mechanism 5 was found after this scanner was built and is not
-yet covered by it) run over 7 repositories (the 2
-already-confirmed-leaky case studies, to test false negatives, plus 5
-additional, not-previously-examined repositories, to test false
-positives) produces zero true positives and misses both known bugs --
-this class of leakage resists simple pattern-matching in both
-directions.
+We provide a five-question checklist and test whether it can be
+automated: a regex scanner run over 7 repositories (2 known-leaky, 5
+previously unexamined) produces zero true positives and misses both
+known bugs. This class of leakage resists simple pattern-matching.
 
 ## 1. Introduction
 
@@ -933,9 +893,9 @@ reached, and additional robustness checks omitted from the main text for
 length.** §4.3 states the result directly; nothing below is required to
 verify it.
 
-**TL;DR for readers who do not want to read nine sequential corrections.**
-Nine issues were found and fixed via iterative review while deriving
-this case study's severity estimate. In order: (1) an uncalibrated
+**TL;DR.** Ten issues were found and fixed via iterative review while
+deriving this case study's severity estimate (full table below). In
+order: (1) an uncalibrated
 synthetic sweep saturated at AUROC=1.0; (2) the calibration formula
 itself was inverted; (3) LEAKY/CLEAN were not budget- or seed-matched;
 (4) the real-feature test's architecture did not match the synthetic
@@ -964,446 +924,87 @@ selection -- found a substantially *larger* gap ($+0.0099$,
 $p=3.6\times10^{-8}$) than the checkpoint-selection-only harness above,
 described later in this appendix.
 
-**Getting the severity estimate right took three earlier, each wrong in a
-different way.** An initial, uncalibrated pass saturated at AUROC$=1.0000$
-for both LEAKY and CLEAN -- a task with no room to fail leaves no room for
-a leakage bug to show inflation either. Recalibrating via the identity
-$\text{AUROC}=\Phi(\sqrt{J/2})$ (Simpson \& Fitter 1973) surfaced a second
-issue: the calibration script had inverted the wrong formula,
-$\Phi(\sqrt{J}/2)$ (the equal-prior Bayes-*accuracy* identity, not AUROC,
-since $2\neq\sqrt2$), giving a task calibrated to AUROC$=0.883$, not the
-intended $0.80$ -- consistent with the $\approx0.87$-$0.88$ LEAKY/CLEAN
-AUROCs actually observed under the miscalibrated version. The corrected
-inversion, $J=2\Phi^{-1}(0.80)^2=1.417$, gives a verified
-$\Phi(\sqrt{J/2})=0.800$. Fixing calibration alone still left a third
-issue: LEAKY and CLEAN were never matched on training-data budget (CLEAN's
-15\% early-stopping carve-out meant $\approx$15\% less training data than
-LEAKY), so a naive fix (adding CLEAN\_MATCHED, retrained on the full
-budget) initially used a different random seed for that retrain than
-LEAKY/CLEAN used, diluting the budget-matched comparison's power and
-making an early "not significant at any capacity" reading partly an
-artifact of the fix's own procedure. Matching the seed as well gives the
-result now stated in §4.3.
+**Correction table.** Each row is one issue found by iterative review while
+deriving §4.3's severity estimate; full derivations live in the cited
+script/result files, not below.
 
-**A fourth issue, on the real-feature test specifically, caught during
-review: an architecture mismatch.** `code/03_real_feature_leakage_test.py`'s
-docstring claimed its LEAKY/CLEAN\_MATCHED/PLACEBO test used "identical
-architecture ... to `code/02d_corrected_capacity_placebo_sweep.py`." It
-did not: 02d performs a genuine 5-fold cross-validation loop, pools
-out-of-fold (OOF) features from all five folds, and fits a downstream
-logistic-regression meta-learner on the pooled OOF features before
-evaluating on the held-out test set; `03` (and the later diagnostic
-rerun, `code/19_real_feature_leakage_diagnostics.py`, which reused the
-same architecture to investigate the anomaly below) instead took only the
-first of five folds, trained a single MLP on it, and evaluated that one
-model's raw output directly on the test set -- a materially different,
-higher-variance pipeline that happened to produce a significant
-$+0.0026$ AUROC gap ($p=0.0012$) on real features. Rerunning with the
-actual 02d architecture
-(`code/25_real_feature_leakage_test_corrected_architecture.py`, same
-cached real Mistral-7B features, no new inference) gives $+0.0002$ AUROC
-($p=0.56$, capacity 128) and $+0.0001$ ($p=0.96$, capacity 384) -- not
-significant at either capacity. This is a fourth
-instance of the same lesson this appendix documents: a single
-confirmatory-looking number is not sufficient without checking that the
-procedure producing it actually matches the one it is claimed to match.
-It is not, however, the end of the story: the "corrected" numbers above
-have a second problem, documented next.
+| # | Issue | Fix | Resulting number |
+|---|---|---|---|
+| 1 | Uncalibrated sweep saturated at AUROC$=1.0$ | Calibrate via $\text{AUROC}=\Phi(\sqrt{J/2})$ | -- |
+| 2 | Calibration formula was inverted ($\Phi(\sqrt J/2)$, the accuracy identity, not AUROC) | Corrected inversion, $J=2\Phi^{-1}(0.80)^2=1.417$ | Verified $\Phi(\sqrt{J/2})=0.800$ |
+| 3 | LEAKY/CLEAN not budget- or seed-matched (CLEAN's ES carve-out $\approx$15\% less data; matched retrain used a different seed) | Match both budget and seed | Result now stated in §4.3 |
+| 4 | Real-feature test's architecture didn't match the synthetic sweep's (single-fold MLP vs. intended 5-fold OOF+meta-learner) | Rerun with the actual architecture (`code/25`) | $+0.0002$ ($p=0.56$, cap. 128), not significant |
+| 5 | "Corrected architecture" still ran at a ceiling operating point (AUROC$\approx0.985$), making its MDE incomparable to the synthetic sweep's | Rescale real features to the same $0.80$ target (`code/31`) | $+0.0014$/$+0.0010$ (cap. 128/384), inside the synthetic range but individually underpowered |
+| 6 | Rescaling factor $\alpha$ itself came from a biased estimator ($J_{\text{real}}$ unstable at $d\approx n$; permutation test gives $J_{\text{perm}}=2.31 > J_{\text{target}}=1.42$) | Empirical, CV-calibrated bisection on *achieved* AUROC (`code/33`) | Converges to $\alpha=0.2031$ |
+| 7 | A permutation-null number ($0.504\pm0.043$) was misattributed to this calibration check | Reconciled: $0.504$ is a different, unrelated check; this check's real value is $0.1202\pm0.0170$ | Both numbers now correctly labeled |
+| 8 | **The calibration transform itself leaked label information across the split it was evaluated on** -- full-sample class-mean centering before the split forces $\cos(\Delta\mu_{\text{tr}},\Delta\mu_{\text{te}})\approx-1$ by construction (verified: $-0.9999\pm0.0000$, train$\to$test AUROC$=0.062$) | Re-center on train indices only (`code/43`, `apply_calibration_train_only`); re-run alpha search per-fold | $\alpha=0.1328$; $\cos=0.0000\pm0.0007$, AUROC$=0.584\pm0.059$ (no longer inverted) |
+| 9 | Operating-point mismatch (issue 5) survives the leakage fix: train-only-calibrated pipeline still runs at AUROC$\approx0.96$-$0.97$, not $0.80$ | Report at the test's own operating point rather than retire it | LEAKY beats CLEAN\_MATCHED by $+0.0021$ (cap. 128, $p=0.0025$) / $+0.0022$ (cap. 384, $p=0.0003$) -- **the number §4.3 reports** |
+| 10 | Checkpoint-selection-only harness may understate MultiHaluDet's actual leak: the real trainer couples an LR scheduler and early stopping to the same validation fold every epoch, not just a final checkpoint pick | Port the scheduler+shared-patience mechanic into the harness (`code/49`), with a genuine budget-matched control (an earlier version used the leaky run's own epoch count, which can never differ from it by construction -- caught before reporting) | LEAKY\_PLUS\_LRSCHED beats CLEAN\_MATCHED\_PLUS\_LRSCHED by $+0.0099$ ($p=3.6\times10^{-8}$) -- **$\approx5\times$ larger** than the checkpoint-only estimate |
 
-**A fifth issue: the corrected architecture still ran the test at a
-ceiling operating point, and a fresh review caught this too.** All four
-conditions in the "corrected architecture" real-feature test operate at
-AUROC $\approx0.985$ -- essentially the same saturation problem this
-appendix's very first entry describes for the original miscalibrated
-synthetic sweep ("a task with no room to fail leaves no room for a
-leakage bug to show inflation either"). We had not applied that same
-discipline to the real features. Comparing an $0.00087$ MDE computed at
-capacity 128's $\approx0.757$ operating point to a $+0.0002$ effect
-measured at a $\approx0.985$ operating point is not a valid
-apples-to-apples power argument, and the "adequately powered null" claim
-in an earlier version of this section was wrong on that basis, not just
-imprecise. Recomputed on a scale-invariant basis (relative error
-reduction against the synthetic sweep's own capacity-128 result, or the
-Fisher-$J$ implied by the binormal identity used throughout this paper),
-the raw $+0.0002$ effect at $0.985$ headroom is not smaller than what
-the synthetic estimate would predict at that headroom -- if anything
-slightly larger. We fixed this properly rather than only computing a
-rescaled comparison: `code/31_real_feature_test_calibrated.py` rescales
-*only* the real features' between-class mean separation (by the same
-binormal-identity factor as the anisotropic sweep) while leaving every
-sample's own real, unmodified within-class deviation untouched -- no
-Gaussian resampling, unlike the anisotropic sweep -- to bring the real
-features to the same AUROC$=0.80$ target the synthetic sweep uses. At
-this comparable operating point: LEAKY beats CLEAN\_MATCHED by $+0.0014$
-($p=0.12$, capacity 128) and $+0.0010$ ($p=0.21$, capacity 384) -- both
-inside the synthetic sweep's own $+0.0009$ to $+0.0034$ range, though
-per-seed variance is larger at this operating point ($SD=0.0084$-$0.0094$
-vs.\ $0.0031$-$0.0032$ uncalibrated -- moving off ceiling makes
-seed-to-seed AUROC genuinely noisier, not a sign of a bug), giving an
-80\%-power MDE ($0.0023$-$0.0026$) this specific test does not
-independently clear at the observed magnitude. The reading at the time
-was "consistent with transfer, not independently confirmatory" -- a real
-correction to the previous version's "evidence against transferring"
-claim. Two further issues, described next, superseded this reading.
+**Issue 8 is the load-bearing finding of this appendix**, and the reason
+this paper's own severity-measurement instrument is used as a worked
+example of Mechanism 1 in §5: a full-dataset, label-dependent transform
+applied before the split it is later evaluated on -- the exact pattern
+this paper's checklist tells readers to look for in other people's code,
+found instead in ours. The synthetic sweeps (isotropic, anisotropic)
+remain this paper's primary severity estimate for Mechanism 3, since
+they share neither the architecture-mismatch (4) nor the split-leakage
+(8) problem the real-feature test needed fixing for.
 
-**A sixth issue: the rescaling factor above was itself computed from a
-biased estimator, caught by a further independent review.** The factor
-$\alpha=\sqrt{J_{\text{target}}/J_{\text{real}}}$ used above depends on
-$J_{\text{real}}=\Delta\mu^\top\Sigma^{-1}\Delta\mu$, the real features'
-plug-in Mahalanobis separation, computed from $n=400$ samples in
-$d=414$ dimensions -- a regime where $d\approx n$ makes the sample
-covariance matrix's inverse unstable regardless of the $0.05\times
-\mathrm{trace}(\Sigma)/d$ ridge term already applied. A direct
-permutation test exposes this: shuffling the labels and recomputing the
-identical formula 30 times gives a mean $J_{\text{perm}}=2.31$ ($SD=0.29$)
--- already larger than $J_{\text{target}}=1.42$, the value this paper
-defines as corresponding to AUROC$=0.80$. Pure label noise, with the
-true label-feature relationship completely destroyed, registers as
-*more* separated by this estimator than the calibration target itself;
-the original $\alpha=0.1455$ was computed from a $J_{\text{real}}=66.93$
-that is contaminated by exactly this same noise-driven inflation and was
-never a trustworthy calibration handle.
+**What this correction history demonstrates about itself.** A single
+confirmatory- or null-looking number was not enough at any step above --
+a correctly-inverted formula, a budget/seed-matched control, adequate
+power, an unbiased calibration estimator, and a train-only split all had
+to hold *simultaneously*, and each in turn was checked, found wanting,
+and fixed by a fresh round of review. A pre-registered decision rule
+(`GENUINE_LEAK_CONFIRMED` / `CONFOUND_CONFIRMED_NO_REAL_LEAK` / `MIXED`,
+from `code/02d`) returns `MIXED` on most tested versions of this
+experiment and `CONFOUND_CONFIRMED_NO_REAL_LEAK` on the one
+ceiling-confounded version -- an earlier claim that the confound branch
+was structurally unreachable was itself wrong, and is corrected here;
+`MIXED` is the modal but not universal honest label for what the data
+show across six tested configurations.
 
-We fixed this with an empirical, cross-validated calibration
-(`code/33_real_feature_test_cv_calibrated.py`) rather than a corrected
-analytic formula: for a candidate $\alpha$, apply the identical
-affine class-mean rescaling, then measure the \emph{actually achieved}
-AUROC via 5-fold cross-validated, $L_2$-regularized ($C=0.01$) logistic
-regression -- out-of-fold, so a sample's held-out prediction never
-depends on that same sample's contribution to the fitted boundary --
-and bisection-search $\alpha$ until the measured (not theoretical) CV
-AUROC hits $0.80$. Bisection converges to $\alpha=0.2031$, with a
-10-seed re-check CV AUROC of $0.7948\pm0.0132$.
+**Two smaller, fully-superseded checks, retained for completeness.**
+Exact per-seed gap SDs (not back-of-envelope estimates) confirm the
+train-only-calibrated test (issue 8's fix) is adequately powered for the
+gap it reports (MDE $0.00198$/$0.00154$ at capacities 128/384, both at
+or below the observed $+0.0021$/$+0.0022$); earlier, architecturally-
+mismatched versions were not. A single-point-estimate FP16-vs-AWQ
+quantization control was re-run with 100 seed-resampled splits through
+this paper's own severity architecture: gap $+0.0068$, 95\% CI
+$[-0.061,+0.080]$ (includes zero) -- consistent with no confound, not a
+demonstration ruling one out. An epoch-count anomaly specific to the
+now-superseded single-fold architecture (CLEAN\_MATCHED underperforming
+PLACEBO by $-0.0025$) reverses sign under every corrected version
+(CLEAN\_MATCHED outperforms PLACEBO by $+0.0157$ under the final,
+train-only-calibrated test) and does not recur; full detail in
+`results/real_feature_leakage_diagnostics.json`.
 
-A further independent review found two problems with the account
-originally given here. **First, the claimed permutation-null
-verification was misattributed.** The text asserted "$0.504\pm0.043$,
-correctly centered at chance" for the CV-based calibration estimator
-under label permutation. This run's own saved output
-(`calibration_permutation_null_check` in
-`results/real_feature_test_cv_calibrated.json`) is $0.1202\pm0.0170$,
-not $0.504\pm0.043$. Both numbers are real, but they answer different
-questions: $0.504\pm0.043$ (re-derived exactly:
-`code/43_calibration_leakage_diagnostic.py` gives $0.5116\pm0.0442$) is
-the CV scorer's behavior on plain, uncalibrated features against
-permuted labels -- a check that the scoring method itself is unbiased.
-$0.1202\pm0.0170$ (re-derived: $0.1196\pm0.0100$) is the output of a
-different, more elaborate check that recomputes calibration parameters
-from the permuted labels and applies them before scoring -- and, per the
-next paragraph, this second check's anomalous value turns out to be an
-early symptom of the same bug found below, not an unrelated curiosity.
-
-**Second, and more serious: the calibration transform itself leaked
-label information across the split it was later evaluated on.** The
-factor $\alpha$ above rescales class means computed from the *full*
-$n=400$ labeled sample, before any train/test split exists. Because each
-class's per-sample deviations sum to exactly zero over the sample used
-to estimate its mean, any subsequent split forces the two halves'
-leftover class-mean directions into an algebraic identity
-($n_{\text{tr}}\overline{\Delta}_{\text{tr}} =
--n_{\text{te}}\overline{\Delta}_{\text{te}}$). We verified this directly
-(`code/43_calibration_leakage_diagnostic.py`) at $\alpha=0$ (the
-rescaling factor this draft previously said gives "zero linear
-separation by construction"): $\cos(\Delta\mu_{\text{train}},
-\Delta\mu_{\text{test}})=-0.9999\pm0.0000$ across 20 random splits, and
-a plain linear model fit on train and scored on test gives AUROC
-$=0.062\pm0.019$ -- not zero separation, but near-perfect, mechanically
-manufactured \emph{anti}-correlation between train and test. This is
-precisely the leakage pattern this paper's own checklist names (§5): a
-full-dataset, label-dependent transform, applied before the split it is
-later evaluated on -- and it explains both the "structural floor" this
-draft previously attributed to real higher-order structure, and the
-anomalous $0.1202$ permutation-null value above (recomputing calibration
-parameters from permuted labels reproduces the identical split-crossing
-mechanism on noise).
-
-**The fix, and what survives it.** We re-centered class means on train
-indices only, applying the resulting affine map to both splits
-(`apply_calibration_train_only`, `code/43_calibration_leakage_diagnostic.py`).
-This removes the artifact cleanly: at $\alpha=0$,
-$\cos(\Delta\mu_{\text{train}},\Delta\mu_{\text{test}})=0.0000\pm0.0007$
-and train-fit$\to$test-eval AUROC $=0.584\pm0.059$ -- a plausible,
-non-inverted value. At the previously-used $\alpha=0.2031$, train-only
-centering gives $\cos=0.563$, AUROC$=0.769$, against the leak-contaminated
-version's $\cos=0.488$, AUROC$=0.531$ at the identical $\alpha$ -- confirming
-the original $0.2031$ result was partially, not wholly, an artifact. We
-also rebuilt the alpha search itself to recenter within each cross-validation
-fold rather than once over the whole sample (so the search cannot reintroduce
-the same leak), converging to a new $\alpha=0.1328$.
-
-**An eighth issue, found while confirming the fix actually resolves what
-matters, not just the diagnostic: the operating-point mismatch survives
-the leakage fix.** Re-running this paper's own downstream 5-fold
-OOF-plus-meta-learner severity pipeline on train-only-calibrated data
-($\alpha=0.1328$) gives LEAKY/CLEAN\_MATCHED/PLACEBO of
-$0.966$/$0.964$/$0.949$ (capacity 128) and $0.968$/$0.966$/$0.959$
-(capacity 384) -- still not the intended $0.80$. Unlike the earlier,
-leak-contaminated version of this same observation, this is now a
-properly verified finding: with the split-crossing artifact confirmed
-removed, the real Mistral-7B/HaluEval features' within-class residual
-structure genuinely carries more discriminative content than a
-mean-only rescaling can suppress, at any $\alpha\in[0,1]$.
-
-**Resolution: report at the test's own operating point, rather than
-retire it.** Because the achieved operating point
-($\approx0.96$-$0.97$) differs from the synthetic sweep's $0.80$
-calibration target, the two remain not directly comparable in magnitude
--- the same principle this appendix's fifth issue already established.
-But the train-only-calibrated test's own internal comparison is now
-trustworthy at its own operating point, and we report it rather than
-discard it: LEAKY beats CLEAN\_MATCHED by $+0.0021$ (BCa 95\% CI
-$[+0.0007,+0.0035]$, $10{,}000$ resamples, capacity 128, paired
-permutation $p=0.0025$, Wilcoxon $p=0.0006$) and $+0.0022$ (CI
-$[+0.0012,+0.0034]$, capacity 384, permutation $p=0.0003$, Wilcoxon
-$p=0.0002$) -- both significant, small, and directionally consistent
-with, though not numerically comparable to, the synthetic sweep's range.
-CLEAN\_MATCHED beats PLACEBO decisively at both capacities ($+0.0157$,
-$p=1.4\times10^{-9}$; $+0.0072$, $p=3.4\times10^{-4}$), confirming
-substantial real, non-leakage-driven signal in adaptive checkpoint
-selection on real features, as in every other version of this test.
-This paper's primary severity estimate for Mechanism 3 continues to
-rest on the two synthetic sweeps, which share neither the analytic-bias
-problem (sixth issue) nor the split-leakage problem (this issue) found
-in the real-feature test, since both synthetic sweeps generate fresh
-i.i.d. samples from a fully-specified generative process at every seed
-rather than rescaling a small, fixed real sample.
-
-**The lesson this demonstrates about itself, not just argues for.** A
-single confirmatory-looking or null-looking number is not sufficient to
-close a leakage-severity question, even at adequate seed count and with a
-placebo control. Nine controls must hold *simultaneously*: a
-correctly-inverted calibration formula; a budget-matched control checked
-for confounds introduced by the matching procedure itself; adequate
-power; a permuted-label placebo; consulting one's own pre-registered
-decision rule rather than narrating past it; matching the operating
-point (not just the architecture) whenever a result is compared across
-data sources; verifying a calibration estimator is itself unbiased
-(ideally by permutation test) rather than trusting a closed-form
-identity at face value; confirming that whatever a calibration
-targets is the same quantity the downstream evaluation pipeline actually
-measures, not a linear proxy for it; and verifying that any transform
-fit on labeled data is fit on train indices only, never the full sample
-before a split -- the one control this paper's own severity-measurement
-instrument violated, self-diagnosing the exact Mechanism-1 pattern this
-paper's own checklist warns readers to look for in other people's code.
-Get any one wrong, in either direction, and a confident-looking
-conclusion can be wrong -- including,
-as this appendix now documents about itself repeatedly, a conclusion
-arrived at while explicitly trying to fix a previous mistake.
-
-**The pre-registered decision rule's verdict depends on which version of
-the test is asked.** A rule classifying each capacity as
-`GENUINE_LEAK_CONFIRMED`, `CONFOUND_CONFIRMED_NO_REAL_LEAK`, or `MIXED`
-from the placebo-relative gaps (`code/02d_corrected_capacity_placebo_sweep.py`)
-gives, across every version of this experiment actually run: `MIXED` at
-all four capacities on the isotropic synthetic sweep; `MIXED` at three
-capacities and `GENUINE_LEAK_CONFIRMED` at one (capacity 128) on the
-anisotropic sweep; `CONFOUND_CONFIRMED_NO_REAL_LEAK` at both tested
-capacities on the ceiling-confounded (uncalibrated) real-feature test;
-and `MIXED` at both capacities on all three of the biased-calibration,
-the leak-contaminated bias-corrected (`code/33`), and the properly
-train-only-centered (`code/43`) real-feature tests. An earlier version
-of this section claimed the `CONFOUND_CONFIRMED_NO_REAL_LEAK` branch was
-structurally unreachable "in every version of this experiment" -- this
-was wrong, and the ceiling-confounded real-feature test above is the
-direct counterexample, caught by the same review that caught the
-ceiling-effect error itself. The honest characterization is not
-"unreachable" but "unstable": the same underlying mechanism produces
-three different verdicts across six tested conditions, depending on
-generative process, calibration, and capacity. `MIXED` is the modal, but
-not universal, honest label for what the data show. (As established
-above, only the train-only-centered version's severity number is
-treated as informative; the other two real-feature verdicts here
-illustrate rule instability, not real severity.)
-
-**Exact, not back-of-envelope, minimum detectable effect, across every
-version of the real-feature test.** The uncalibrated
-corrected-architecture rerun
-(`code/25_real_feature_leakage_test_corrected_architecture.py`) saves
-full per-seed gap arrays. Exact per-seed gap SD for
-LEAKY-vs-CLEAN\_MATCHED is $0.003095$ (capacity 128), giving an
-80\%-power MDE of $0.00087$ -- but this MDE is itself measured at the
-same $\approx0.985$ ceiling operating point as the effect it is compared
-to, so the earlier claim that this makes the null "adequately powered"
-does not hold once the operating-point mismatch above is accounted for;
-it is a valid MDE for *that* operating point, not for the synthetic
-sweep's $0.80$ operating point. The leak-contaminated bias-corrected
-version (`code/31_real_feature_test_calibrated.py`) gave exact per-seed
-gap SD of $0.00940$ (capacity 128) and $0.00834$ (capacity 384),
-80\%-power MDE of $0.00263$ and $0.00234$ respectively -- both larger
-than that version's observed gaps ($+0.0014$, $+0.0010$), i.e.
-underpowered at the time. The properly train-only-calibrated version
-(`code/43_calibration_leakage_diagnostic.py`) gives exact per-seed gap SD
-of $0.00709$ (capacity 128) and $0.00551$ (capacity 384), 80\%-power MDE
-of $0.00198$ and $0.00154$ respectively -- both now at or just below the
-observed gaps ($+0.0021$, $+0.0022$), meaning this version of the test,
-properly calibrated and leak-free, is adequately powered to support the
-significant gap it reports. (The original, architecturally-mismatched
-version of this test had a larger per-seed SD still -- $0.008294$ and
-$0.009420$ -- consistent with the single-fold pipeline's higher
-variance; that version's significant gap is an artifact of the
-architecture mismatch, not a property of the underlying mechanism.)
-
-**A single point estimate is weaker rigor than every other comparison in
-this paper.** The FP16-vs-AWQ quantization control (§4.3) was originally a
-single 5-fold-CV logistic-regression point estimate at $n=50$. We reran
-the identical comparison through this paper's own capacity-128
-SweepMLP architecture -- the same one the headline severity claim uses --
-with 100 seed-resampled splits instead of one point estimate (reusing
-cached features, no new model inference). Result: mean AUROC $0.946$
-(FP16) vs.\ $0.939$ (AWQ), gap $+0.0068$, 95\% CI $[-0.061, +0.080]$
-(includes zero), Wilcoxon $p=0.148$ -- not significant, though a CI this
-wide (roughly 78$\times$ the magnitude of the severity estimate itself)
-means this control is consistent with no quantization confound rather
-than a demonstration that rules one out; §4.3's main-text wording has
-been softened to match.
-(`results/fp16_vs_awq_control_matched_architecture.json`).
-
-**The epoch-count mechanism below described the single-fold architecture's
-anomaly specifically, and applies to none of the corrected versions.**
-Under
-the original, single-fold architecture, CLEAN\_MATCHED underperformed
-PLACEBO by $-0.0025$ ($p=0.0115$), which we traced to an epoch-count
-selection difference: instrumented epoch counts across 100 seeds
-(`code/19_real_feature_leakage_diagnostics.py`) showed CLEAN's
-early-stopped checkpoint averaging epoch $12.18$, while PLACEBO's
-checkpoint-selection -- even against permuted, meaningless validation
-labels -- averaged epoch $17.7$ ($p=0.012$, per-seed epoch gap predicting
-the AUROC gap directly at $r=-0.594$, $p=7.5\times10^{-11}$). Under the
-uncalibrated corrected (5-fold-OOF) architecture, this gap shrinks to
-$-0.0006$ ($p=0.39$, capacity 128) and is no longer significant. Under
-both the leak-contaminated bias-corrected test and the properly
-train-only-calibrated test, the comparison reverses sign entirely:
-CLEAN\_MATCHED substantially *outperforms* PLACEBO ($+0.0189$,
-$p=5.8\times10^{-8}$, capacity 128; $+0.0102$, $p=2.1\times10^{-7}$,
-capacity 384 under the leak-contaminated version; $+0.0157$,
-$p=1.4\times10^{-9}$, capacity 128; $+0.0072$, $p=3.4\times10^{-4}$,
-capacity 384 under the properly train-only-calibrated version) -- the
-expected direction (real, informative selection labels should do at
-least as well as permuted ones), consistent across both corrected
-versions of the calibration and therefore not an artifact of the
-leakage bug either. The anomaly this mechanism was built to explain was
-specific to the single-fold architecture's higher variance and does not
-recur in any corrected version. We retain this diagnostic here, clearly
-marked as describing the superseded architecture, because it
-demonstrates the same point as the rest of this appendix: an unexplained
-sanity-check anomaly should be run down before being narrated past, and
-in this instance running it down further -- via the architecture-mismatch
-check above -- also resolved the anomaly itself.
-
-**A ninth check: does the severity scale the way extreme-value theory
-predicts, across the number of candidates, the size of the selection
-set, and the operating point?** The reasoning behind Mechanism 3's
-severity is a winner's-curse argument: selecting the best of $K$ noisy
-validation estimates inflates the reported score by an amount that
-grows with $K$ and shrinks with the validation set size $n_{\text{val}}$
-(extreme-value theory predicts $\text{gap}\approx
-c\cdot\sigma_{\text{val}}\sqrt{2\ln K}$). The original capacity sweep
-varied only model capacity, holding $K$, $n_{\text{val}}$, and the
-operating point fixed, so it could not directly test this. We built
-`code/47_selection_multiplicity_sweep.py` to test it directly, first
-decoupling the single conflated `seed` variable this paper's other
-sweeps use into four independent seeds
-(`data_seed`, `split_seed`, `fold_seed_base`, `init_seed_base`), so that
-varying one factor cannot accidentally covary the data draw, the split,
-or the initialization with it.
-
-*Sweep A (number of candidates $K$, capacity fixed at 128, 200 seeds
-per cell, densified to 10 points after an initial 5-point pass).*
-$K\in\{1,3,5,10,15,25,45,75,135,225\}$ synthetic checkpoints are trained
-per seed and the best-on-validation one is selected and scored on test,
-exactly as CLEAN\_MATCHED's selection procedure does at $K=1$. Gap over
-a non-adaptive control is non-monotone at small $K$ but trends upward
-overall: $+0.0000$ ($K{=}1$, degenerate -- no selection occurs with a
-single candidate), $+0.0000$ ($K{=}3$), $+0.0001$ ($K{=}5$,
-$p=0.017$), $+0.0003$ ($K{=}10$, $p=8.5\times10^{-6}$), $+0.0002$
-($K{=}15$, $p=0.063$), $+0.0001$ ($K{=}25$, $p=0.271$), $+0.0004$
-($K{=}45$, $p=0.040$), $+0.0004$ ($K{=}75$, $p=0.044$), $+0.0005$
-($K{=}135$, $p=0.018$), $+0.0005$ ($K{=}225$, $p=0.018$). A least-squares
-fit of $\text{gap}=c\cdot\sigma_{\text{val}}\sqrt{2\ln K}$ against the
-measured $\sigma_{\text{val}}$ gives $c=0.00299$, $R^2=0.544$ -- densifying
-the grid from 5 to 10 points and doubling seeds per cell moved the fit
-only marginally (from $R^2=0.536$), confirming the predicted functional
-form captures roughly half the variance robustly rather than as an
-artifact of a coarse 5-point grid, while still falling short of a tight
-confirmation of the exact $\sqrt{2\ln K}$ exponent.
-
-*Sweep B (validation set size $n_{\text{val}}$, via
-$N_{\text{SAMPLES}}\in\{350,700,2800\}$, $K=15$ fixed).* The gap shrinks
-as $n_{\text{val}}$ grows, as the $1/\sqrt{n_{\text{val}}}$ term in the
-same prediction requires: $+0.0007$ ($N{=}350$, $p=0.250$), $+0.0006$
-($N{=}700$, $p=0.0343$), $+0.0000$ ($N{=}2800$, $p=0.627$) --
-qualitatively the predicted direction, though the sweep does not span
-enough points to fit the $1/\sqrt{n_{\text{val}}}$ exponent precisely.
-
-*Sweep C (operating point, via
-$\text{TARGET\_AUROC}\in\{0.70,0.80,0.90,0.95,0.985\}$, $K=15$,
-$N_{\text{SAMPLES}}=700$).* Gap generally shrinks toward the ceiling, as
-Appendix A's earlier ceiling-effect entries would predict: $+0.0011$
-($\text{AUROC}{=}0.70$, $p=0.158$), $+0.0006$ ($0.80$, $p=0.0343$),
-$+0.0001$ ($0.90$, $p=0.195$) -- but the two operating points closest to
-MultiHaluDet's own real regime break the monotone pattern and remain
-statistically decisive despite being numerically the smallest: $+0.0002$
-($0.95$, $p=0.00261$) and $+0.0001$ ($0.985$, $p=0.00161$). At high
-capacity the estimator's per-seed variance drops enough that even a
-sub-percent-point gap clears significance at $n=200$ seeds --
-MultiHaluDet's own reported operating point ($\approx0.9855$) sits
-almost exactly at the sweep's most extreme, most significant cell, so
-this is not a merely academic corner of the sweep.
-
-**What this sweep adds, and what it does not.** It confirms the
-qualitative direction of all three predicted dependencies (more
-candidates, less validation data, and operating point all move severity
-the way winner's-curse theory says they should) using seeds decoupled
-enough that no single random draw can produce all three patterns by
-coincidence. It does not, even on a densified 10-point $K$-grid at
-double the seed count, precisely fit the theory's exponents
-($R^2=0.544$ for the $\sqrt{2\ln K}$ term is suggestive, not
-confirmatory, and barely moved from the original 5-point grid's
-$R^2=0.536$), and Sweep C's non-monotonicity near the
-real operating point means "severity shrinks toward the ceiling" is a
-general tendency here, not a guarantee -- exactly the kind of small,
-statistically real, operating-point-specific effect this paper's
-Mechanism 3 severity estimate has argued for throughout. Full per-cell
+**A ninth check: does severity scale the way extreme-value theory
+predicts?** The reasoning behind Mechanism 3 is a winner's-curse
+argument: selecting the best of $K$ noisy validation estimates inflates
+the reported score by $\text{gap}\approx c\cdot\sigma_{\text{val}}
+\sqrt{2\ln K}$, shrinking with validation-set size $n_{\text{val}}$.
+`code/47_selection_multiplicity_sweep.py` tests this directly (decoupled
+`data_seed`/`split_seed`/`fold_seed_base`/`init_seed_base`, so no single
+draw can produce all three patterns by coincidence). Sweeping
+$K\in\{1,3,5,10,15,25,45,75,135,225\}$ at fixed capacity gives a gap that
+is non-monotone at small $K$ but trends from $+0.0000$ to $+0.0005$
+overall, fit by $c=0.00299$, $R^2=0.544$ ($10$-point grid; barely moved
+from a 5-point grid's $R^2=0.536$) -- suggestive, not a tight
+confirmation of the exponent. Sweeping $n_{\text{val}}$ (via
+$N_{\text{SAMPLES}}\in\{350,700,2800\}$) shrinks the gap toward zero as
+predicted ($+0.0007\to+0.0000$). Sweeping the operating point
+($\text{TARGET\_AUROC}\in\{0.70,\ldots,0.985\}$) shrinks the gap toward
+the ceiling overall, but the two points closest to MultiHaluDet's own
+real regime ($0.95$, $0.985$) break the monotone pattern and remain
+statistically decisive despite being numerically smallest ($p=0.0026$,
+$p=0.0016$) -- MultiHaluDet's own operating point ($\approx0.9855$) sits
+almost exactly at this sweep's most significant cell. All three
+qualitative dependencies point the predicted direction; none is fit
+tightly enough to confirm the theory's exact exponents. Full per-cell
 results: `results/selection_multiplicity_sweep.json`.
-
-**A tenth check: does the severity harness's checkpoint-selection-only
-model of Mechanism 3 understate what the actual vendored trainer does?**
-The severity harness above (and every synthetic/real-feature test that
-uses it) captures MultiHaluDet's leak as a single decision: which
-training-iterate checkpoint to keep, selected by best validation AUC.
-The actual trainer (`code/external/MultiHaluDet/src/training/trainer.py`,
-lines 76-149) does something continuously reactive to that same
-validation signal, not a single end-of-training decision: a
-`ReduceLROnPlateau` scheduler (`mode='max', factor=0.5, patience=3`) is
-stepped on the val-fold AUC every epoch, and early stopping is tied to
-the identical patience counter -- the learning-rate trajectory itself,
-not just the final checkpoint choice, reacts epoch-by-epoch to the fold
-later scored as OOF. `code/49_mechanism3_fidelity_extension.py` ports
-this exact mechanic (both the scheduler and the shared-patience early
-stop) into the severity harness, run at capacity 128 on the same
-train-only-calibrated real features ($\alpha=0.1328$) as the primary
-real-feature result, 100 seeds, with a genuine budget-matched control
-(the matching epoch count comes from an independently-selected,
-disjoint early-stopping holdout, not from the leaky run's own count --
-an earlier version of this script used the leaky run's own selected
-epoch to build its control, which is a construction that can never
-differ from the leaky condition by definition, since no learning-rate
-reduction can occur before the epoch of peak validation AUC; this was
-caught and fixed before results were reported). Result: LEAKY\_PLUS\_LRSCHED
-beats CLEAN\_MATCHED\_PLUS\_LRSCHED by $+0.0099$ (BCa 95\% CI
-$[+0.0068,+0.0133]$, $10{,}000$ resamples, Wilcoxon
-$p=3.6\times10^{-8}$) -- roughly $4$-$5\times$ larger than the
-checkpoint-selection-only harness's own $+0.0021$ at the same capacity
-and calibration. CLEAN\_MATCHED\_PLUS\_LRSCHED beats
-PLACEBO\_PLUS\_LRSCHED by $+0.0509$ ($p=1.6\times10^{-16}$), confirming
-real, non-leakage-driven signal survives under the more faithful
-training loop as well. This means the checkpoint-selection-only
-severity number this paper reports as its primary Mechanism 3 estimate
-is conservative relative to what MultiHaluDet's actual training loop
-does: modeling the full epoch-by-epoch coupling to the validation
-signal, not just the final checkpoint pick, reveals a larger leak, not
-a smaller one. Full results: `results/mechanism3_fidelity_extension.json`.
 
 ## References
 
