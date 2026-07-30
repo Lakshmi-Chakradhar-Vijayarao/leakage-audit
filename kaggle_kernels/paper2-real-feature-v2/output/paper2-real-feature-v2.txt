@@ -1,0 +1,106 @@
+GPU sanity check passed: Tesla T4
+Loading TheBloke/Mistral-7B-Instruct-v0.2-AWQ ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.10.0+cu128).
+WARN  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+INFO  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+INFO  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+fatal: not a git repository (or any parent up to mount point /kaggle)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+INFO  
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 7.3.1
+Transformers : 5.14.1
+Torch        : 2.10.0+cu128
+Triton       : 3.6.0
+INFO  ExLlamaV2 AWQ: compiling torch.ops JIT extension in `/root/.cache/gptqmodel/torch_extensions/exllamav2_awq/c0ebb841cca699ba`.
+INFO  ExLlamaV2 AWQ: torch.ops JIT extension ready in 29s (estimated ~35s, -6.1s).
+INFO  Kernel: Auto-selection: adding candidate `AwqExllamaV2Linear`            
+INFO  Kernel: selected -> `AwqExllamaV2Linear`.                                
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-AWQ/resolve/f970a2bb89d5c2f9d217dc337f39e24625d6462a/generation_config.json "HTTP/1.1 307 Temporary Redirect"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/TheBloke/Mistral-7B-Instruct-v0.2-AWQ/f970a2bb89d5c2f9d217dc337f39e24625d6462a/generation_config.json "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/resolve-cache/models/TheBloke/Mistral-7B-Instruct-v0.2-AWQ/f970a2bb89d5c2f9d217dc337f39e24625d6462a/generation_config.json "HTTP/1.1 200 OK"
+INFO  gc.collect() reclaimed 0 objects in 0.246s                               
+VRAM used: 2.54 GB
+Loading real HaluEval samples...
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/datasets/pminervini/HaluEval/resolve/12a856119f03975a94509091e8cada3e6be6ead7/README.md "HTTP/1.1 307 Temporary Redirect"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/api/resolve-cache/datasets/pminervini/HaluEval/12a856119f03975a94509091e8cada3e6be6ead7/README.md "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/resolve-cache/datasets/pminervini/HaluEval/12a856119f03975a94509091e8cada3e6be6ead7/README.md "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/datasets/pminervini/HaluEval/resolve/12a856119f03975a94509091e8cada3e6be6ead7/HaluEval.py "HTTP/1.1 404 Not Found"
+INFO:httpx:HTTP Request: HEAD https://s3.amazonaws.com/datasets.huggingface.co/datasets/datasets/pminervini/HaluEval/pminervini/HaluEval.py "HTTP/1.1 404 Not Found"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/datasets/pminervini/HaluEval/revision/12a856119f03975a94509091e8cada3e6be6ead7 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/datasets/pminervini/HaluEval/resolve/12a856119f03975a94509091e8cada3e6be6ead7/.huggingface.yaml "HTTP/1.1 404 Not Found"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/datasets/pminervini/HaluEval/tree/12a856119f03975a94509091e8cada3e6be6ead7/dialogue?recursive=true&expand=false "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/datasets/pminervini/HaluEval/tree/12a856119f03975a94509091e8cada3e6be6ead7?recursive=false&expand=false "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/datasets/pminervini/HaluEval/resolve/12a856119f03975a94509091e8cada3e6be6ead7/dataset_infos.json "HTTP/1.1 404 Not Found"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/datasets/pminervini/HaluEval/tree/12a856119f03975a94509091e8cada3e6be6ead7/qa_samples?recursive=true&expand=false "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/datasets/pminervini/HaluEval/resolve/12a856119f03975a94509091e8cada3e6be6ead7/qa_samples/data-00000-of-00001.parquet "HTTP/1.1 302 Found"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/datasets/pminervini/HaluEval/xet-read-token/12a856119f03975a94509091e8cada3e6be6ead7 "HTTP/1.1 200 OK"
+  400 samples loaded, hall_rate=0.507
+  [0/400] elapsed=0.0min ETA=0min
+  [25/400] elapsed=0.1min ETA=1min
+  [50/400] elapsed=0.2min ETA=1min
+  [75/400] elapsed=0.2min ETA=1min
+  [100/400] elapsed=0.3min ETA=1min
+  [125/400] elapsed=0.4min ETA=1min
+  [150/400] elapsed=0.4min ETA=1min
+  [175/400] elapsed=0.5min ETA=1min
+  [200/400] elapsed=0.6min ETA=1min
+  [225/400] elapsed=0.6min ETA=0min
+  [250/400] elapsed=0.7min ETA=0min
+  [275/400] elapsed=0.8min ETA=0min
+  [300/400] elapsed=0.8min ETA=0min
+  [325/400] elapsed=0.9min ETA=0min
+  [350/400] elapsed=1.0min ETA=0min
+  [375/400] elapsed=1.0min ETA=0min
+Extraction complete: X_seq=(400, 32, 12), X_glob=(400, 30), hall_rate=0.493
+Saved: /kaggle/working/real_features_mistral7b_halueval.npz
+============================================================
+Step 2: Real-feature checkpoint-selection-leakage test
+============================================================
+Combined feature matrix: (400, 414), hall_rate=0.493
+  seed 10/100: leaky=0.9841 clean=0.9787 clean_matched=0.9787 placebo=0.9836
+  seed 20/100: leaky=0.9834 clean=0.9802 clean_matched=0.9803 placebo=0.9840
+  seed 30/100: leaky=0.9845 clean=0.9815 clean_matched=0.9812 placebo=0.9855
+  seed 40/100: leaky=0.9838 clean=0.9809 clean_matched=0.9808 placebo=0.9858
+  seed 50/100: leaky=0.9845 clean=0.9819 clean_matched=0.9819 placebo=0.9848
+  seed 60/100: leaky=0.9853 clean=0.9829 clean_matched=0.9829 placebo=0.9854
+  seed 70/100: leaky=0.9847 clean=0.9818 clean_matched=0.9820 placebo=0.9846
+  seed 80/100: leaky=0.9841 clean=0.9810 clean_matched=0.9812 placebo=0.9841
+  seed 90/100: leaky=0.9836 clean=0.9806 clean_matched=0.9808 placebo=0.9835
+  seed 100/100: leaky=0.9832 clean=0.9804 clean_matched=0.9806 placebo=0.9831
+Mean AUROCs: {'leaky': 0.9831957473420887, 'clean': 0.9804065040650407, 'clean_matched': 0.9805816135084428, 'placebo': 0.9830581613508441}
+Gaps: {
+  "leaky_minus_placebo": {
+    "mean_a": 0.9831957473420887,
+    "mean_b": 0.9830581613508441,
+    "mean_gap": 0.00013758599124451986,
+    "std_gap": 0.00841869030775159,
+    "wilcoxon_p": 0.9177962540589946
+  },
+  "clean_minus_placebo": {
+    "mean_a": 0.9804065040650407,
+    "mean_b": 0.9830581613508441,
+    "mean_gap": -0.002651657285803637,
+    "std_gap": 0.009255518648031607,
+    "wilcoxon_p": 0.006390251976808825
+  },
+  "clean_matched_minus_placebo": {
+    "mean_a": 0.9805816135084428,
+    "mean_b": 0.9830581613508441,
+    "mean_gap": -0.0024765478424015053,
+    "std_gap": 0.009373113330074194,
+    "wilcoxon_p": 0.011498729050274157
+  },
+  "leaky_minus_clean_matched": {
+    "mean_a": 0.9831957473420887,
+    "mean_b": 0.9805816135084428,
+    "mean_gap": 0.0026141338336460253,
+    "std_gap": 0.008252259425791176,
+    "wilcoxon_p": 0.0011505904260600756
+  }
+}
+Saved: /kaggle/working/real_feature_leakage_test_result.json
