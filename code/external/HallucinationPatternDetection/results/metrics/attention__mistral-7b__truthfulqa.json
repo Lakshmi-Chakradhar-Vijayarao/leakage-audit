@@ -1,0 +1,30 @@
+{
+  "model": "mistral-7b",
+  "dataset": "truthfulqa",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.48449379751900756,
+      "auprc": 0.4810324368081928,
+      "accuracy_at_best_thr": 0.5175,
+      "f1_at_best_thr": 0.5113924050632911,
+      "best_threshold": 1.4002819061279297
+    },
+    "31": {
+      "auroc": 0.581032412965186,
+      "auprc": 0.5232123007273991,
+      "accuracy_at_best_thr": 0.59,
+      "f1_at_best_thr": 0.5314285714285715,
+      "best_threshold": 1.6741588115692139
+    },
+    "16": {
+      "auroc": 0.4812424969987995,
+      "auprc": 0.4960583894330173,
+      "accuracy_at_best_thr": 0.5225,
+      "f1_at_best_thr": 0.6757215619694398,
+      "best_threshold": 2.4009652137756348
+    }
+  },
+  "best_layer": "31",
+  "best_auroc": 0.581032412965186
+}

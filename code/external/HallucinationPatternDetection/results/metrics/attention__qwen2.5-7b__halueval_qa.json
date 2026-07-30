@@ -1,0 +1,30 @@
+{
+  "model": "qwen2.5-7b",
+  "dataset": "halueval_qa",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.8661466536663417,
+      "auprc": 0.8418649242133277,
+      "accuracy_at_best_thr": 0.8025,
+      "f1_at_best_thr": 0.8058968058968059,
+      "best_threshold": 2.958300828933716
+    },
+    "27": {
+      "auroc": 0.8470711767794195,
+      "auprc": 0.8493639804322443,
+      "accuracy_at_best_thr": 0.77,
+      "f1_at_best_thr": 0.784037558685446,
+      "best_threshold": 2.5679996013641357
+    },
+    "14": {
+      "auroc": 0.350108752718818,
+      "auprc": 0.40089789933064696,
+      "accuracy_at_best_thr": 0.525,
+      "f1_at_best_thr": 0.11214953271028037,
+      "best_threshold": 1.513426661491394
+    }
+  },
+  "best_layer": "0",
+  "best_auroc": 0.8661466536663417
+}

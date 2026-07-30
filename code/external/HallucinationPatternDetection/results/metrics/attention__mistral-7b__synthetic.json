@@ -1,0 +1,30 @@
+{
+  "model": "mistral-7b",
+  "dataset": "synthetic",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.5185500000000001,
+      "auprc": 0.5194083394819119,
+      "accuracy_at_best_thr": 0.5525,
+      "f1_at_best_thr": 0.2317596566523605,
+      "best_threshold": 0.5462723970413208
+    },
+    "31": {
+      "auroc": 0.5546,
+      "auprc": 0.5391549991677367,
+      "accuracy_at_best_thr": 0.6,
+      "f1_at_best_thr": 0.42028985507246375,
+      "best_threshold": 0.9840498566627502
+    },
+    "16": {
+      "auroc": 0.7736999999999999,
+      "auprc": 0.7688172074467494,
+      "accuracy_at_best_thr": 0.735,
+      "f1_at_best_thr": 0.7253886010362695,
+      "best_threshold": 0.9211117625236511
+    }
+  },
+  "best_layer": "16",
+  "best_auroc": 0.7736999999999999
+}

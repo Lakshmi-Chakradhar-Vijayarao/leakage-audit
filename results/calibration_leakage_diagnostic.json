@@ -1,0 +1,94 @@
+{
+  "centering_diagnostic": {
+    "0.0": {
+      "full_sample_centering": {
+        "cos_mean": -0.9999259626722077,
+        "cos_std": 3.516227335385194e-05,
+        "auc_mean": 0.06225766103814885,
+        "auc_std": 0.019425887719003776
+      },
+      "train_only_centering": {
+        "cos_mean": 2.0062176471328766e-05,
+        "cos_std": 0.0007146545151632955,
+        "auc_mean": 0.5841150719199499,
+        "auc_std": 0.059433523682766075
+      }
+    },
+    "0.2031": {
+      "full_sample_centering": {
+        "cos_mean": 0.4875762924440822,
+        "cos_std": 0.13617972336605166,
+        "auc_mean": 0.5308005003126954,
+        "auc_std": 0.05647451823922282
+      },
+      "train_only_centering": {
+        "cos_mean": 0.5630343361070665,
+        "cos_std": 0.1370763159801888,
+        "auc_mean": 0.7685115697310818,
+        "auc_std": 0.04811295598499104
+      }
+    },
+    "1.0": {
+      "full_sample_centering": {
+        "cos_mean": 0.9682982337726994,
+        "cos_std": 0.009620633713963569,
+        "auc_mean": 0.9908067542213883,
+        "auc_std": 0.007304233374621319
+      },
+      "train_only_centering": {
+        "cos_mean": 0.9682982337726994,
+        "cos_std": 0.009620633713963597,
+        "auc_mean": 0.9908067542213883,
+        "auc_std": 0.007304233374621319
+      }
+    }
+  },
+  "permutation_null_reconciliation": {
+    "check_A_plain_features_vs_permuted_labels": {
+      "mean": 0.5116426195894077,
+      "std": 0.04418503140277238
+    },
+    "check_B_full_sample_calibration_from_permuted_labels": {
+      "mean": 0.11962691605611261,
+      "std": 0.01001613149982335
+    }
+  },
+  "train_only_calibration_alpha": 0.1328125,
+  "train_only_calibration_search_history": [
+    {
+      "alpha": 0.5,
+      "cv_auroc_mean": 0.9502558630393996,
+      "cv_auroc_std": 0.0014320786251443996
+    },
+    {
+      "alpha": 0.25,
+      "cv_auroc_mean": 0.8960086303939964,
+      "cv_auroc_std": 0.0023663710029814457
+    },
+    {
+      "alpha": 0.125,
+      "cv_auroc_mean": 0.7900166666666667,
+      "cv_auroc_std": 0.003431054484808442
+    },
+    {
+      "alpha": 0.1875,
+      "cv_auroc_mean": 0.8584676203877424,
+      "cv_auroc_std": 0.004436637636221165
+    },
+    {
+      "alpha": 0.15625,
+      "cv_auroc_mean": 0.8280811601000625,
+      "cv_auroc_std": 0.0029352708509756934
+    },
+    {
+      "alpha": 0.140625,
+      "cv_auroc_mean": 0.8099242651657287,
+      "cv_auroc_std": 0.003689698987152898
+    },
+    {
+      "alpha": 0.1328125,
+      "cv_auroc_mean": 0.8003206066291432,
+      "cv_auroc_std": 0.0036229055843757002
+    }
+  ]
+}

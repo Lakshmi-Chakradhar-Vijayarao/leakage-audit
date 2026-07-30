@@ -4,3 +4,4 @@ __pycache__/
 *.npz
 *.pt
 *.bin
+!results/real_features_mistral7b_halueval.npz

@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you find this work useful in your research, please cite it:"
+title: "Hallucination Pattern Detection in Open-Source LLMs"
+authors:
+  - family-names: "Aiersilan"
+    given-names: "Aizierjiang"
+license: MIT
+preferred-citation:
+  type: article
+  title: "Hallucination Is Linearly Decodable from Mid-Layer Hidden States in Quantized LLMs"
+  authors:
+    - family-names: "Aiersilan"
+      given-names: "Aizierjiang"
+  journal: "arXiv preprint arXiv:2606.02628"
+  year: 2026

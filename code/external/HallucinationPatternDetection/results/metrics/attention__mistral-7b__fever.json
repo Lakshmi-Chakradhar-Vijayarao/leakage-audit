@@ -1,0 +1,30 @@
+{
+  "model": "mistral-7b",
+  "dataset": "fever",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.5213758599124453,
+      "auprc": 0.48913703162532596,
+      "accuracy_at_best_thr": 0.565,
+      "f1_at_best_thr": 0.43137254901960786,
+      "best_threshold": 1.329574465751648
+    },
+    "31": {
+      "auroc": 0.4366228893058161,
+      "auprc": 0.4325564301405922,
+      "accuracy_at_best_thr": 0.49,
+      "f1_at_best_thr": 0.009708737864077669,
+      "best_threshold": 1.7751715183258057
+    },
+    "16": {
+      "auroc": 0.5800625390869294,
+      "auprc": 0.5653780805675992,
+      "accuracy_at_best_thr": 0.5775,
+      "f1_at_best_thr": 0.6626746506986028,
+      "best_threshold": 1.736562728881836
+    }
+  },
+  "best_layer": "16",
+  "best_auroc": 0.5800625390869294
+}

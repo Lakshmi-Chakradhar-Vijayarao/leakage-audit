@@ -1,0 +1,76 @@
+# Hallucination Pattern Detection — conda environment.
+# Cross-platform: works on Windows, macOS, Linux.
+#
+# To create:
+#     conda env create -f environment.yml
+#     conda activate swarm
+#
+# IMPORTANT (NVIDIA users):
+#   The pip block below pins the CUDA 12.8 PyTorch wheels via the
+#   official PyTorch index URL. cu128 wheels support every supported
+#   NVIDIA architecture from Pascal (sm_60) through Blackwell (sm_120),
+#   which is what RTX 50-series cards (5060, 5070, 5080, 5090) need.
+#
+#   If you already created the env with the cu124 wheels and torch
+#   complains about your GPU's compute capability not being supported
+#   (e.g. "sm_120 is not compatible"), run inside the env:
+#
+#       pip uninstall -y torch torchvision torchaudio
+#       pip install --upgrade torch torchvision torchaudio \
+#           --index-url https://download.pytorch.org/whl/cu128
+#
+# Older GPUs (RTX 30-series and below) are also covered by cu128. If
+# you must use cu124 for some reason, just swap the URL below.
+#
+# MacOS / CPU-only users:
+#   Remove the `--extra-index-url` line for the torch trio. The CPU
+#   wheels will be installed and the pipeline will refuse to run the
+#   GPU-dependent stages (correctly).
+name: swarm
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy>=1.26
+  - scipy>=1.11
+  - scikit-learn>=1.4
+  - pandas>=2.1
+  - matplotlib>=3.8
+  - seaborn>=0.13
+  - jupyter
+  - pyyaml
+  - tqdm
+  - pip:
+      # ----- PyTorch with CUDA 12.8 wheels (covers Blackwell sm_120) -----
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+      - torch>=2.7.0
+      - torchvision>=0.22.0
+      - torchaudio>=2.7.0
+      # ----- HuggingFace stack -----
+      - transformers>=4.44.0
+      - accelerate>=0.33.0
+      - bitsandbytes>=0.45.0
+      - datasets>=2.20.0
+      - sentencepiece>=0.2.0
+      - protobuf>=4.25
+      - einops>=0.8.0
+      - safetensors>=0.4.3
+      # ----- dim-reduction + viz -----
+      - umap-learn>=0.5.6
+      - plotly>=5.22
+      # ----- NLP utilities -----
+      - nltk>=3.9
+      - sacrebleu>=2.4
+      - rouge-score>=0.1.2
+      - sentence-transformers>=3.0.1
+      # ----- probes / utilities -----
+      - joblib>=1.4
+      - rich>=13.7
+      - typer>=0.12
+      # ----- optional Ollama integration -----
+      - ollama>=0.3.0
+      # ----- misc -----
+      - tabulate>=0.9
+      - jsonlines>=4.0

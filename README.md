@@ -4,17 +4,20 @@ Code, results, and paper source for "Not All Leaks Are Equal: A Taxonomy and
 Audit of Label-Information Leakage in Hidden-State Hallucination Detection."
 
 ## What's included
-Everything. Unlike the companion repos in this project, no files were excluded
-here — this paper's own results never required large raw caches.
-- `code/` — all audit scripts, including the regex-based leakage linter and the
-  capacity-128/384 real-feature reruns.
+Everything, including the vendored third-party repositories the paper audits.
+- `code/` — all audit scripts, including the regex-based leakage linter, the
+  capacity-128/384 real-feature reruns, and the calibration-leakage
+  diagnostic that found and fixed a split-crossing leakage bug in this
+  paper's own severity-measurement instrument (`code/43`-`45`).
+- `code/external/` — the two externally published, third-party repositories
+  Case Studies 3 and 4 audit (MultiHaluDet, HallucinationPatternDetection),
+  vendored at the pinned commits cited in the paper (§4, §6), plus five
+  additional repositories scanned by the leakage linter (§5). Each retains
+  its own license; see the paper for exact commit hashes and links to the
+  original repositories.
 - `results/` — every result JSON reported in the paper, including the full
-  four-round correction history for Case Study 3 (see the paper's Appendix A).
+  correction history for Case Study 3 (see the paper's Appendix A) and the
+  real Mistral-7B/HaluEval feature cache (`real_features_mistral7b_halueval.npz`)
+  needed to re-run `code/27`, `code/31`, `code/33`, and `code/43`.
 - `draft/` — the paper source.
 - `kaggle_kernels/`, `related_work/`, `requirements.txt`.
-
-## Note on external case studies
-Case Studies 3 and 4 audit two externally published, third-party repositories
-at pinned commits (linked directly in the paper). This repository contains only
-this project's own audit scripts and results, not copies of those third-party
-codebases — see the paper's §4 and §6 for the exact pinned-commit references.

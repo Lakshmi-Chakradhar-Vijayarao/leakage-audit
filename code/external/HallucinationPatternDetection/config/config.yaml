@@ -1,0 +1,134 @@
+# =====================================================================
+# Hallucination Pattern Detection - master configuration
+# =====================================================================
+# All scripts read this file. Keep model lists, seeds, sample counts,
+# and hyperparameters versioned here for reproducibility.
+# =====================================================================
+
+# ---------- reproducibility ----------
+seed: 42
+deterministic: true
+
+# ---------- hardware ----------
+device: cuda            # "cuda" or "cpu"
+dtype: bfloat16         # compute dtype for non-quantized modules
+quantization:
+  enabled: true
+  bits: 4
+  quant_type: nf4       # nf4 | fp4
+  double_quant: true
+  compute_dtype: bfloat16
+
+# ---------- models ----------
+# Hugging Face IDs. All loaded in 4-bit NF4 to fit on 8 GB VRAM.
+# `short_name` is used in filenames / plot labels.
+#
+# All three models below are publicly accessible (no HF gating, no
+# license-acceptance required). The Llama-3.1-8B model is the
+# NousResearch ungated mirror, which is byte-identical to
+# meta-llama/Llama-3.1-8B-Instruct. If you already have access to the
+# gated meta-llama repo and have run `huggingface-cli login`, you can
+# swap the hf_id back to "meta-llama/Llama-3.1-8B-Instruct".
+models:
+  - short_name: llama3.1-8b
+    hf_id: NousResearch/Meta-Llama-3.1-8B-Instruct
+    family: llama
+    chat_template: llama3
+  - short_name: mistral-7b
+    hf_id: mistralai/Mistral-7B-Instruct-v0.3
+    family: mistral
+    chat_template: mistral
+  - short_name: qwen2.5-7b
+    hf_id: Qwen/Qwen2.5-7B-Instruct
+    family: qwen
+    chat_template: qwen
+
+# ---------- datasets ----------
+# `n_samples` caps the working subset per dataset to keep extraction
+# tractable on a single RTX 5060. Set to null for the full split.
+datasets:
+  truthfulqa:
+    hf_id: truthful_qa
+    config: multiple_choice
+    split: validation
+    n_samples: 400
+  halueval_qa:
+    hf_id: pminervini/HaluEval
+    config: qa
+    split: data
+    n_samples: 400
+  fever:
+    hf_id: fever
+    config: v1.0
+    split: paper_test
+    n_samples: 400
+  synthetic:
+    n_samples: 400         # generated locally; no download
+
+# ---------- generation ----------
+generation:
+  max_new_tokens: 64
+  temperature: 0.7
+  top_p: 0.95
+  do_sample: true
+  n_samples_for_consistency: 5
+  greedy_temperature: 0.0
+
+# ---------- hidden state extraction ----------
+extraction:
+  layers: all
+  pool: last_token          # last_token | mean | max
+  capture_attention: true
+  attention_layers: [0, -1, "middle"]
+  batch_size: 4
+  max_input_length: 512
+
+# ---------- probing ----------
+probes:
+  types: [linear, mlp]
+  test_size: 0.2
+  val_size: 0.1
+  mlp_hidden: [256, 64]
+  mlp_dropout: 0.2
+  epochs: 30
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  batch_size: 128
+  n_seeds: 3
+
+# ---------- INSIDE method ----------
+inside:
+  n_samples: 10
+  alpha: 1.0e-3
+  layer: -1
+
+# ---------- self consistency ----------
+self_consistency:
+  n_samples: 5
+  similarity_threshold: 0.7
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+
+# ---------- visualization ----------
+# Figures are written as vector PDF by default, so they rescale with
+# no rasterization loss.
+# To regenerate as PNG instead, set figure_format: png here, or pass
+# `--figure-format png` to scripts/08_generate_visualizations.py.
+viz:
+  dpi: 300
+  figure_format: pdf
+  palette: deep
+  tsne_perplexity: 30
+  umap_n_neighbors: 15
+  umap_min_dist: 0.1
+
+# ---------- paths ----------
+paths:
+  data_raw: data/raw
+  data_processed: data/processed
+  cache_dir: data/cache
+  hidden_states: results/hidden_states
+  probes: results/probes
+  metrics: results/metrics
+  figures: results/figures
+  tables: results/tables
+  logs: results/logs

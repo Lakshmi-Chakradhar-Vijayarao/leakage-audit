@@ -1,0 +1,30 @@
+{
+  "model": "qwen2.5-7b",
+  "dataset": "fever",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.5391869918699187,
+      "auprc": 0.49891943030768393,
+      "accuracy_at_best_thr": 0.5875,
+      "f1_at_best_thr": 0.4694533762057878,
+      "best_threshold": 2.0726583003997803
+    },
+    "27": {
+      "auroc": 0.6089305816135083,
+      "auprc": 0.5403344689451947,
+      "accuracy_at_best_thr": 0.6125,
+      "f1_at_best_thr": 0.49838187702265374,
+      "best_threshold": 1.5045090913772583
+    },
+    "14": {
+      "auroc": 0.5158474046278925,
+      "auprc": 0.5100892066971792,
+      "accuracy_at_best_thr": 0.525,
+      "f1_at_best_thr": 0.5226130653266332,
+      "best_threshold": 1.5131410360336304
+    }
+  },
+  "best_layer": "27",
+  "best_auroc": 0.6089305816135083
+}

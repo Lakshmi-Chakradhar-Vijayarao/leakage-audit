@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Conda / virtualenv
+env/
+.venv/
+venv/
+
+# Project artifacts (do not commit huge tensors / model weights)
+data/cache/
+data/raw/
+results/hidden_states/
+# Run logs contain local machine paths; keep them out of the repo.
+results/logs/
+# results/probes/
+# results/metrics/
+# results/figures/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

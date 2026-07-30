@@ -1,0 +1,30 @@
+{
+  "model": "llama3.1-8b",
+  "dataset": "synthetic",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.52315,
+      "auprc": 0.5175820654604906,
+      "accuracy_at_best_thr": 0.57,
+      "f1_at_best_thr": 0.3008130081300813,
+      "best_threshold": 0.7112689018249512
+    },
+    "31": {
+      "auroc": 0.6393000000000001,
+      "auprc": 0.6094269169591543,
+      "accuracy_at_best_thr": 0.6375,
+      "f1_at_best_thr": 0.6401985111662531,
+      "best_threshold": 0.7622076272964478
+    },
+    "16": {
+      "auroc": 0.622525,
+      "auprc": 0.5965122498045321,
+      "accuracy_at_best_thr": 0.6425,
+      "f1_at_best_thr": 0.6124661246612466,
+      "best_threshold": 0.9042477607727051
+    }
+  },
+  "best_layer": "31",
+  "best_auroc": 0.6393000000000001
+}

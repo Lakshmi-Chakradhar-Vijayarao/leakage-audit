@@ -1,0 +1,30 @@
+{
+  "model": "llama3.1-8b",
+  "dataset": "truthfulqa",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.48664465786314526,
+      "auprc": 0.4786462432872375,
+      "accuracy_at_best_thr": 0.53,
+      "f1_at_best_thr": 0.584070796460177,
+      "best_threshold": 2.0610342025756836
+    },
+    "31": {
+      "auroc": 0.6030662264905962,
+      "auprc": 0.5486325656003246,
+      "accuracy_at_best_thr": 0.5975,
+      "f1_at_best_thr": 0.5706666666666667,
+      "best_threshold": 1.1151790618896484
+    },
+    "16": {
+      "auroc": 0.4844937975190076,
+      "auprc": 0.4856592839646867,
+      "accuracy_at_best_thr": 0.5175,
+      "f1_at_best_thr": 0.14977973568281938,
+      "best_threshold": 1.4980244636535645
+    }
+  },
+  "best_layer": "31",
+  "best_auroc": 0.6030662264905962
+}

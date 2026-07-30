@@ -1,0 +1,30 @@
+{
+  "model": "mistral-7b",
+  "dataset": "halueval_qa",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.9022975574389359,
+      "auprc": 0.8808857978226828,
+      "accuracy_at_best_thr": 0.85,
+      "f1_at_best_thr": 0.8404255319148937,
+      "best_threshold": 2.117255210876465
+    },
+    "31": {
+      "auroc": 0.4190604765119128,
+      "auprc": 0.4289073171208376,
+      "accuracy_at_best_thr": 0.505,
+      "f1_at_best_thr": 0.1951219512195122,
+      "best_threshold": 2.318289279937744
+    },
+    "16": {
+      "auroc": 0.8471961799044976,
+      "auprc": 0.8437118111106691,
+      "accuracy_at_best_thr": 0.7925,
+      "f1_at_best_thr": 0.801909307875895,
+      "best_threshold": 2.68306565284729
+    }
+  },
+  "best_layer": "0",
+  "best_auroc": 0.9022975574389359
+}

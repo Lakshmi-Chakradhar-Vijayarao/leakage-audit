@@ -1,0 +1,30 @@
+{
+  "model": "llama3.1-8b",
+  "dataset": "fever",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.5438148843026891,
+      "auprc": 0.5067423831563957,
+      "accuracy_at_best_thr": 0.5725,
+      "f1_at_best_thr": 0.4083044982698962,
+      "best_threshold": 1.8327624797821045
+    },
+    "31": {
+      "auroc": 0.5877423389618512,
+      "auprc": 0.5406782986862195,
+      "accuracy_at_best_thr": 0.5825,
+      "f1_at_best_thr": 0.5424657534246575,
+      "best_threshold": 1.187930941581726
+    },
+    "16": {
+      "auroc": 0.6862789243277049,
+      "auprc": 0.6064247954318518,
+      "accuracy_at_best_thr": 0.6825,
+      "f1_at_best_thr": 0.6539509536784741,
+      "best_threshold": 1.693359613418579
+    }
+  },
+  "best_layer": "16",
+  "best_auroc": 0.6862789243277049
+}

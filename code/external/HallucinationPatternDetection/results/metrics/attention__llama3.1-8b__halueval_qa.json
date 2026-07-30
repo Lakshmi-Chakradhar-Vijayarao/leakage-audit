@@ -1,0 +1,30 @@
+{
+  "model": "llama3.1-8b",
+  "dataset": "halueval_qa",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.9409235230880771,
+      "auprc": 0.940450177307613,
+      "accuracy_at_best_thr": 0.8625,
+      "f1_at_best_thr": 0.8578811369509044,
+      "best_threshold": 2.814044952392578
+    },
+    "31": {
+      "auroc": 0.6479911997799945,
+      "auprc": 0.6041528749527361,
+      "accuracy_at_best_thr": 0.6325,
+      "f1_at_best_thr": 0.622107969151671,
+      "best_threshold": 1.6011683940887451
+    },
+    "16": {
+      "auroc": 0.9233480837020924,
+      "auprc": 0.9218211654757745,
+      "accuracy_at_best_thr": 0.88,
+      "f1_at_best_thr": 0.8862559241706162,
+      "best_threshold": 2.3044285774230957
+    }
+  },
+  "best_layer": "0",
+  "best_auroc": 0.9409235230880771
+}

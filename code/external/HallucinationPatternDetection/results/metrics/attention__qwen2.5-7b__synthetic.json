@@ -1,0 +1,30 @@
+{
+  "model": "qwen2.5-7b",
+  "dataset": "synthetic",
+  "method": "attention_entropy",
+  "per_layer": {
+    "0": {
+      "auroc": 0.5439750000000001,
+      "auprc": 0.5281937163484869,
+      "accuracy_at_best_thr": 0.5675,
+      "f1_at_best_thr": 0.3663003663003663,
+      "best_threshold": 1.1207482814788818
+    },
+    "27": {
+      "auroc": 0.6828,
+      "auprc": 0.6109599199345147,
+      "accuracy_at_best_thr": 0.6625,
+      "f1_at_best_thr": 0.5360824742268041,
+      "best_threshold": 0.5429815649986267
+    },
+    "14": {
+      "auroc": 0.6314,
+      "auprc": 0.6397461435631839,
+      "accuracy_at_best_thr": 0.6175,
+      "f1_at_best_thr": 0.7017543859649122,
+      "best_threshold": 0.9629939794540405
+    }
+  },
+  "best_layer": "27",
+  "best_auroc": 0.6828
+}
