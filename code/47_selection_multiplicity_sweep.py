@@ -206,14 +206,16 @@ def main():
     out = {"sweep_A_K": {}, "sweep_B_n_val": {}, "sweep_C_operating_point": {}}
 
     print("=== Sweep A: K (number of candidate checkpoints) ===", flush=True)
-    for K in [1, 5, 15, 45, 135]:
-        r = run_sweep_cell(N_SEEDS, CAPACITY, K, DEFAULT_N_SAMPLES, DEFAULT_TARGET_AUROC)
+    SWEEP_A_K_VALUES = [1, 3, 5, 10, 15, 25, 45, 75, 135, 225]
+    SWEEP_A_N_SEEDS = 200
+    for K in SWEEP_A_K_VALUES:
+        r = run_sweep_cell(SWEEP_A_N_SEEDS, CAPACITY, K, DEFAULT_N_SAMPLES, DEFAULT_TARGET_AUROC)
         out["sweep_A_K"][str(K)] = r
         print(f"  K={K}: gap={r['gap_mean']:+.4f} CI={r['gap_bca_ci_95']} p={r['wilcoxon_p']:.4g} "
               f"val_auc_std={r['mean_val_auc_std']:.4f}  elapsed={time.time()-t0:.0f}s", flush=True)
 
     # Fit gap ~ c * sigma_val * sqrt(2 ln K)
-    Ks = np.array([1, 5, 15, 45, 135], dtype=float)
+    Ks = np.array(SWEEP_A_K_VALUES, dtype=float)
     gaps = np.array([out["sweep_A_K"][str(int(k))]["gap_mean"] for k in Ks])
     sigma_val = np.mean([out["sweep_A_K"][str(int(k))]["mean_val_auc_std"] for k in Ks])
     predictor = sigma_val * np.sqrt(2 * np.log(np.maximum(Ks, 1.01)))
