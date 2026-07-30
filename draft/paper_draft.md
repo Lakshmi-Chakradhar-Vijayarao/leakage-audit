@@ -8,7 +8,7 @@ Independent Researcher
 
 Linear and shallow-MLP probes on LLM hidden states are a standard tool for
 hallucination detection, with reported AUROCs routinely exceeding 0.90. We
-identify four distinct mechanisms by which evaluation labels leak into
+identify five distinct mechanisms by which evaluation labels leak into
 these numbers, each requiring a different fix: (1) full-dataset
 fit-then-score feature leakage feeding a nested cross-validation loop
 (+0.19 AUROC inflation, verified in our own prior pipeline, HaRP); (2)
@@ -19,11 +19,15 @@ selection using the same fold later reused as "out-of-fold" features,
 verified directly in a published multilingual hallucination-detection
 pipeline's (MultiHaluDet) released code; (4) test-set-driven
 best-of-many-layers selection with no multiplicity correction, verified in
-a second published paper's code.
+a second published paper's code; (5) test-set-driven decision-threshold
+selection, found in the same MultiHaluDet pipeline audited for Mechanism
+3 -- a distinct choice (which operating point to report at, not which
+feature/checkpoint/layer to use) that turns out to be substantially more
+severe than Mechanism 3 once both are actually measured.
 
 Mechanisms (1)-(2) are demonstrated in our own previously-unpublished
 pipelines; we release the training code and logs for independent
-verification, though none has been done yet. Mechanisms (3)-(4) are
+verification, though none has been done yet. Mechanisms (3)-(5) are
 verified against pinned commits of externally-authored code -- a stronger
 evidentiary tier.
 
@@ -56,10 +60,19 @@ both significant and both directionally consistent with, though not
 numerically comparable to (given the operating-point mismatch), the
 synthetic sweep's severity range. This paper's primary severity estimate
 for Mechanism 3 still rests on the two synthetic sweeps, which share
-neither problem this test encountered.
+neither problem this test encountered. Mechanism 5, quantified on the
+same calibrated synthetic harness, is substantially larger: F1 gaps of
+$+0.0058$ to $+0.0322$ across five operating points (all $p<10^{-17}$,
+$n=200$ seeds), roughly an order of magnitude more severe than Mechanism
+3 at every operating point tested, and far more statistically decisive
+-- direct evidence, from two mechanisms found in the same audited
+pipeline, that severity genuinely differs by mechanism rather than being
+a property of "this pipeline" as a whole.
 
-We provide a checklist covering all four mechanisms and test whether it
-can be automated: a regex-based scanner run over 7 repositories (the 2
+We provide a checklist covering all five mechanisms and test whether it
+can be automated: a regex-based scanner (covering the original four
+patterns; Mechanism 5 was found after this scanner was built and is not
+yet covered by it) run over 7 repositories (the 2
 already-confirmed-leaky case studies, to test false negatives, plus 5
 additional, not-previously-examined repositories, to test false
 positives) produces zero true positives and misses both known bugs --
@@ -102,7 +115,11 @@ distinction the field currently has no vocabulary for.
 4. A code-verified identification of a fourth, distinct mechanism
    (test-set-driven best-of-many-layers selection) in a second externally
    published paper's released pipeline.
-5. A checklist synthesizing all four mechanisms into actionable questions,
+5. A code-verified identification of a fifth, distinct mechanism
+   (test-set-driven decision-threshold selection) in the same pipeline
+   audited for Mechanism 3, quantified on the same calibrated synthetic
+   harness and found to be substantially more severe.
+6. A checklist synthesizing all five mechanisms into actionable questions,
    and an attempt to automate it that is itself informative about how hard
    this class of bug is to detect mechanically.
 
@@ -119,6 +136,40 @@ two-stage feature-extraction-then-classification structure common in this
 literature. To our knowledge, no prior work names this as a distinct
 pattern here.
 
+**Kapoor \& Narayanan's cross-field leakage taxonomy.** The closest prior
+art to this paper's central move is Kapoor \& Narayanan (2023), who
+survey leakage across 17 scientific fields and 294 papers and propose an
+8-type taxonomy: L1.1 (no test set), L1.2 (pre-processing computed on
+train+test combined), L1.3 (feature selection on train+test), L1.4
+(duplicates across the split), L2 (illegitimate/proxy features), L3.1
+(temporal leakage), L3.2 (non-independence between train and test
+samples), and L3.3 (test distribution not matching the distribution of
+scientific interest). Mapping this paper's five mechanisms onto that
+taxonomy: Mechanism 4 (test-set-driven best-layer selection) and
+Mechanism 5 (test-set-driven threshold selection, §5) are both direct
+instances of L1.1 -- the test set is reused for a modeling decision
+(which layer, which threshold) and then for the reported metric,
+leaving no genuinely held-out data at all. Mechanism 1 (full-dataset
+fit-then-score feature leakage) is an instance of L1.2, generalized from
+a preprocessing statistic to an entire fitted feature-extraction model.
+Mechanism 3 (per-fold checkpoint-selection leakage) is a narrower-bandwidth
+variant of the same L1.2 pattern, restricted to which training iterate is
+kept rather than which preprocessing statistic is used. Mechanism 2
+(CV-based layer/hyperparameter selection optimism, i.e.\ Varma \& Simon's
+problem) does not map cleanly onto any single one of Kapoor \& Narayanan's
+eight leaf types -- it is closest in spirit to L1.2/L1.3 but is really a
+distinct, model-selection-specific pattern their taxonomy does not name
+explicitly, even though they cite the general model-selection-optimism
+literature elsewhere. This is itself informative: three of this paper's
+five mechanisms are genuine instances of an existing, general taxonomy
+built for a wider scientific audience, while the CV-based
+architecture/hyperparameter-selection pattern this paper's Case Study 2
+documents is not explicitly one of the eight named types anywhere in
+that taxonomy -- consistent with this paper's claim that hidden-state
+hallucination probing's specific two-stage structure surfaces at least
+one leakage pattern general cross-field taxonomies do not yet enumerate
+by name.
+
 **Calibration and benchmark-construction critiques.** A large, separate
 literature asks whether LLM confidence is calibrated to correctness
 (surveys, hidden-state-based confidence estimation, conformal-prediction
@@ -131,7 +182,7 @@ directly into the input prompt; once controlled for, most baselines fall
 to near chance. This is independent, larger-scale evidence that the
 field's reported AUROCs are frequently protocol or construction
 artifacts, though PARALLAX's mechanism (benchmark construction) is
-distinct from all four mechanisms documented here (each of which concerns
+distinct from all five mechanisms documented here (each of which concerns
 a downstream selection step, not the benchmark's own construction).
 Separately, surface-form correctness metrics (ROUGE-L, exact match) are
 known to diverge from LLM-judge or human factual-correctness judgments --
@@ -601,10 +652,53 @@ task, so the ceiling-effect concern from §4.3 recurs here too. This
 mechanism's severity is small and consistent in direction with
 Mechanism 3's, not unquantified.
 
+### 4.5 Mechanism 5 (found while auditing Case Study 3's own repository): Test-set-driven operating-point selection — MultiHaluDet
+
+A fresh, independent review found a fifth, structurally distinct
+leakage mechanism sitting in the exact file this paper already audits
+for Mechanism 3. `MultiHaluDet/run_pipeline.py::stage_4_ensemble` calls
+`find_best_thresholds(probs, y_test)` (`src/utils/metrics.py`), which
+sweeps 81 candidate F1 thresholds and the ROC-optimal (Youden) threshold
+*directly against the test labels*, then reports every threshold-dependent
+metric -- F1, accuracy, Matthews correlation, Cohen's $\kappa$, balanced
+accuracy, and the ECE computed from those predictions -- at that
+test-label-selected threshold. AUROC is threshold-free and unaffected by
+this specific bug, but every other headline number MultiHaluDet reports
+is test-set-optimized operating-point selection: the choice of *where to
+draw the decision boundary* uses the same labels the boundary is then
+scored against. This is structurally distinct from Mechanisms 1-4, which
+all concern *which feature, checkpoint, or layer* to use -- this one
+concerns *which threshold to report at*, given a fixed, already-chosen
+model.
+
+We quantified this severity using the same isotropic-Gaussian calibration
+this paper's other severity estimates already rely on (binormal identity,
+Bayes-optimal AUROC target), with a simple logistic-regression classifier
+in place of the full SweepMLP-plus-meta-learner architecture (threshold-selection
+leakage does not depend on which classifier produced the probabilities,
+so a simpler classifier keeps this demonstration self-contained;
+`code/46_mechanism5_threshold_selection.py`). Comparing a threshold
+selected on the test labels (`find_best_thresholds`, verbatim ported from
+MultiHaluDet's own code) against a threshold selected on an independent
+validation split never touching the test labels, across five operating
+points spanning this paper's other severity estimates: F1 gaps of
+$+0.0322$ (AUROC target $0.70$) down to $+0.0058$ ($0.985$, MultiHaluDet's
+own reported regime), all significant at $p<10^{-17}$ over $200$ seeds
+(BCa 95\% CIs excluding zero throughout); accuracy gaps of comparable
+magnitude ($+0.0082$ to $+0.0334$). This mechanism's severity is
+**larger** than Mechanism 3's checkpoint-selection leakage
+($+0.0009$ to $+0.0034$ AUROC) at every operating point tested, and its
+statistical significance is far stronger (Mechanism 3's smallest
+$p\approx0.007$; this mechanism's largest $p\approx10^{-17}$) -- direct
+support for this paper's "not all leaks are equal" thesis, since two
+mechanisms found in the *same* audited pipeline differ by roughly an
+order of magnitude in severity, once both are actually measured rather
+than assumed comparable.
+
 ## 5. A Checklist for This Literature
 
-[Full version in `draft/leakage_checklist.md`.] Four questions correspond
-to the four mechanisms above:
+[Full version in `draft/leakage_checklist.md`.] Five questions correspond
+to the five mechanisms above:
 
 1. Is any feature computed by fitting something on the full dataset's
    labels before an outer CV loop treats part of that dataset as held out?
@@ -617,9 +711,14 @@ to the four mechanisms above:
 4. Was a hyperparameter chosen by maximizing a cross-validated metric,
    with that same CV number then reported as performance, with no
    further genuinely held-out check?
+5. Was a decision threshold or other operating point chosen by
+   optimizing a metric on the test labels themselves, with that same
+   test set then used to report the metric at that threshold?
 
 **We tried to automate this checklist; the attempt itself is informative.**
-We built a regex-based scanner for the four patterns and ran it against 7
+We built a regex-based scanner for the original four patterns (Mechanism
+5 was found after this scanner was built and is not yet covered by it)
+and ran it against 7
 repositories total: the two already-audited case studies (MultiHaluDet,
 HallucinationPatternDetection), to test whether it catches known bugs,
 plus 5 additional, not-previously-examined, externally-found
@@ -651,7 +750,7 @@ class, not a random or exhaustive sample of the field (HaRP and GUARDIAN,
 this paper's own pipelines and the source of Case Studies 1-2, were never
 run through the scanner at all -- they sit entirely outside this count).
 The true population-level prevalence of any
-of these four mechanisms remains unknown and is not estimated by this
+of these five mechanisms remains unknown and is not estimated by this
 count. We report the negative automation result because the same
 variable-naming and control-flow subtlety that makes this leakage easy to
 introduce by accident also makes it resist simple pattern-matching, in
@@ -726,7 +825,7 @@ test at this sample size and dimensionality.
 
 ## 7. Conclusion
 
-Four distinct label-information-leakage mechanisms recur across
+Five distinct label-information-leakage mechanisms recur across
 hidden-state hallucination-detection pipelines, including our own, and
 differ substantially in severity. Case Study 1 is catastrophic ($+0.19$
 AUROC) regardless of scale. Case Study 3's checkpoint-selection mechanism
@@ -734,10 +833,18 @@ is a small residual gap, significant at 2 of 4 tested capacities, that
 strengthens rather than weakens under a stricter control isolating fold
 reuse from adaptive selection in general (Appendix A documents why a
 defensible estimate here requires several controls to hold
-simultaneously). That difficulty -- needing calibration, budget-matching,
-seed-matching, and an alternative-confound test all to hold at once
-before trusting the number -- is the strongest argument in this paper for
-the checklist we provide, more so than any single mechanism in isolation.
+simultaneously) -- and a K/selection-set-size sweep (Appendix A) confirms
+this severity scales with the number of candidates and the selection-set
+size, as extreme-value theory predicts, rather than with model capacity
+as the original sweep varied. Mechanism 5, the test-set threshold
+selection found in this same pipeline, is roughly an order of magnitude
+more severe and far more statistically decisive -- the clearest single
+piece of evidence in this paper that severity is a property of the
+mechanism, not of "this pipeline" as a whole. That difficulty --
+needing calibration, budget-matching, seed-matching, and an
+alternative-confound test all to hold at once before trusting a single
+number -- is the strongest argument in this paper for the checklist we
+provide, more so than any single mechanism in isolation.
 
 The checklist lets researchers and reviewers in this fast-growing
 subfield ask precise, mechanism-specific questions of a pipeline's
@@ -748,7 +855,7 @@ The automated-scanner exercise (§5) covers seven repositories in total:
 two already-confirmed positive case studies (§4.3-4.4, MultiHaluDet and
 HallucinationPatternDetection) and five additional, not-previously-examined
 repositories, which surfaced no new confirmed positives -- too small a
-sample to support any claim about how common these four mechanisms are
+sample to support any claim about how common these five mechanisms are
 across the wider literature, and we do not make one. (Case Studies 1-2,
 HaRP and GUARDIAN, were manually audited and are not part of this count
 at all.) A pre-registered audit applying
@@ -1091,6 +1198,73 @@ sanity-check anomaly should be run down before being narrated past, and
 in this instance running it down further -- via the architecture-mismatch
 check above -- also resolved the anomaly itself.
 
+**A ninth check: does the severity scale the way extreme-value theory
+predicts, across the number of candidates, the size of the selection
+set, and the operating point?** The reasoning behind Mechanism 3's
+severity is a winner's-curse argument: selecting the best of $K$ noisy
+validation estimates inflates the reported score by an amount that
+grows with $K$ and shrinks with the validation set size $n_{\text{val}}$
+(extreme-value theory predicts $\text{gap}\approx
+c\cdot\sigma_{\text{val}}\sqrt{2\ln K}$). The original capacity sweep
+varied only model capacity, holding $K$, $n_{\text{val}}$, and the
+operating point fixed, so it could not directly test this. We built
+`code/47_selection_multiplicity_sweep.py` to test it directly, first
+decoupling the single conflated `seed` variable this paper's other
+sweeps use into four independent seeds
+(`data_seed`, `split_seed`, `fold_seed_base`, `init_seed_base`), so that
+varying one factor cannot accidentally covary the data draw, the split,
+or the initialization with it.
+
+*Sweep A (number of candidates $K$, capacity fixed at 128, 384 seeds
+per cell).* $K\in\{1,5,15,45,135\}$ synthetic checkpoints are trained
+per seed and the best-on-validation one is selected and scored on test,
+exactly as CLEAN\_MATCHED's selection procedure does at $K=1$. Gap over
+a non-adaptive control grows with $K$: $+0.0000$ ($K{=}1$), $+0.0001$
+($K{=}5$, $p=0.144$), $+0.0002$ ($K{=}15$, $p=0.188$), $+0.0006$
+($K{=}45$, $p=0.0343$), $+0.0007$ ($K{=}135$, $p=0.0101$). A least-squares
+fit of $\text{gap}=c\cdot\sigma_{\text{val}}\sqrt{2\ln K}$ against the
+measured $\sigma_{\text{val}}=0.0379$ gives $c=0.00465$, $R^2=0.536$ --
+the predicted functional form captures roughly half the variance in a
+five-point sweep, consistent with (not a precise confirmation of) the
+extreme-value scaling prediction.
+
+*Sweep B (validation set size $n_{\text{val}}$, via
+$N_{\text{SAMPLES}}\in\{350,700,2800\}$, $K=15$ fixed).* The gap shrinks
+as $n_{\text{val}}$ grows, as the $1/\sqrt{n_{\text{val}}}$ term in the
+same prediction requires: $+0.0007$ ($N{=}350$, $p=0.250$), $+0.0006$
+($N{=}700$, $p=0.0343$), $+0.0000$ ($N{=}2800$, $p=0.627$) --
+qualitatively the predicted direction, though the sweep does not span
+enough points to fit the $1/\sqrt{n_{\text{val}}}$ exponent precisely.
+
+*Sweep C (operating point, via
+$\text{TARGET\_AUROC}\in\{0.70,0.80,0.90,0.95,0.985\}$, $K=15$,
+$N_{\text{SAMPLES}}=700$).* Gap generally shrinks toward the ceiling, as
+Appendix A's earlier ceiling-effect entries would predict: $+0.0011$
+($\text{AUROC}{=}0.70$, $p=0.158$), $+0.0006$ ($0.80$, $p=0.0343$),
+$+0.0001$ ($0.90$, $p=0.195$) -- but the two operating points closest to
+MultiHaluDet's own real regime break the monotone pattern and remain
+statistically decisive despite being numerically the smallest: $+0.0002$
+($0.95$, $p=0.00261$) and $+0.0001$ ($0.985$, $p=0.00161$). At high
+capacity the estimator's per-seed variance drops enough that even a
+sub-percent-point gap clears significance at $n=200$ seeds --
+MultiHaluDet's own reported operating point ($\approx0.9855$) sits
+almost exactly at the sweep's most extreme, most significant cell, so
+this is not a merely academic corner of the sweep.
+
+**What this sweep adds, and what it does not.** It confirms the
+qualitative direction of all three predicted dependencies (more
+candidates, less validation data, and operating point all move severity
+the way winner's-curse theory says they should) using seeds decoupled
+enough that no single random draw can produce all three patterns by
+coincidence. It does not, on five- and three-point grids, precisely fit
+the theory's exponents ($R^2=0.536$ for the $\sqrt{2\ln K}$ term is
+suggestive, not confirmatory), and Sweep C's non-monotonicity near the
+real operating point means "severity shrinks toward the ceiling" is a
+general tendency here, not a guarantee -- exactly the kind of small,
+statistically real, operating-point-specific effect this paper's
+Mechanism 3 severity estimate has argued for throughout. Full per-cell
+results: `results/selection_multiplicity_sweep.json`.
+
 ## References
 
 Full citations below, compiled from exactly the bibliographic detail
@@ -1105,6 +1279,9 @@ Kaufman, S., Rosset, S., & Perlich, C. (2012). Leakage in Data Mining:
 Formulation, Detection, and Avoidance. *Proceedings of the 18th ACM
 SIGKDD International Conference on Knowledge Discovery and Data Mining
 (KDD 2012)*.
+
+Kapoor, S., & Narayanan, A. (2023). Leakage and the Reproducibility
+Crisis in ML-based Science. *Patterns*, 4(9). arXiv 2207.07048.
 
 Varma, S., & Simon, R. (2006). Bias in Error Estimation When Using
 Cross-Validation for Model Selection. *BMC Bioinformatics*, 7(1), 91.
