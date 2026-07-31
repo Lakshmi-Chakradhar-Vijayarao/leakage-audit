@@ -10,7 +10,7 @@ Severity Tracks Candidate Count and Operating Point Rather Than Mechanism."
 |---|---|
 | 3 (MultiHaluDet) | Yes — pinned third-party commit vendored, all scripts and result JSONs included |
 | 4 (quantized-LLM paper) | Yes — pinned commit vendored; `code/45` recomputes the severity estimate from shipped per-layer result files |
-| 2 (GUARDIAN) | Yes, from a derived artifact — the original 171 MB hidden-state cache is too large to ship, so `code/48` emits `results/case_study_2_probe_scores.npz` (4.0 MB: per-layer, per-sample CV fold assignments and probe scores, for all 50 randomized reps) and `code/51` recomputes and asserts every reported number from it |
+| 2 (GUARDIAN) | Yes, from a derived artifact — the original 171 MB hidden-state cache is too large to ship, so `code/48` emits `results/case_study_2_probe_scores.npz` (~1 MB: per-layer, per-sample CV fold assignments and probe scores) and `code/51` recomputes and asserts every reported number from it |
 | 1 (HaRP) | **No.** No script, log, or data file supporting its `+0.19` figure is included. The paper states this explicitly, excludes the number from its abstract severity range, and excludes it from every cross-mechanism comparison. |
 
 ## What's included
@@ -20,7 +20,7 @@ Severity Tracks Candidate Count and Operating Point Rather Than Mechanism."
   `worked_examples.md` (Case Studies 1-2, this paper's own pipelines),
   `case_study_multihaludet.md` and `case_study_quantized_llm_paper.md`
   (Case Studies 3-4, full code excerpts from the external targets), and
-  `leakage_checklist.md` (the standalone five-question checklist, §5).
+  `leakage_checklist.md` (the standalone five-question checklist, §6).
 - `code/` — every audit script, numbered roughly in the chronological order
   they were written. **The numbering has gaps** (e.g. `02`→`19`, `33`→`43`):
   earlier-numbered scripts were superseded by later, corrected versions
@@ -41,23 +41,24 @@ Severity Tracks Candidate Count and Operating Point Rather Than Mechanism."
   law that shows the extreme-value functional form does *not* fit once
   each cell's own measured sigma is used (`50`), a replay script that
   re-derives every Case Study 2 number from the small shipped derived
-  artifact with no access to the 171 MB raw cache (`51`), the
+  artifact with no access to the 171 MB raw cache (`51`), and the
   LaTeX-to-markdown sync script that makes `draft/paper_draft.md` a
   mechanical function of `draft/latex/main.tex` so the two cannot drift
-  (`52`), a number-verification script that traces every headline number in
-  the paper back to the result JSON that produces it and fails on any
-  mismatch or on any retracted string reappearing (`53`, 83 checks), the
-  aggregator for the fidelity extension's 2x2 ablation (`54`), a control
-  testing whether the pipeline's own cross-model feature averaging
-  attenuates the measured severity (`55` — it does, by 2.5-4.7x), and a
-  fixed-dimension eigenspectrum sweep separating covariance shape from
-  dimensionality in the isotropic-vs-anisotropic comparison (`56`).
+  (`52`), a number-verification harness that traces every headline figure in
+  the abstract, §5 and the conclusion back to the result JSON that produces
+  it and fails loudly on any mismatch (`53`), the factorial 2x2 ablation
+  separating the fidelity extension's two most recent corrections (`54`), a
+  control testing whether cross-model feature averaging is what makes the
+  measured severity small (`55`), a fixed-dimension eigenspectrum sweep
+  separating covariance shape from dimensionality (`56`), and a factorial
+  K x operating-point grid fitting a single *empirical* joint severity
+  surface — explicitly not a bound — across both axes at once (`57`).
 - `code/external/` — the seven third-party repositories this paper audits
   or scans: `MultiHaluDet` and `HallucinationPatternDetection` (Case
   Studies 3-4, vendored at the pinned commits cited in the paper), plus
   `DetectLLMHallucination`, `hallucination_probes`, `halluscope`,
   `haloscope`, and `semantic-entropy-probes` (scanned by the leakage
-  linter, §5). Each retains its own license; see the paper for exact
+  linter, §6). Each retains its own license; see the paper for exact
   commit hashes and links to the original repositories.
 - `results/` — every result JSON reported in the paper, including the full
   correction history for Case Study 3 (paper's Appendix A), the Mechanism 5

@@ -91,8 +91,9 @@ gap in 12/20 seeds.
 > intended 0.80) and whose LEAKY condition trained on ~15% more data than
 > CLEAN. Both defects are documented in the correction history below. The
 > paper's current, budget- and seed-matched primary estimate for this
-> mechanism is **+0.0009 to +0.0034 AUROC** across capacities 16/48/128/384
-> on the isotropic synthetic sweep (significant at 2 of 4 capacities), with
+> mechanism is **+0.0011 to +0.0036 AUROC** across capacities 16/48/128/384
+> on the isotropic synthetic sweep (individually significant at 2 of 4
+> capacities, 1 of 4 after Holm-Bonferroni), with
 > the real-feature and fidelity-extension numbers reported in `main.tex`
 > §4.3 and Appendix A. Read those, not the table above.
 
@@ -118,22 +119,32 @@ full capacity sweep at n=100 seeds throughout gives the final result:
 
 | Hidden | LEAKY | CLEAN | CLEAN_MATCHED | PLACEBO | Gap LEAKY−CLEAN (p) [confounded, retracted] | Gap LEAKY−CLEAN_MATCHED (p) |
 |---|---|---|---|---|---|---|
-| 16  | 0.7611 | 0.7567 | 0.7602 | 0.7272 | +0.0044 (0.0019) | +0.0009 (0.309) |
-| 48  | 0.7647 | 0.7617 | 0.7631 | 0.7375 | +0.0030 (0.0058) | **+0.0017 (0.015)** |
-| 128 | 0.7604 | 0.7555 | 0.7571 | 0.7309 | +0.0049 (0.0008) | **+0.0034 (0.008)** |
-| **384 (matches MultiHaluDet's config)** | 0.7533 | 0.7474 | 0.7506 | 0.7350 | +0.0059 (0.0012) | +0.0027 (0.077) |
+| 16  | 0.7604 | 0.7541 | 0.7585 | 0.7338 | +0.0062 (0.0000) | **+0.0019 (0.019)** |
+| 48  | 0.7633 | 0.7595 | 0.7621 | 0.7442 | +0.0038 (0.0003) | +0.0011 (0.171) |
+| 128 | 0.7586 | 0.7531 | 0.7549 | 0.7371 | +0.0055 (0.0015) | **+0.0036 (0.001)** |
+| **384 (matches MultiHaluDet's config)** | 0.7478 | 0.7446 | 0.7454 | 0.7338 | +0.0031 (0.0496) | +0.0024 (0.171) |
+
+**Seed-decoupling rerun (closure review).** The table above is the rerun after
+`code/02d` was retrofitted with `code/47`'s decoupled
+`data_seed`/`split_seed`/`fold_seed_base`/`init_seed_base` streams; previously a
+single `seed` drove the data draw, the outer split and the fold assignment at
+once. Magnitudes are stable (+0.0009–+0.0034 before, +0.0011–+0.0036 after);
+which capacities clear significance is not — 48 goes from p=0.015 to p=0.171 and
+16 goes from p=0.309 to p=0.019. The superseded run ships as
+`results/corrected_capacity_placebo_sweep_coupled_seed_legacy.json`.
 
 **The budget-confounded gap (LEAKY-CLEAN) is significant at all four
 capacities but shows no clear capacity trend** (it dips at 48, then rises
 -- not a monotonic growth curve); we retain this column only for
 transparency and do not treat it as evidence of anything beyond "a
 budget-confounded gap exists." **The properly seed-matched,
-budget-matched gap (LEAKY-CLEAN_MATCHED) is significant, surviving
-Holm-Bonferroni correction across the four capacities, at 2 of 4
-capacities (48 and 128 units), not significant at 16 units (gap
-$\approx$0, $p$=0.309, below this capacity's own minimum detectable
-effect), and underpowered rather than null at 384 units ($p$=0.077, at
-the edge of that capacity's minimum detectable effect).**
+budget-matched gap (LEAKY-CLEAN_MATCHED) is individually significant at 2 of 4
+capacities (16 and 128 units, $p$=0.019 and $p$=0.0012), of which only
+capacity 128 survives Holm-Bonferroni across the four-capacity family
+($0.0012\times4=0.0049$; capacity 16 gives $0.019\times3=0.058$ and stops the
+procedure). The two non-significant cells are underpowered rather than null:
+exact per-seed MDEs are 0.0023 at capacity 48 against an observed +0.0011, and
+0.0039 at capacity 384 against an observed +0.0024.**
 Decomposing the confounded gap: budget mismatch explains 80% of the
 apparent effect at 16 units but only 31-54% at the other three
 capacities, leaving a majority-share residual that reaches significance
@@ -224,7 +235,7 @@ literature is not one uniform failure mode, and quantifying any one
 mechanism's severity via synthetic reconstruction is itself failure-prone
 in ways this paper's own four-round correction history now documents
 directly. **Stated explicitly (round-5 review): the +0.19 (Case Study 1)
-and +0.0009-to-+0.0034 (Case Study 3) numbers below are not measurements
+and +0.0011-to-+0.0036 (Case Study 3) numbers below are not measurements
 on the same scale and must not be read as "mechanism 3 is roughly
 20-200x milder than mechanism 1." The first is a real-hidden-state
 effect size; the second is a linear-Gaussian synthetic-proxy effect
@@ -269,9 +280,10 @@ For the record, the original (now-superseded) spectrum framing read --
    (Case Study 3, MultiHaluDet): checkpoint selection using the same fold
    whose features get reused downstream -- a genuine, code-verified leak
    channel whose magnitude, in our synthetic reconstruction, is small
-   ($+0.0009$ to $+0.0034$ AUROC) and reaches significance at only 2 of 4
-   capacities tested, once training-budget and random-seed confounds are
-   both properly controlled for.
+   ($+0.0011$ to $+0.0036$ AUROC) and reaches individual significance at only
+   2 of 4 capacities tested (1 of 4 after Holm-Bonferroni), once
+   training-budget, random-seed and seed-decoupling confounds are all
+   properly controlled for.
 3. **A related but distinct bias family entirely** (test-set-driven
    best-layer selection with no correction for having tried 33
    hypotheses -- see the quantized-LLM paper secondary case study) --

@@ -90,5 +90,85 @@
       ],
       "acc_gap_wilcoxon_p": 4.821653558655284e-32
     }
+  },
+  "sample_size_sensitivity": {
+    "target_auroc": 0.985,
+    "n_seeds": 200,
+    "by_n_samples": {
+      "700": {
+        "n_samples": 700,
+        "n_test": 140,
+        "n_val": 112,
+        "f1_gap_mean": 0.02118660067167907,
+        "f1_gap_bca_ci_95": [
+          0.019097018562860016,
+          0.023608089461819293
+        ],
+        "f1_gap_wilcoxon_p": 4.137775343180976e-32,
+        "acc_gap_mean": 0.021500000000000005,
+        "acc_gap_bca_ci_95": [
+          0.01932142857142858,
+          0.02417857142857143
+        ],
+        "leaky_f1_mean": 0.920526755428414,
+        "honest_f1_mean": 0.8993401547567348
+      },
+      "1750": {
+        "n_samples": 1750,
+        "n_test": 350,
+        "n_val": 280,
+        "f1_gap_mean": 0.011085958073806109,
+        "f1_gap_bca_ci_95": [
+          0.009983623943550781,
+          0.012382321266140523
+        ],
+        "f1_gap_wilcoxon_p": 9.482403857733062e-34,
+        "acc_gap_mean": 0.01198571428571428,
+        "acc_gap_bca_ci_95": [
+          0.010771428571428569,
+          0.013414285714285707
+        ],
+        "leaky_f1_mean": 0.9338038116771074,
+        "honest_f1_mean": 0.9227178536033014
+      },
+      "3500": {
+        "n_samples": 3500,
+        "n_test": 700,
+        "n_val": 560,
+        "f1_gap_mean": 0.006650753064888399,
+        "f1_gap_bca_ci_95": [
+          0.005971753412805858,
+          0.007427573971998458
+        ],
+        "f1_gap_wilcoxon_p": 2.0176145602854456e-33,
+        "acc_gap_mean": 0.006592857142857145,
+        "acc_gap_bca_ci_95": [
+          0.005957142857142859,
+          0.007292857142857146
+        ],
+        "leaky_f1_mean": 0.9359979391520835,
+        "honest_f1_mean": 0.9293471860871952
+      },
+      "10000": {
+        "n_samples": 10000,
+        "n_test": 2000,
+        "n_val": 1600,
+        "f1_gap_mean": 0.0034090780585667563,
+        "f1_gap_bca_ci_95": [
+          0.0030327923791249717,
+          0.0038507042867768587
+        ],
+        "f1_gap_wilcoxon_p": 9.13620425088645e-33,
+        "acc_gap_mean": 0.0036399999999999887,
+        "acc_gap_bca_ci_95": [
+          0.003280407012160137,
+          0.004044999999999988
+        ],
+        "leaky_f1_mean": 0.937831750213887,
+        "honest_f1_mean": 0.9344226721553204
+      }
+    },
+    "shrinkage_factor_700_to_10000": 6.214759623481997,
+    "note": "The main cells fix N_SAMPLES=700, hence n_test=140 and n_val=112, and this was previously unstated. The gap is a function of how noisy the threshold-selection signal is, so it shrinks as those grow. MultiHaluDet's own n_test is not recoverable from their released config (test_size=0.20 is pinned; src/data/loader.py defaults max_samples=10000), so describing the 0.985 cell as their reported regime matches OPERATING POINT only, not sample size."
   }
 }

@@ -111,6 +111,23 @@ remainder are enumerated explicitly here and in the paper (Appendix A, issue
       never referenced anywhere in the audited repository's Python sources,
       so there is nothing to port.
 
+FIFTH CORRECTION (a further independent adversarial review): this script
+discarded the `best_epoch` its own training loop already computed
+(`model, _ = train_with_scheduler_and_earlystop(...)` at all three call
+sites), so the TRAINING-DEPTH confound could not be checked. LEAKY and the
+control do not merely differ in which validation signal they react to: the
+epoch whose checkpoint each one keeps is itself chosen by that signal, so
+the two arms can sit at systematically different training depths, which is
+a confound layered on top of the already-disclosed ~15% data-budget
+confound (tr2_idx vs tr_idx). An earlier, pre-fidelity-port version of this
+harness was noted to keep LEAKY's checkpoint at a deeper average epoch than
+CLEAN_MATCHED's, and that measurement went missing when the harness was
+re-ported. `best_epoch` is now captured for all three conditions across
+every seed and fold and written to the result JSON
+(`best_epoch_stats`), so the magnitude of this confound under the
+fully-ported configuration is a reported number rather than an untracked
+one; §4.3 discloses it alongside the data-budget confound.
+
   This means "fidelity extension" here refers specifically to fidelity of
   the *validation-signal coupling and optimizer schedule*, not of the loss
   function or the model class. The quantity being measured is the
@@ -334,15 +351,18 @@ def run_one_seed(X, y, hidden, seed):
     oof = {k: np.zeros((n_tr, feat_dim_out)) for k in conditions}
     test_feat = {k: np.zeros((len(y_test), feat_dim_out)) for k in conditions}
 
+    best_epochs = {k: [] for k in conditions}
+
     for fold, (tr_idx, val_idx) in enumerate(skf.split(X_train, y_train)):
         fold_seed = seed * 100 + fold
 
         # LEAKY: scheduler+early-stop react to the SAME val fold later scored as OOF.
-        model_leaky, _ = train_with_scheduler_and_earlystop(
+        model_leaky, be_leaky = train_with_scheduler_and_earlystop(
             X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_train[val_idx], hidden, MAX_EPOCHS, fold_seed,
         )
         oof["leaky_plus_lrsched"][val_idx] = extract_features(model_leaky, X_train[val_idx])
         test_feat["leaky_plus_lrsched"] += extract_features(model_leaky, X_test)
+        best_epochs["leaky_plus_lrsched"].append(be_leaky)
 
         # CLEAN_MATCHED: scheduler+early-stop react to a genuine, disjoint
         # ES-holdout carved from tr_idx (never touches val_idx). FIXED
@@ -356,18 +376,20 @@ def run_one_seed(X, y, hidden, seed):
         tr2_idx, es_idx = train_test_split(
             tr_idx, test_size=ES_HOLD_FRACTION, stratify=y_train[tr_idx], random_state=fold_seed,
         )
-        model_clean_matched, _ = train_with_scheduler_and_earlystop(
+        model_clean_matched, be_cm = train_with_scheduler_and_earlystop(
             X_train[tr2_idx], y_train[tr2_idx], X_train[es_idx], y_train[es_idx], hidden, MAX_EPOCHS, fold_seed,
         )
         oof["clean_matched_plus_lrsched"][val_idx] = extract_features(model_clean_matched, X_train[val_idx])
         test_feat["clean_matched_plus_lrsched"] += extract_features(model_clean_matched, X_test)
+        best_epochs["clean_matched_plus_lrsched"].append(be_cm)
 
         y_val_permuted = rng.permutation(y_train[val_idx])
-        model_placebo, _ = train_with_scheduler_and_earlystop(
+        model_placebo, be_plc = train_with_scheduler_and_earlystop(
             X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_val_permuted, hidden, MAX_EPOCHS, fold_seed,
         )
         oof["placebo_plus_lrsched"][val_idx] = extract_features(model_placebo, X_train[val_idx])
         test_feat["placebo_plus_lrsched"] += extract_features(model_placebo, X_test)
+        best_epochs["placebo_plus_lrsched"].append(be_plc)
 
     aucs = {}
     for k in oof:
@@ -379,7 +401,9 @@ def run_one_seed(X, y, hidden, seed):
         test_k = deep_scaler.transform(test_feat[k])
         clf = LogisticRegression(max_iter=2000).fit(oof_k, y_train)
         aucs[k] = roc_auc_score(y_test, clf.predict_proba(test_k)[:, 1])
-    return aucs
+    # Training-depth confound tracking (5th correction): the epoch each arm's
+    # kept checkpoint sits at, averaged over this seed's folds.
+    return aucs, {k: float(np.mean(v)) for k, v in best_epochs.items()}
 
 
 def bca_ci(a, b, n_resamples=10000):
@@ -417,10 +441,12 @@ def main():
     print(f"Loaded real features: X={X.shape}, y={y.shape}, hall_rate={y.mean():.3f}")
 
     results = {k: [] for k in ["leaky_plus_lrsched", "clean_matched_plus_lrsched", "placebo_plus_lrsched"]}
+    best_epoch_by_seed = {k: [] for k in results}
     for seed in range(N_SEEDS):
-        aucs = run_one_seed(X, y, HIDDEN, seed)
+        aucs, be = run_one_seed(X, y, HIDDEN, seed)
         for k in results:
             results[k].append(aucs[k])
+            best_epoch_by_seed[k].append(be[k])
         if (seed + 1) % 10 == 0:
             print(f"  seed {seed + 1}/{N_SEEDS} done", flush=True)
 
@@ -430,6 +456,31 @@ def main():
     _, p_cmp_placebo = wilcoxon(results["clean_matched_plus_lrsched"], results["placebo_plus_lrsched"])
     ci_lp_cmp = bca_ci(results["leaky_plus_lrsched"], results["clean_matched_plus_lrsched"])
     ci_cmp_placebo = bca_ci(results["clean_matched_plus_lrsched"], results["placebo_plus_lrsched"])
+
+    # --- Training-depth confound (5th correction) -------------------------------
+    _be = {k: np.asarray(v) for k, v in best_epoch_by_seed.items()}
+    _be_diff = _be["leaky_plus_lrsched"] - _be["clean_matched_plus_lrsched"]
+    _, _be_p = wilcoxon(_be["leaky_plus_lrsched"], _be["clean_matched_plus_lrsched"])
+    best_epoch_stats = {
+        "mean_best_epoch": {k: float(v.mean()) for k, v in _be.items()},
+        "sd_best_epoch": {k: float(v.std()) for k, v in _be.items()},
+        "leaky_minus_clean_matched_epochs": float(_be_diff.mean()),
+        "leaky_over_clean_matched_ratio": float(
+            _be["leaky_plus_lrsched"].mean() / _be["clean_matched_plus_lrsched"].mean()),
+        "relative_difference_pct": float(
+            100 * (_be["leaky_plus_lrsched"].mean() - _be["clean_matched_plus_lrsched"].mean())
+            / _be["clean_matched_plus_lrsched"].mean()),
+        "wilcoxon_p": float(_be_p),
+        "per_seed_mean_best_epoch": {k: v.tolist() for k, v in _be.items()},
+        "note": (
+            "Training-depth confound, tracked because it was previously untracked. Each "
+            "arm's kept checkpoint sits at whatever epoch its OWN validation signal "
+            "maximized, so LEAKY and CLEAN_MATCHED_PLUS_LRSCHED can differ in training "
+            "depth as well as in which signal they react to. Values are the mean over "
+            "N_INNER_FOLDS folds per seed, then over seeds. This sits on top of the "
+            "separately-disclosed ~15% data-budget confound (the control trains on "
+            "tr2_idx, ~85% of tr_idx)."),
+    }
 
     out = {
         "n_seeds": N_SEEDS, "hidden": HIDDEN, "alpha_train_only": ALPHA_TRAIN_ONLY,
@@ -451,12 +502,18 @@ def main():
                 results["clean_matched_plus_lrsched"], results["placebo_plus_lrsched"]),
             **tie_diagnostics(results["clean_matched_plus_lrsched"], results["placebo_plus_lrsched"]),
         },
+        "best_epoch_stats": best_epoch_stats,
         "raw_per_seed": results,
     }
     with open(OUT_PATH, "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nLEAKY_PLUS_LRSCHED vs CLEAN_MATCHED_PLUS_LRSCHED: gap={gap_lp_cmp.mean():+.4f} "
           f"CI={ci_lp_cmp} p={p_lp_cmp:.4g}")
+    print("Training-depth confound (mean kept-checkpoint epoch): "
+          + ", ".join(f"{k}={v:.2f}" for k, v in best_epoch_stats["mean_best_epoch"].items())
+          + f"  -> LEAKY-CLEAN={best_epoch_stats['leaky_minus_clean_matched_epochs']:+.2f} "
+            f"({best_epoch_stats['relative_difference_pct']:+.1f}%), "
+            f"p={best_epoch_stats['wilcoxon_p']:.3g}")
     print(f"CLEAN_MATCHED_PLUS_LRSCHED vs PLACEBO_PLUS_LRSCHED: gap={gap_cmp_placebo.mean():+.4f} "
           f"CI={ci_cmp_placebo} p={p_cmp_placebo:.4g}")
     print(f"Saved: {OUT_PATH}")

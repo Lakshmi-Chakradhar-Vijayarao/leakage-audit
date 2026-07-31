@@ -32,8 +32,10 @@ out the SAME trained fold-models without the averaging step, which is what
 this script does.
 
 FOUR READOUTS, IDENTICAL MODELS. For every seed and capacity, the fold loop
-is bit-identical to code/02d's (same seeds, same splits, same training). Only
-the readout differs:
+is bit-identical to code/02d's (same seeds, same splits, same training),
+INCLUDING code/02d's decoupled data/split/fold/init seed streams -- this
+script imports `seeds_for` from code/02d rather than reimplementing it, so
+the two cannot drift apart again. Only the readout differs:
 
   (A) averaged      -- the shipped pipeline: mean over the K fold-models'
                        test features, then the meta-learner. This reproduces
@@ -113,6 +115,7 @@ make_synthetic_data = _M.make_synthetic_data
 train_to_best_checkpoint = _M.train_to_best_checkpoint
 train_fixed_epochs = _M.train_fixed_epochs
 extract_features = _M.extract_features
+seeds_for = _M.seeds_for
 N_INNER_FOLDS = _M.N_INNER_FOLDS
 TEST_SIZE = _M.TEST_SIZE
 EPOCHS = _M.EPOCHS
@@ -127,27 +130,28 @@ RNG_GLOBAL = np.random.default_rng(2026)
 
 
 def run_one_seed(seed, hidden):
-    """Fold loop identical to code/02d's run_one_seed (same seeds, same splits,
-    same training), but the per-fold test features are kept separately so the
-    averaged and un-averaged readouts can both be computed from the SAME
-    trained models."""
-    X, y = make_synthetic_data(seed)
+    """Fold loop identical to code/02d's run_one_seed (same decoupled seed
+    streams, same splits, same training), but the per-fold test features are
+    kept separately so the averaged and un-averaged readouts can both be
+    computed from the SAME trained models."""
+    data_seed, split_seed, fold_seed_base, init_seed_base = seeds_for(seed)
+    X, y = make_synthetic_data(data_seed)
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=TEST_SIZE, stratify=y, random_state=seed
+        X, y, test_size=TEST_SIZE, stratify=y, random_state=split_seed
     )
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    rng = np.random.default_rng(seed + 10000)
-    skf = StratifiedKFold(n_splits=N_INNER_FOLDS, shuffle=True, random_state=seed)
+    rng = np.random.default_rng(fold_seed_base + 10000)
+    skf = StratifiedKFold(n_splits=N_INNER_FOLDS, shuffle=True, random_state=fold_seed_base)
     feat_dim_out = hidden // 2
     n_tr = len(y_train)
     oof = {k: np.zeros((n_tr, feat_dim_out)) for k in CONDITIONS}
     per_fold_test = {k: [] for k in CONDITIONS}
 
     for fold, (tr_idx, val_idx) in enumerate(skf.split(X_train, y_train)):
-        fold_seed = seed * 100 + fold
+        fold_seed = init_seed_base * 100 + fold
 
         m_leaky, _ = train_to_best_checkpoint(
             X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_train[val_idx],
@@ -198,7 +202,7 @@ def run_one_seed(seed, hidden):
         #     see the module docstring.
         p = cross_val_predict(
             LogisticRegression(max_iter=2000), oof[k], y_train,
-            cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
+            cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=fold_seed_base),
             method="predict_proba")[:, 1]
         out["oof_crossfold_cv"][k] = roc_auc_score(y_train, p)
     return out

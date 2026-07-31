@@ -109,3 +109,42 @@ the first time — attaches a CI and a significance test to this section.
 Half these cells are ceiling-saturated, which is itself the paper's
 broader point: severity here is governed by where on the difficulty curve
 the pipeline operates, not by which leakage mechanism is present.
+
+## Two further sites in this same repository, found by an independent blind re-read
+
+Added during a closure review. A second rater, given the vendored source
+but not this paper, its checklist, or the location of any known bug, was
+asked to read this repository for leakage sites. It re-derived the
+`saplma.py` bug above independently, and surfaced two sites this paper had
+not previously reported. Both were verified directly against the pinned
+commit `ea0b9678`.
+
+**(i) `scripts/06_analyze_attention.py:33-52` — best-layer argmax with no
+split at all.** The loop computes `score_to_metrics(labels, per_sample[:, li])`
+for every kept layer using `data["labels"]` — the *entire* labelled set,
+with no train/val/test partition anywhere in the file — then takes
+`best = max(per_layer, key=lambda k: per_layer[k]["auroc"])` and writes
+`best_auroc` into the metrics JSON. `scripts/07_aggregate_results.py:74-86`
+folds that value straight into the headline results table. This is
+Mechanism 4 in a purer form than the `saplma.py` site: there, at least, a
+held-out split exists and is merely selected on; here there is none.
+
+**(ii) `src/analysis/metrics.py:57-65` (`score_to_metrics`) — Mechanism 5,
+in this repository too.** The function computes
+`fpr, tpr, thr = roc_curve(target, score)`, takes `best = int(np.argmax(j))`
+with `j = tpr - fpr` (Youden), and then scores `accuracy_score(y_true, ...)`
+and `f1_score(y_true, ...)` at that threshold — against the same labels the
+threshold was chosen on. `scripts/07_aggregate_results.py:85-86` reports
+both as `accuracy` and `f1`.
+
+Site (ii) matters beyond this case study: Mechanism 5 was introduced in
+`main.tex` §4.5 as something found inside MultiHaluDet's `run_pipeline.py`.
+It occurs independently in *both* audited repositories. Two independently
+published pipelines committing the identical test-label-tuned
+operating-point selection is what makes the mechanism worth naming
+separately; one instance would not have been.
+
+Neither site changes any severity number in this paper — both are additional
+instances of mechanisms already quantified, not new mechanisms — and neither
+is counted among the regex scanner's 7 raw hits, which are the scanner's
+output rather than a human (or second-rater) audit's.

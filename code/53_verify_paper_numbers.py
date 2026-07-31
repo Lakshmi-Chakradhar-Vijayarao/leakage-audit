@@ -86,6 +86,28 @@ print("\n== Mechanism 3 isotropic sweep (code/02d via code/44) ==")
 d = load("statistical_rigor_retrofit.json")["isotropic_sweep"]["by_capacity"]
 for cap in ["16", "48", "128", "384"]:
     check(f"cap {cap} leaky-clean_matched", d[cap]["leaky_minus_clean_matched"]["gap_mean"])
+# The seed-decoupling retrofit must not silently revert to the confounded scheme.
+checks += 1
+_02d = load("corrected_capacity_placebo_sweep.json")
+_ok = _02d["config"].get("seed_scheme") == "decoupled"
+print(f"  {'OK  ' if _ok else 'FAIL'}  code/02d ran with decoupled data/split/fold/init seeds")
+if not _ok:
+    failures.append("code/02d reverted to the coupled single-seed scheme (SS4.3 says it is fixed)")
+checks += 1
+# ...and the legacy coupled run must still ship, so the comparison SS4.3 makes is checkable.
+_ok = (R / "corrected_capacity_placebo_sweep_coupled_seed_legacy.json").exists()
+print(f"  {'OK  ' if _ok else 'FAIL'}  the superseded coupled-seed run ships for comparison")
+if not _ok:
+    failures.append("coupled-seed legacy JSON missing; SS4.3's before/after comparison is unverifiable")
+checks += 1
+# code/47's independently-written default cell must reproduce code/02d's cap-128 cell.
+_c47 = load("selection_multiplicity_sweep.json")["sweep_C_operating_point"]["0.8"]["gap_mean"]
+_c02d = d["128"]["leaky_minus_clean_matched"]["gap_mean"]
+_ok = abs(_c47 - _c02d) < 5e-5
+print(f"  {'OK  ' if _ok else 'FAIL'}  code/47 default cell reproduces code/02d cap-128 "
+      f"({_c47:+.5f} vs {_c02d:+.5f})")
+if not _ok:
+    failures.append("code/47 and code/02d no longer agree on the shared configuration")
 
 print("\n== Mechanism 3 fidelity extension (code/49) ==")
 d = load("mechanism3_fidelity_extension.json")
@@ -112,6 +134,22 @@ for _tok in ["AdamW", "RobustScaler", "clip_grad_norm_"]:
         failures.append(f"code/49 no longer uses {_tok} (Appendix A issue 14)")
 check("fidelity-extension gap", g["gap_mean"])
 check("fidelity-extension LEAKY operating point", d["means"]["leaky_plus_lrsched"], "{:.4f}")
+# Appendix A item 10 quoted a stale CLEAN_MATCHED-vs-PLACEBO gap that did not
+# survive the issue-14 fidelity port. Pin it to the shipped array.
+check("fidelity-extension control-vs-placebo gap",
+      d["clean_matched_plus_lrsched_minus_placebo_plus_lrsched"]["gap_mean"])
+# Training-depth confound (5th correction) must be tracked, not silently dropped.
+checks += 1
+_be = d.get("best_epoch_stats")
+_ok = _be is not None and "mean_best_epoch" in _be
+print(f"  {'OK  ' if _ok else 'FAIL'}  code/49 tracks the training-depth confound (best_epoch_stats)")
+if not _ok:
+    failures.append("mechanism3_fidelity_extension.json has no best_epoch_stats (SS4.3 reports it)")
+else:
+    check("LEAKY mean kept-checkpoint epoch", _be["mean_best_epoch"]["leaky_plus_lrsched"], "{:.2f}")
+    check("control mean kept-checkpoint epoch",
+          _be["mean_best_epoch"]["clean_matched_plus_lrsched"], "{:.2f}")
+    check("training-depth relative difference", _be["relative_difference_pct"], "{:.1f}")
 
 print("\n== Mechanism 3 real-feature harness (code/43 via code/44) ==")
 d = load("statistical_rigor_retrofit.json")["real_feature_train_only_calibrated"]["by_capacity"]
@@ -248,6 +286,40 @@ print(f"  {'OK  ' if _ok else 'FAIL'}  sanity_checks.py states the identity-cova
 if not _ok:
     failures.append("sanity_checks.py no longer documents its Sigma=I assumption")
 
+print("\n== Mechanism 5 sample-size sensitivity (code/46, SWEEP=N) ==")
+d = load("mechanism5_threshold_selection.json")
+checks += 1
+_ss = d.get("sample_size_sensitivity")
+_ok = _ss is not None
+print(f"  {'OK  ' if _ok else 'FAIL'}  Mechanism 5's n_test/n_val dependence is measured, not assumed")
+if not _ok:
+    failures.append("mechanism5_threshold_selection.json has no sample_size_sensitivity block")
+else:
+    for n in ["700", "1750", "3500", "10000"]:
+        check(f"n={n} F1 gap", _ss["by_n_samples"][n]["f1_gap_mean"])
+    check("F1-gap shrinkage factor 140->2000", _ss["shrinkage_factor_700_to_10000"], "{:.1f}")
+
+print("\n== Joint severity surface (code/57) ==")
+try:
+    d = load("joint_severity_surface.json")
+    checks += 1
+    _ok = max(v["abs_diff"] for v in d["internal_consistency_vs_sweep_C"].values()) < 5e-5
+    print(f"  {'OK  ' if _ok else 'FAIL'}  the grid's K=45 column reproduces code/47's Sweep C")
+    if not _ok:
+        failures.append("code/57's K=45 column diverged from code/47's Sweep C; harness drifted")
+    for name in ["M1", "M3", "M4"]:
+        check(f"{name} LOO R^2", d["fits"][name]["loo_r_squared"], "{:.3f}")
+    check("interaction F-test p", d["interaction_f_test"]["p"], "{:.3f}")
+    checks += 1
+    _ok = "not a bound" in d["framing"]
+    print(f"  {'OK  ' if _ok else 'FAIL'}  the joint fit ships labelled as an empirical fit, not a bound")
+    if not _ok:
+        failures.append("code/57's framing no longer disclaims being a bound")
+except FileNotFoundError:
+    checks += 1
+    print("  FAIL  joint_severity_surface.json missing (SS5 reports the joint fit)")
+    failures.append("joint_severity_surface.json missing")
+
 print("\n== Retracted claims must be gone ==")
 check_absent("5.2x asserted as the current like-for-like ratio", "ratio of \\textbf{$5.2\\times$")
 check_absent("severity differs sharply", "Severity differs sharply by mechanism")
@@ -267,6 +339,13 @@ check_absent("stale fidelity-extension number", "$+0.0221$ (BCa 95\\% CI")
 check_absent("stale like-for-like ratio", "is a ratio of $\\mathbf{2.4\\times}$")
 check_absent("~30 layers", "~30 layers")
 check_absent("stale 8-rep GUARDIAN count", "under $8$ randomized stratified")
+check_absent("stale pre-fidelity-port control-vs-placebo gap", "$+0.0498$, $p=3.7")
+check_absent("stale coupled-seed Holm verdict (48 and 128)", "at 48 and 128 units")
+check_absent("stale coupled-seed CM-placebo range", "gaps $+0.016$ to $+0.033$")
+check_absent("stale coupled-seed isotropic range in prose",
+             "$+0.0009$ to $+0.0034$ AUROC on the synthetic sweep")
+check_absent("pooled-family claim that nothing survives",
+             "would leave nothing significant at")
 
 print(f"\n{checks} checks run, {len(failures)} failures")
 for f in failures:

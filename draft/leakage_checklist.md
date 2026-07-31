@@ -55,13 +55,14 @@ comparison is confounded by training-data budget, not leakage.**
 reconstruction, corrected calibration and budget-matched control, n=100
 seeds, capacities 16/48/128/384):** the original (budget-confounded)
 LEAKY-CLEAN gap is statistically significant at all four capacities
-tested (+0.0044 to +0.0059 AUROC, p=0.0008-0.0058) but shows no clear
+tested (+0.0031 to +0.0062 AUROC, p=0.00003-0.0496) but shows no clear
 capacity trend. Once training-data budget \emph{and} random seed are
 both matched (LEAKY vs. CLEAN_MATCHED -- an earlier draft matched budget
 but not seed, and wrongly found no significant residual anywhere), the
-gap is significant at 2 of 4 capacities (48 and 128 units, p=0.015 and
-0.008), not significant at 16 units (gap $\approx$0), and borderline at
-384 units (p=0.077). Three earlier drafts of this checklist entry (one
+gap is individually significant at 2 of 4 capacities (16 and 128 units,
+p=0.019 and p=0.0012, of which only capacity 128 survives Holm-Bonferroni
+within that family), and underpowered rather than null at 48 and 384
+(p=0.171 at both, against MDEs of 0.0023 and 0.0039). Three earlier drafts of this checklist entry (one
 claiming "not significant even pooled," one claiming "significant,
 confirmed real, capacity-growing," one claiming "not significant
 anywhere once budget-matched") were each wrong in a different way, fixed
@@ -168,8 +169,15 @@ unnecessary, since the audited repository ships per-layer, per-seed
 AUROC arrays for all 24 model/dataset/probe-type combinations tested.
 Selecting the best layer on two of three seeds and evaluating on the
 third held-out seed gives a directly-measured winner's-curse estimate:
-mean $+0.0047$ AUROC across all 24 combinations (max $+0.0288$), small
-and consistent in direction with Mechanism 3's.
+mean $+0.0054$ AUROC across all 24 combinations (BCa 95% CI
+$[+0.0032,+0.0100]$, Wilcoxon $p=0.00017$; max $+0.0347$), small and
+consistent in direction with Mechanism 3's. (This document previously
+reported $+0.0047$/max $+0.0288$ here: those came from an estimator whose
+naive baseline was a max over *all three* seeds including the held-out one,
+which arithmetically forced the estimate to exactly 0.0000 in 7 of 24 cells.
+`main.tex` §4.4 documents the correction; this line had not been updated with
+it. Note also that 12 of the 24 cells are ceiling-saturated — reported
+separately in §4.4 as $+0.0042$ saturated versus $+0.0065$ non-saturated.)
 
 ### 4. Selection-based optimism in cross-validated hyperparameter choice (severity: real, but selection-specific component small once measured with a proper random split — Case Study 2)
 **Ask:** Was a hyperparameter (a layer, a regularization strength, a
@@ -365,11 +373,14 @@ residual anywhere" conclusion was itself partly an artifact of the fix's
 implementation, not purely of the training-budget correction. Matching
 the seed (so CLEAN_MATCHED differs from LEAKY only in epoch-count
 provenance, not also in weight initialization) and rerunning gives the
-actual result: the budget-matched gap is significant (surviving
-Holm-Bonferroni correction across the four capacities tested) at 2 of 4
-capacities (48 and 128 units), not significant at 16 units (gap
-$\approx$0, below this capacity's minimum detectable effect), and
-underpowered rather than confidently null at 384 units. **A fix for one confound is not
+actual result: the budget-matched gap is individually significant at 2 of 4
+capacities (16 and 128 units), of which only capacity 128 survives
+Holm-Bonferroni across the four-capacity family, and underpowered rather
+than confidently null at 48 and 384 units. (These are the numbers after a
+later closure review also decoupled the data/split/fold/init seeds in
+`code/02d`, which left the magnitudes essentially fixed but moved which two
+capacities clear significance -- itself a caution against reading per-cell
+significance labels as stable.) **A fix for one confound is not
 exempt from introducing another; re-derive or spot-check every random
 seed, split, or initialization that changes between your "leaky" and
 "clean" conditions, not only the one variable you set out to control.**

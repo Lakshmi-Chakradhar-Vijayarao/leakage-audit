@@ -43,8 +43,32 @@ ALSO: reruns across the FULL capacity sweep (16/48/128/384), not just the
 flagship 384, at N_SEEDS=100 throughout -- directly answering the review's
 "re-run the full sweep at n=100 or delete the capacity-dependence claim"
 demand, instead of powering up only the endpoint.
+
+FOURTH FIX (added later, after an independent review pointed out that
+code/47's seed-decoupling was never retrofitted to this script -- the
+paper's PRIMARY severity harness): SEED DECOUPLING. Every earlier version
+of this script drove the synthetic data generation, the outer train/test
+split AND the inner StratifiedKFold fold assignment from one shared `seed`
+variable, so across the 100 replicates those three sources of variation were
+perfectly confounded: no two replicates share a dataset with a different
+split, and no two share a split with a different fold assignment. That is
+the exact confound `code/47_selection_multiplicity_sweep.py` introduced
+`data_seed`/`split_seed`/`fold_seed_base`/`init_seed_base` to fix, and it is
+now retrofitted here using code/47's identical scheme:
+
+    data_seed      = i            (which synthetic sample is drawn)
+    split_seed     = i + 100000   (the outer train/test partition)
+    fold_seed_base = i + 200000   (inner CV fold assignment + placebo RNG)
+    init_seed_base = i + 300000   (torch init and the ES carve-out split)
+
+so no single draw can produce the data, the split and the folds together.
+See `seeds_for()` below. The `--coupled-seed` flag reproduces the previous,
+confounded behaviour bit-for-bit so the two can be compared directly; the
+previous run's output is retained as
+`results/corrected_capacity_placebo_sweep_coupled_seed_legacy.json`.
 """
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -77,6 +101,24 @@ EPOCHS = 45
 ES_HOLD_FRACTION = 0.15
 N_SEEDS = 100
 CAPACITIES = [16, 48, 128, 384]
+
+# ── FIX 4: seed decoupling (code/47's scheme, retrofitted here) ─────────────
+# COUPLED_SEEDS=True restores the previous, confounded single-`seed` behaviour
+# bit-for-bit (`--coupled-seed` on the command line) so the two runs can be
+# compared directly rather than asserted to agree.
+COUPLED_SEEDS = "--coupled-seed" in sys.argv
+
+
+def seeds_for(i):
+    """Decouple replicate `i` into four independent seed streams.
+
+    Identical to code/47_selection_multiplicity_sweep.py's scheme, which was
+    written specifically to fix this confound and was never retrofitted here
+    until now. Returns (data_seed, split_seed, fold_seed_base, init_seed_base).
+    """
+    if COUPLED_SEEDS:
+        return i, i, i, i
+    return i, i + 100000, i + 200000, i + 300000
 
 
 class SweepMLP(nn.Module):
@@ -171,17 +213,17 @@ def extract_features(model, X):
         return model.features(torch.tensor(X, dtype=torch.float32)).numpy()
 
 
-def run_one_seed(seed, hidden):
-    X, y = make_synthetic_data(seed)
+def run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden):
+    X, y = make_synthetic_data(data_seed)
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=TEST_SIZE, stratify=y, random_state=seed
+        X, y, test_size=TEST_SIZE, stratify=y, random_state=split_seed
     )
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    rng = np.random.default_rng(seed + 10000)
-    skf = StratifiedKFold(n_splits=N_INNER_FOLDS, shuffle=True, random_state=seed)
+    rng = np.random.default_rng(fold_seed_base + 10000)
+    skf = StratifiedKFold(n_splits=N_INNER_FOLDS, shuffle=True, random_state=fold_seed_base)
     feat_dim_out = hidden // 2
     n_tr = len(y_train)
     oof = {k: np.zeros((n_tr, feat_dim_out)) for k in
@@ -190,7 +232,9 @@ def run_one_seed(seed, hidden):
                  ["leaky", "clean", "clean_matched", "placebo"]}
 
     for fold, (tr_idx, val_idx) in enumerate(skf.split(X_train, y_train)):
-        fold_seed = seed * 100 + fold
+        # torch init and the ES carve-out split get their own stream, so a
+        # replicate's initialization no longer co-varies with its data draw.
+        fold_seed = init_seed_base * 100 + fold
 
         # LEAKY: select on val_idx's TRUE labels (same fold reused downstream);
         # trains on the FULL tr_idx.
@@ -254,7 +298,7 @@ def main():
         print(f"{'='*70}")
         all_aucs = {k: [] for k in ["leaky", "clean", "clean_matched", "placebo"]}
         for seed in range(N_SEEDS):
-            aucs = run_one_seed(seed, hidden)
+            aucs = run_one_seed(*seeds_for(seed), hidden)
             for k, v in aucs.items():
                 all_aucs[k].append(v)
             if (seed + 1) % 20 == 0:
@@ -311,12 +355,20 @@ def main():
                    "epochs": EPOCHS, "capacities": CAPACITIES,
                    "target_auroc": TARGET_AUROC, "fisher_j_corrected": FISHER_J,
                    "class_sep": CLASS_SEP,
-                   "calibration_sanity_check_auroc": float(norm.cdf(np.sqrt(FISHER_J/2)))},
+                   "calibration_sanity_check_auroc": float(norm.cdf(np.sqrt(FISHER_J/2))),
+                   "seed_scheme": "coupled_legacy" if COUPLED_SEEDS else "decoupled",
+                   "seed_scheme_note": (
+                       "decoupled: data_seed=i, split_seed=i+100000, "
+                       "fold_seed_base=i+200000, init_seed_base=i+300000 (code/47's "
+                       "scheme, retrofitted here). coupled_legacy: a single i drove "
+                       "data generation, the outer split and the fold assignment "
+                       "simultaneously -- retained only for comparison.")},
         "by_capacity": results_by_capacity,
     }
     out_dir = Path(__file__).resolve().parent.parent / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / "corrected_capacity_placebo_sweep.json"
+    out_path = out_dir / ("corrected_capacity_placebo_sweep_coupled_seed_legacy.json"
+                          if COUPLED_SEEDS else "corrected_capacity_placebo_sweep.json")
     with open(out_path, "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nSaved: {out_path}")
