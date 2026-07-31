@@ -1,10 +1,25 @@
 # Paper 2 — Worked Examples (own-project case studies)
 
-These are the two internal, fully-reproducible case studies that anchor the
-audit paper before we bring in external targets. Both come from projects in
-this portfolio and are already verified against raw logs (not re-derived
-from memory) — see the earlier deep-dive reports for the primary evidence
-trail. This document turns them into the clean, paper-ready form.
+These are the two internal case studies that anchor the audit paper before
+we bring in external targets. Both come from projects in this portfolio.
+
+> **Evidentiary status (must be read alongside every number below).**
+> These two case studies are **not** equally verifiable by a reader of the
+> submitted artifact, and the paper now grades them explicitly:
+>
+> - **Case Study 2 (GUARDIAN)** is reproducible from what ships with the
+>   paper. Its original 171 MB hidden-state cache is too large to include,
+>   so `code/48` emits a ~1 MB derived artifact (per-layer, per-sample CV
+>   fold assignments and probe scores for all 32 layers, for the
+>   sequential split, the reversed split and all 8 randomized reps) and
+>   `code/51` recomputes and asserts every reported number from it.
+> - **Case Study 1 (HaRP)** is **not** independently re-verifiable from
+>   the submitted artifact. No script, log, or data file supporting its
+>   `+0.19` figure is included. The mechanism is real and clearly
+>   described; the number is reported from prior work, is excluded from
+>   the paper's abstract severity range, and is excluded from every
+>   cross-mechanism comparison. Treat the table below as a narrative
+>   account, not a measurement a reader can check here.
 
 ---
 
@@ -91,11 +106,16 @@ At GUARDIAN's selected layer (L11, chosen via argmax train-split CV AUROC):
 | 5-fold CV, all 700 samples | 0.776 |
 | True held-out (probe trained on first 400, tested on the remaining, never-seen-during-selection 300) | **0.616** |
 
-The gap the CV-based selection number and the true held-out number is
-**18.8 points of AUROC** — entirely attributable to the fact that L11 was
-*chosen* because it happened to maximize CV AUROC on this specific sample,
-which is exactly the condition under which CV-based selection is known to
-be optimistic.
+The gap between the CV-based selection number and the true held-out number
+is **18.8 points of AUROC**. An earlier version of this document described
+that gap as "entirely attributable" to L11 having been *chosen* because it
+maximized CV AUROC on this specific sample. **That attribution is
+retracted** — see "Correction: the held-out split above is not actually
+random" below. Under a proper random partition, the general CV-vs-held-out
+gap is indistinguishable from zero, and the component genuinely
+attributable to argmax-over-layers selection is $+0.027$ (SD $0.021$,
+$p=0.009$), about 7x smaller than the 18.8-point headline. The 18.8-point
+number is retained here only as the original, uncorrected observation.
 
 A second, independent demonstration of the same fragility: which layer
 counts as "optimal" depends on the selection rule. Argmax over the
@@ -108,9 +128,14 @@ disagree about which layer the paper's own headline claim should be about.
 
 Any paper in this space that reports "we swept all layers and found layer
 X is optimal, achieving AUROC Y" and uses the *same* cross-validation run
-both to select X and to report Y is vulnerable to this exact gap. The size
-of the gap (18.8 points here) suggests this is not a negligible, ignorable
-effect at the sample sizes (N≈700) common in this literature.
+both to select X and to report Y is vulnerable to this exact gap. The
+correctly-isolated size of that gap here, however, is small: $+0.027$
+AUROC (SD $0.021$, $p=0.009$) under randomized splits, not the 18.8 points
+the confounded sequential split suggested. It is a real and statistically
+significant effect at the sample sizes (N≈700) common in this literature,
+but a small one — consistent with every other code-verified severity
+estimate in this paper, all of which fall between roughly $0.000$ and
+$+0.027$ AUROC.
 
 ### Correction: the held-out split above is not actually random
 

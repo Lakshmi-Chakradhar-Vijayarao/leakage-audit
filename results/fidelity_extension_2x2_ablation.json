@@ -1,0 +1,70 @@
+{
+  "cells": [
+    {
+      "calibration": "superseded_label_conditional",
+      "es_patience": 3,
+      "source_file": "results/abl_oldcal_es3.json",
+      "alpha": 0.1328,
+      "gap_mean": 0.011063164477798614,
+      "bca_ci_95": [
+        0.007729831144465268,
+        0.01474784921280165
+      ],
+      "wilcoxon_p": 4.331556057745149e-09,
+      "paired_permutation_p": 0.0,
+      "leaky_mean_auroc": 0.9579174484052534,
+      "is_reported_cell": false
+    },
+    {
+      "calibration": "superseded_label_conditional",
+      "es_patience": 15,
+      "source_file": "results/abl_oldcal_es15.json",
+      "alpha": 0.1328,
+      "gap_mean": 0.006466541588492799,
+      "bca_ci_95": [
+        0.004371482176360221,
+        0.009018136335209499
+      ],
+      "wilcoxon_p": 9.192171550051134e-08,
+      "paired_permutation_p": 0.0,
+      "leaky_mean_auroc": 0.9634959349593495,
+      "is_reported_cell": false
+    },
+    {
+      "calibration": "label_free_axis_noising",
+      "es_patience": 3,
+      "source_file": "results/mechanism3_fidelity_extension_espatience3_ablation.json",
+      "alpha": 0.3359375,
+      "gap_mean": 0.015178236397748601,
+      "bca_ci_95": [
+        0.007895766088381218,
+        0.02298936835522202
+      ],
+      "wilcoxon_p": 0.00025546793631038827,
+      "paired_permutation_p": 0.0001,
+      "leaky_mean_auroc": 0.8905878674171358,
+      "is_reported_cell": false
+    },
+    {
+      "calibration": "label_free_axis_noising",
+      "es_patience": 15,
+      "source_file": "results/mechanism3_fidelity_extension.json",
+      "alpha": 0.3359375,
+      "gap_mean": 0.02205753595997498,
+      "bca_ci_95": [
+        0.01586134054957525,
+        0.029199661127496983
+      ],
+      "wilcoxon_p": 1.911781488341891e-09,
+      "paired_permutation_p": 0.0,
+      "leaky_mean_auroc": 0.9176047529706066,
+      "is_reported_cell": true
+    }
+  ],
+  "n_seeds_per_cell": 100,
+  "patience_effect_at_superseded_calibration": -0.004596622889305815,
+  "patience_effect_at_label_free_calibration": 0.00687929956222638,
+  "sign_of_patience_effect_flips": true,
+  "previously_reported_number": 0.011063164477798614,
+  "currently_reported_number": 0.02205753595997498
+}

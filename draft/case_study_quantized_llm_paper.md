@@ -69,12 +69,43 @@ We did not re-run this pipeline end-to-end with a corrected protocol
 (e.g., select the layer using only the val split, then report that
 layer's test AUROC once) -- doing so requires re-extracting Llama-3.1-8B/
 Mistral-7B/Qwen2.5-7B hidden states, which needs GPU beyond what's
-budgeted for this secondary case study. This case study's contribution is
-the code-verified identification of a second, distinct bias family (not a
-quantified before/after number, which Case Study 3's synthetic ablation
-already provides for the sibling checkpoint-selection bug). If Kaggle
-budget allows after Paper 3's runs complete, a cheap partial check is
-possible: re-run just `03_train_probes.py` on already-extracted layers
-with a corrected val-based layer-selection rule and compare the single
-selected layer's test AUROC against the paper's reported "best of 30"
-number, without needing to re-extract any hidden states.
+budgeted for this secondary case study.
+
+**UPDATE: this case study IS quantified.** An earlier version of this
+document said its contribution was "the code-verified identification of a
+second, distinct bias family (not a quantified before/after number)."
+That is no longer accurate. A fresh review found the winner's-curse
+estimate is fully computable from files already vendored in this repo:
+`code/external/HallucinationPatternDetection/results/probes/*.json` ships
+per-layer, per-seed AUROC arrays for all 24 model x dataset x probe-type
+combinations (33 layers, 3 seeds each).
+`code/45_case_study_4_winners_curse.py` holds out each seed in turn,
+selects the best layer using **only** the other two, takes the naive
+baseline as the selection-set mean at that layer, and takes the honest
+estimate as the held-out seed's AUROC at the same layer.
+
+**Result (24 combinations, leave-one-seed-out, 3 rotations each):**
+
+| Subset | n cells | Mean winner's curse | BCa 95% CI | Wilcoxon p |
+|---|---|---|---|---|
+| All cells | 24 | **+0.0054** | [+0.0032, +0.0100] | 0.00017 |
+| Ceiling-saturated (selected layer AUROC >= 0.975) | 12 | +0.0042 | [+0.0029, +0.0057] | 0.0005 |
+| Non-saturated | 12 | +0.0065 | [+0.0023, +0.0152] | 0.047 |
+
+By dataset: `fever` +0.0124, `halueval_qa` +0.0052, `synthetic` +0.0033,
+`truthfulqa` +0.0007. Max single cell: +0.0347
+(`qwen2.5-7b__fever__linear`).
+
+**Correction embedded in that number.** The first version of `code/45`
+took the naive baseline from the repo's own reported `best_auroc`, which
+is a max over **all three** seeds including the one then used as
+"held-out." Whenever the leave-one-out argmax coincided with the
+full-sample argmax (7 of 24 cells), the two sides of the subtraction were
+arithmetically forced equal and the estimate was pinned at exactly
+0.0000. The corrected, genuinely leave-one-out protocol raises the mean
+from +0.0047 to +0.0054 and the max from +0.0288 to +0.0347, and — for
+the first time — attaches a CI and a significance test to this section.
+
+Half these cells are ceiling-saturated, which is itself the paper's
+broader point: severity here is governed by where on the difficulty curve
+the pipeline operates, not by which leakage mechanism is present.

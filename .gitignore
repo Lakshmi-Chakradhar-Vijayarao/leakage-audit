@@ -5,3 +5,4 @@ __pycache__/
 *.pt
 *.bin
 !results/real_features_mistral7b_halueval.npz
+!results/case_study_2_probe_scores.npz

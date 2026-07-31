@@ -55,33 +55,70 @@ from pathlib import Path
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import roc_auc_score
 
 GUARDIAN_ROOT = Path(os.path.expanduser(os.environ.get("GUARDIAN_ROOT", "~/Desktop/guardian")))
 GUARDIAN_NPZ = GUARDIAN_ROOT / "results" / "hidden_states" / "mistral_7b_tqa_hidden_states.npz"
 ROOT = Path(__file__).resolve().parent.parent
 OUT_PATH = ROOT / "results" / "case_study_2_layer_decomposition.json"
+# Small, shipped, derived artifact so a reader can re-derive every number in
+# OUT_PATH without the 171 MB raw hidden-state cache (see code/51).
+ARTIFACT_PATH = ROOT / "results" / "case_study_2_probe_scores.npz"
 
 N_TRAIN_SELECT = 400
 RANDOM_STATE = 42
 N_REPS = 8
 
+# Every probe score computed anywhere in this script is recorded here and
+# written to ARTIFACT_PATH at the end, keyed by split-variant name.
+ARTIFACT = {}
 
-def per_layer_gaps(H_sel, y_sel, H_ho, y_ho, n_layers, cv):
+
+def per_layer_gaps(H_sel, y_sel, H_ho, y_ho, n_layers, cv, variant=None):
+    """Per-layer CV-on-selection-pool vs. fit-on-pool/score-on-held-out AUROC.
+
+    The CV number is the mean of the per-fold AUROCs (identical to what
+    `cross_val_score(..., scoring='roc_auc')` returned in the previous version
+    of this script, which is replaced here by an explicit fold loop only so the
+    per-sample scores and fold assignments can be recorded for the shipped
+    derived artifact -- the arithmetic is unchanged).
+    """
+    n_sel = len(y_sel)
+    fold_id = np.full(n_sel, -1, dtype=np.int16)
+    cv_scores = np.zeros((n_layers, n_sel), dtype=np.float32)
+    ho_scores = np.zeros((n_layers, len(y_ho)), dtype=np.float32)
+
+    splits = list(cv.split(np.zeros(n_sel), y_sel))
+    for f, (_, te) in enumerate(splits):
+        fold_id[te] = f
+
     per_layer = []
     for l in range(n_layers):
         X_sel = H_sel[:, l, :]
         X_ho = H_ho[:, l, :]
-        cv_auroc = float(cross_val_score(
-            LogisticRegression(max_iter=1000), X_sel, y_sel, cv=cv, scoring="roc_auc"
-        ).mean())
+        fold_aurocs = []
+        for f, (tr, te) in enumerate(splits):
+            clf_f = LogisticRegression(max_iter=1000).fit(X_sel[tr], y_sel[tr])
+            s = clf_f.predict_proba(X_sel[te])[:, 1]
+            cv_scores[l, te] = s
+            fold_aurocs.append(roc_auc_score(y_sel[te], s))
+        cv_auroc = float(np.mean(fold_aurocs))
         clf = LogisticRegression(max_iter=1000).fit(X_sel, y_sel)
-        heldout_auroc = float(roc_auc_score(y_ho, clf.predict_proba(X_ho)[:, 1]))
+        s_ho = clf.predict_proba(X_ho)[:, 1]
+        ho_scores[l] = s_ho
+        heldout_auroc = float(roc_auc_score(y_ho, s_ho))
         per_layer.append({
             "layer": l, "cv_auroc_selectpool": cv_auroc,
             "heldout_auroc": heldout_auroc, "optimism_gap": cv_auroc - heldout_auroc,
         })
+
+    if variant is not None:
+        ARTIFACT[f"{variant}__y_sel"] = np.asarray(y_sel, dtype=np.int8)
+        ARTIFACT[f"{variant}__y_ho"] = np.asarray(y_ho, dtype=np.int8)
+        ARTIFACT[f"{variant}__fold_id"] = fold_id
+        ARTIFACT[f"{variant}__cv_scores"] = cv_scores
+        ARTIFACT[f"{variant}__ho_scores"] = ho_scores
     return per_layer
 
 
@@ -105,7 +142,7 @@ def main():
     print("\n=== (1) ORIGINAL sequential split H[:400]/H[400:] (protocol-confounded) ===", flush=True)
     H_sel, y_sel = H[:N_TRAIN_SELECT], y[:N_TRAIN_SELECT]
     H_ho, y_ho = H[N_TRAIN_SELECT:], y[N_TRAIN_SELECT:]
-    per_layer_seq = per_layer_gaps(H_sel, y_sel, H_ho, y_ho, n_layers, cv)
+    per_layer_seq = per_layer_gaps(H_sel, y_sel, H_ho, y_ho, n_layers, cv, variant="sequential")
     for r in per_layer_seq:
         print(f"  L{r['layer']:02d}: CV={r['cv_auroc_selectpool']:.4f}  held-out={r['heldout_auroc']:.4f}  gap={r['optimism_gap']:+.4f}", flush=True)
     l_star_seq = int(np.argmax([r["cv_auroc_selectpool"] for r in per_layer_seq]))
@@ -117,7 +154,7 @@ def main():
     # a different split can select a different layer, and "selection-specific"
     # is only meaningful evaluated at the layer that split's own procedure picks.
     print("\n=== (2) REVERSED sequential split H[400:]=select / H[:400]=held-out ===", flush=True)
-    per_layer_rev = per_layer_gaps(H_ho, y_ho, H_sel, y_sel, n_layers, cv)
+    per_layer_rev = per_layer_gaps(H_ho, y_ho, H_sel, y_sel, n_layers, cv, variant="reversed")
     l_star_rev = int(np.argmax([r["cv_auroc_selectpool"] for r in per_layer_rev]))
     sel_component_rev, gaps_rev = selection_specific_component(per_layer_rev, l_star_rev)
     print(f"  Selected layer (own argmax): L{l_star_rev} | gap at that layer: {gaps_rev[l_star_rev]:+.4f} "
@@ -143,7 +180,7 @@ def main():
         sel_idx = np.concatenate([pos_idx[:n_pos_sel], neg_idx[:n_neg_sel]])
         ho_idx = np.concatenate([pos_idx[n_pos_sel:], neg_idx[n_neg_sel:]])
         rng.shuffle(sel_idx); rng.shuffle(ho_idx)
-        per_layer_rand = per_layer_gaps(H[sel_idx], y[sel_idx], H[ho_idx], y[ho_idx], n_layers, cv)
+        per_layer_rand = per_layer_gaps(H[sel_idx], y[sel_idx], H[ho_idx], y[ho_idx], n_layers, cv, variant=f"rand{rep}")
         l_star_rand = int(np.argmax([r["cv_auroc_selectpool"] for r in per_layer_rand]))
         comp, gaps_rand = selection_specific_component(per_layer_rand, l_star_rand)
         rand_sel_components.append(comp)
@@ -190,6 +227,13 @@ def main():
     with open(OUT_PATH, "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nSaved: {OUT_PATH}")
+
+    np.savez_compressed(ARTIFACT_PATH, n_layers=np.int32(n_layers),
+                        n_reps=np.int32(N_REPS), **ARTIFACT)
+    size_mb = ARTIFACT_PATH.stat().st_size / 1e6
+    print(f"Saved derived artifact: {ARTIFACT_PATH} ({size_mb:.2f} MB) -- "
+          f"replay with code/51_case_study_2_replay_from_artifact.py, no 171 MB "
+          f"raw hidden-state cache required.")
     print(f"Sequential-split selection-specific component (at L{l_star_seq}): {sel_component_seq:+.4f} (CONFOUNDED)")
     print(f"Reversed-split selection-specific component (at L{l_star_rev}):    {sel_component_rev:+.4f} (sign-flip diagnostic)")
     print(f"Randomized-split selection-specific component (own-layer, per rep): {rand_sel_components.mean():+.4f} (SD {rand_sel_components.std(ddof=1):.4f}) (CORRECTED)")

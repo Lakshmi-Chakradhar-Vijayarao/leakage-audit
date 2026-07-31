@@ -26,8 +26,14 @@ followed later by `cross_validate(other_model, features_including_that_column, y
 **Fix:** recompute the feature out-of-fold -- refit the inner
 model/centroid using only the current fold's training indices, and only
 score it on that fold's held-out indices.
-**Measured severity (this paper, Case Study 1):** +0.19 AUROC inflation
+**Reported severity (this paper, Case Study 1):** +0.19 AUROC inflation
 (0.962 leaked -> 0.771 corrected), on real Qwen 2.5 3B hidden-state data.
+**Evidentiary caveat:** this figure is reported from prior work and is
+**not** independently re-verifiable from the artifact submitted with this
+paper — no supporting script, log, or data file is included. It is
+excluded from the paper's abstract severity range and from every
+cross-mechanism comparison. Every other severity number in this checklist
+is code-verified against shipped scripts and result JSONs.
 
 ### 2. Per-fold checkpoint-selection leakage (severity: MECHANISM REAL AND CODE-VERIFIED; SMALL, CAPACITY-INCONSISTENT RESIDUAL ONCE BUDGET- AND SEED-MATCHED — Case Study 3)
 **Ask:** Inside a CV fold, is a model trained across multiple epochs/steps,
@@ -83,12 +89,42 @@ leaky fold" with "has an adaptive LR/early-stopping mechanism at all"
 since the leaky and placebo conditions both kept their scheduler. The
 final, corrected control keeps the model already trained with a real
 scheduler on a genuinely disjoint carve-out, rather than discarding it.
-Under this corrected harness, LEAKY beats the scheduler-bearing
-CLEAN\_MATCHED control by $+0.0111$ ($p=4.3\times10^{-9}$, $n=100$ seeds) --
-roughly 3-4x larger than the checkpoint-selection-only estimate above --
-while the scheduler-bearing control itself still beats PLACEBO decisively
-($+0.0498$, $p=3.7\times10^{-16}$), confirming it is a strongly
-informative, non-degenerate honest baseline. **Lesson: when a real
+
+**Two further corrections landed on this harness afterwards** (Appendix A,
+issues 12-13). First, its early-stopping break used the LR scheduler's
+`patience=3` rather than the audited repo's own `config.patience = 15`
+(`src/config.py:19`) -- `patience=3` governs only `ReduceLROnPlateau`'s LR
+reduction (`src/training/trainer.py:76`). Second, the calibration transform
+it ran on was replaced with a fully label-free one after the previous
+version was found to still condition the shrinkage on each point's own
+label. Because both landed together, they were varied factorially rather
+than reported jointly (`code/54`, n=100 seeds per cell):
+
+| Calibration (LEAKY operating point) | ES patience 3 | ES patience 15 |
+|---|---|---|
+| Superseded label-conditional (~0.96) | +0.0111 | +0.0065 |
+| Label-free axis-noising (~0.89–0.92) | +0.0152 | **+0.0221** |
+
+**The patience correction's sign flips with the operating point** — it
+shrinks the gap at ~0.96 and grows it at ~0.89–0.92 — so neither
+correction is credited with the whole move from +0.0111 to +0.0221. The
+reported cell is the bottom right: **+0.0221** (BCa 95% CI
+[+0.0159, +0.0292], Wilcoxon p=1.9e-9, paired permutation p<0.0001, 28
+tied absolute differences of 100 pairs). Against the
+checkpoint-selection-only harness run on the same features under the same
+label-free calibration (+0.0093 at capacity 128), that is a genuinely
+like-for-like ratio of **2.4x**. The earlier "roughly 3-4x larger than
+the checkpoint-selection-only estimate" claim in this document, and the
+intermediate "5.2x", are both **retracted**: they compared across
+differently-calibrated harnesses at different operating points, which
+this paper's own Appendix A says is invalid. Even the 2.4x figure carries
+a disclosed residual non-equivalence — the two harnesses land at LEAKY
+operating points of ~0.918 and ~0.940 respectively, and since severity
+falls steeply with operating point (main.tex §5), 2.4x should be read as
+an upper bound rather than a point estimate. The scheduler-bearing
+control itself still beats PLACEBO
+decisively, confirming it is a strongly informative, non-degenerate honest
+baseline. **Lesson: when a real
 pipeline reacts to validation feedback continuously (a scheduler, early
 stopping), a "clean" control that reacts to it not at all is a different,
 easy-to-underestimate confound in its own right -- match the mechanism's

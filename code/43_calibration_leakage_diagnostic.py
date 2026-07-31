@@ -31,8 +31,28 @@ both splits. This script:
      labels them correctly.
   3. Re-runs the CV-based alpha bisection and the full downstream
      LEAKY/CLEAN/CLEAN_MATCHED/PLACEBO severity pipeline (both fully
-     unmodified from code/33) using train-only centering, at capacities
-     128 and 384, 100 seeds each.
+     unmodified from code/33) using the calibration selected below, at
+     capacities 128 and 384, 100 seeds each.
+
+SECOND CORRECTION (a later independent review): train-only centering fixes
+the *estimation* of the class means but NOT the *application* of the
+shrinkage -- `mask = y == cls` ranges over the whole array, so each test
+point's own label still decides which class offset gets subtracted from it.
+That is a residual, smaller-scale instance of exactly the Mechanism-1
+pattern this paper audits for, committed once again by this paper's own
+instrument. The fix is `apply_calibration_label_free`: estimate the
+class-mean axis u, the midpoint c, and the pooled within-class SD along u
+from train indices only, then apply an identical, label-free map to every
+row (shrink the projection onto u by alpha and re-inject
+sqrt(1-alpha^2)*s_w of fresh independent noise along u, preserving the
+marginal spread). Every number this script now reports uses that transform.
+A simpler label-free candidate -- pure directional shrinkage toward the
+midpoint, with no noise re-injection -- was tested and REJECTED: for any
+alpha>0 it is an invertible linear map and therefore cannot reduce
+separability at all (measured: AUROC ~0.99 at every alpha>0). Both the
+superseded label-conditional transform and the rejected directional-shrink
+transform are retained in the Part-1 diagnostic so the comparison is
+reproducible.
 """
 import json
 import time
@@ -88,7 +108,14 @@ def apply_calibration_full_sample(X, y, alpha):
 
 
 def apply_calibration_train_only(X, y, alpha, train_idx):
-    """FIX: class means estimated from train indices only, applied to both splits."""
+    """PARTIAL FIX (superseded, retained for the diagnostic table): class means
+    estimated from train indices only, applied to both splits. A later
+    independent review found this still conditions the *application* of the
+    shrinkage on each point's own label (`mask = y == cls` ranges over the full
+    array, test points included) -- a residual, smaller-scale instance of
+    exactly the Mechanism-1 pattern this paper audits for. Superseded by
+    `apply_calibration_label_free` below, which is used for every number this
+    paper now reports."""
     y_tr = y[train_idx]
     mu_pos = X[train_idx][y_tr == 1].mean(axis=0)
     mu_neg = X[train_idx][y_tr == 0].mean(axis=0)
@@ -102,6 +129,62 @@ def apply_calibration_train_only(X, y, alpha, train_idx):
     return Xc
 
 
+def apply_calibration_directional_shrink(X, y, alpha, train_idx, seed=0):
+    """Label-free candidate #1 (REJECTED -- documented because it does not work).
+
+    Shrink every point's own projection onto the train-estimated class-mean
+    axis toward the train-estimated midpoint:  x -> x - (1-alpha)<x-c,u>u.
+    This consults no label at application time, but for any alpha>0 it is an
+    *invertible* linear map, so it cannot reduce linear separability at all --
+    it rescales the discriminative axis and the within-class spread along that
+    axis by the identical factor, leaving d' along u unchanged. Measured
+    behaviour is a step function (AUROC ~0.99 at every alpha>0, collapsing only
+    at alpha=0 where the map becomes singular), i.e. useless as a difficulty
+    dial. Kept in the diagnostic so the rejection is reproducible."""
+    y_tr = y[train_idx]
+    mu_pos = X[train_idx][y_tr == 1].mean(axis=0)
+    mu_neg = X[train_idx][y_tr == 0].mean(axis=0)
+    diff = mu_pos - mu_neg
+    u = diff / (np.linalg.norm(diff) + 1e-12)
+    c = (mu_pos + mu_neg) / 2
+    proj = (X - c) @ u
+    return X - (1.0 - alpha) * np.outer(proj, u)
+
+
+def apply_calibration_label_free(X, y, alpha, train_idx, seed=0):
+    """FINAL FIX: a fully label-free difficulty dial (no per-sample label is
+    consulted when the transform is applied to any point, train or test).
+
+    Everything the transform needs -- the class-mean axis u, the midpoint c,
+    and the pooled within-class SD along u, s_w -- is estimated from the
+    TRAIN indices only. The map applied to every row of X is then:
+
+        p  = <x - c, u>
+        p' = alpha*p + sqrt(1 - alpha^2) * s_w * eps,   eps ~ N(0,1) i.i.d.
+        x' = x + (p' - p) * u
+
+    This shrinks the between-class mean separation along u by exactly alpha
+    while preserving the marginal spread along u (alpha^2 s_w^2 +
+    (1-alpha^2) s_w^2 = s_w^2), so d' along u is alpha * ||dmu|| / s_w:
+    monotone in alpha, hitting the chance level exactly at alpha=0. Unlike
+    `apply_calibration_directional_shrink` it is not invertible (fresh
+    independent noise is injected), so it genuinely dials difficulty; unlike
+    `apply_calibration_train_only` it never looks at a point's own label."""
+    y_tr = y[train_idx]
+    mu_pos = X[train_idx][y_tr == 1].mean(axis=0)
+    mu_neg = X[train_idx][y_tr == 0].mean(axis=0)
+    diff = mu_pos - mu_neg
+    u = diff / (np.linalg.norm(diff) + 1e-12)
+    c = (mu_pos + mu_neg) / 2
+    proj_tr = (X[train_idx] - c) @ u
+    s_w = float(np.sqrt(0.5 * (proj_tr[y_tr == 1].var() + proj_tr[y_tr == 0].var())))
+    p = (X - c) @ u
+    rng = np.random.default_rng(seed)
+    eps = rng.standard_normal(len(X))
+    p_new = alpha * p + np.sqrt(max(0.0, 1.0 - alpha ** 2)) * s_w * eps
+    return X + np.outer(p_new - p, u)
+
+
 def diagnostic_cosine_and_auroc(X, y, calibration_fn, alpha, n_splits=20):
     """For a given calibration method, measure cos(delta_mu_train, delta_mu_test)
     and train-fit -> test-eval AUROC across many random splits."""
@@ -110,10 +193,12 @@ def diagnostic_cosine_and_auroc(X, y, calibration_fn, alpha, n_splits=20):
         idx_tr, idx_te = train_test_split(
             np.arange(len(y)), test_size=TEST_SIZE, stratify=y, random_state=seed
         )
-        if calibration_fn is apply_calibration_train_only:
+        if calibration_fn is apply_calibration_full_sample:
+            Xc = calibration_fn(X, y, alpha)
+        elif calibration_fn is apply_calibration_train_only:
             Xc = calibration_fn(X, y, alpha, idx_tr)
         else:
-            Xc = calibration_fn(X, y, alpha)
+            Xc = calibration_fn(X, y, alpha, idx_tr, seed)
         y_tr, y_te = y[idx_tr], y[idx_te]
         Xtr, Xte = Xc[idx_tr], Xc[idx_te]
         dmu_tr = Xtr[y_tr == 1].mean(axis=0) - Xtr[y_tr == 0].mean(axis=0)
@@ -250,7 +335,9 @@ def run_one_seed(X, y, hidden, seed):
     X_train_idx, X_test_idx, y_train, y_test = train_test_split(
         np.arange(len(y)), y, test_size=TEST_SIZE, stratify=y, random_state=seed
     )
-    X_calibrated = apply_calibration_train_only(X, y, ALPHA_TRAIN_ONLY, X_train_idx).astype(np.float32)
+    X_calibrated = apply_calibration_label_free(
+        X, y, ALPHA_TRAIN_ONLY, X_train_idx, seed=seed
+    ).astype(np.float32)
     X_train, X_test = X_calibrated[X_train_idx], X_calibrated[X_test_idx]
 
     scaler = StandardScaler()
@@ -320,9 +407,10 @@ ALPHA_TRAIN_ONLY = None  # set in main() after calibration search
 
 
 def calibrate_alpha_train_only_empirically(X, y):
-    """Bisection using train-only centering + CV logistic regression (fit on
-    train fold, scored on held-out fold), so the calibration search itself
-    never lets test information leak into the estimated class means either."""
+    """Bisection using the label-free calibration + CV logistic regression (fit
+    on train fold, scored on held-out fold), so the calibration search itself
+    never lets test information leak into the estimated axis/midpoint/spread,
+    and no point's own label is consulted when the transform is applied."""
     lo, hi = 0.0, 1.0
     history = []
     for it in range(CALIB_MAX_ITER):
@@ -331,8 +419,8 @@ def calibrate_alpha_train_only_empirically(X, y):
         for seed in range(CALIB_SEEDS):
             skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
             fold_aucs = []
-            for tr_idx, te_idx in skf.split(X, y):
-                Xc = apply_calibration_train_only(X, y, mid, tr_idx)
+            for fold_i, (tr_idx, te_idx) in enumerate(skf.split(X, y)):
+                Xc = apply_calibration_label_free(X, y, mid, tr_idx, seed=seed * 10 + fold_i)
                 clf = LogisticRegression(max_iter=5000, C=CALIB_C).fit(Xc[tr_idx], y[tr_idx])
                 fold_aucs.append(roc_auc_score(y[te_idx], clf.predict_proba(Xc[te_idx])[:, 1]))
             aucs.append(np.mean(fold_aucs))
@@ -366,11 +454,21 @@ def main():
         cos_tr, cos_tr_sd, auc_tr, auc_tr_sd = diagnostic_cosine_and_auroc(
             X, y, apply_calibration_train_only, alpha
         )
+        cos_lf, cos_lf_sd, auc_lf, auc_lf_sd = diagnostic_cosine_and_auroc(
+            X, y, apply_calibration_label_free, alpha
+        )
+        cos_ds, cos_ds_sd, auc_ds, auc_ds_sd = diagnostic_cosine_and_auroc(
+            X, y, apply_calibration_directional_shrink, alpha
+        )
         print(f"alpha={alpha}: FULL-SAMPLE cos={cos_full:.4f}+/-{cos_full_sd:.4f} auc={auc_full:.4f}+/-{auc_full_sd:.4f}"
-              f"  |  TRAIN-ONLY cos={cos_tr:.4f}+/-{cos_tr_sd:.4f} auc={auc_tr:.4f}+/-{auc_tr_sd:.4f}", flush=True)
+              f"  |  TRAIN-ONLY(label-cond) cos={cos_tr:.4f}+/-{cos_tr_sd:.4f} auc={auc_tr:.4f}+/-{auc_tr_sd:.4f}"
+              f"  |  LABEL-FREE cos={cos_lf:.4f}+/-{cos_lf_sd:.4f} auc={auc_lf:.4f}+/-{auc_lf_sd:.4f}"
+              f"  |  DIR-SHRINK(rejected) cos={cos_ds:.4f}+/-{cos_ds_sd:.4f} auc={auc_ds:.4f}+/-{auc_ds_sd:.4f}", flush=True)
         diag[str(alpha)] = {
             "full_sample_centering": {"cos_mean": cos_full, "cos_std": cos_full_sd, "auc_mean": auc_full, "auc_std": auc_full_sd},
             "train_only_centering": {"cos_mean": cos_tr, "cos_std": cos_tr_sd, "auc_mean": auc_tr, "auc_std": auc_tr_sd},
+            "label_free_axis_noising": {"cos_mean": cos_lf, "cos_std": cos_lf_sd, "auc_mean": auc_lf, "auc_std": auc_lf_sd},
+            "directional_shrink_rejected": {"cos_mean": cos_ds, "cos_std": cos_ds_sd, "auc_mean": auc_ds, "auc_std": auc_ds_sd},
         }
     out["centering_diagnostic"] = diag
 
@@ -379,7 +477,7 @@ def main():
     print(json.dumps(recon, indent=2), flush=True)
     out["permutation_null_reconciliation"] = recon
 
-    print("\n=== Part 3: calibrate alpha with train-only centering ===", flush=True)
+    print("\n=== Part 3: calibrate alpha with label-free axis-noising calibration ===", flush=True)
     alpha, calib_history = calibrate_alpha_train_only_empirically(X, y)
     ALPHA_TRAIN_ONLY = alpha
     print(f"Converged alpha={alpha:.5f}", flush=True)
@@ -390,8 +488,8 @@ def main():
         json.dump(out, f, indent=2)
     print(f"\nSaved diagnostic: {OUT_PATH}", flush=True)
 
-    print("\n=== Part 4: full downstream severity pipeline, train-only centering ===", flush=True)
-    severity_out = {"calibration_alpha": float(alpha), "calibration_method": "train_only_centering", "capacities": {}}
+    print("\n=== Part 4: full downstream severity pipeline, label-free calibration ===", flush=True)
+    severity_out = {"calibration_alpha": float(alpha), "calibration_method": "label_free_axis_noising", "capacities": {}}
     for hidden in CAPACITIES:
         print(f"\n{'='*60}\nCapacity {hidden}, N_SEEDS={N_SEEDS}, train-only-calibrated (alpha={alpha:.4f})\n{'='*60}", flush=True)
         all_aucs = {k: [] for k in ["leaky", "clean", "clean_matched", "placebo"]}

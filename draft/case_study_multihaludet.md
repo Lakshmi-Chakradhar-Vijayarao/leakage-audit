@@ -73,16 +73,28 @@ methodological trap: a task with no room to fail leaves no room for a
 leakage bug to show any inflation either. Recalibrating via the Fisher/AUROC
 identity fixed this.
 
-**Result (20 seeds, N=700, 5-fold, hidden=48):**
+**First-attempt result (20 seeds, N=700, 5-fold, hidden=48) — SUPERSEDED,
+retained only to show what the correction history started from:**
 
 | Condition | Mean AUROC | Std |
 |---|---|---|
 | LEAKY (checkpoint selected on val_idx) | 0.8708 | 0.0298 |
 | CLEAN (checkpoint selected on a disjoint carve-out) | 0.8689 | 0.0308 |
-| Gap (leaky − clean) | **+0.0019** | 0.0057 |
+| Gap (leaky − clean) | +0.0019 | 0.0057 |
 
-Wilcoxon signed-rank test on the paired per-seed gap: p=0.170 (not
-significant at the standard 0.05 threshold). Positive gap in 12/20 seeds.
+Wilcoxon signed-rank test on the paired per-seed gap: p=0.170. Positive
+gap in 12/20 seeds.
+
+> **These 0.87-level numbers are pre-correction and are NOT this case
+> study's result.** They come from a run whose task-difficulty calibration
+> inverted the wrong AUROC identity (realized task AUROC ~0.883 against an
+> intended 0.80) and whose LEAKY condition trained on ~15% more data than
+> CLEAN. Both defects are documented in the correction history below. The
+> paper's current, budget- and seed-matched primary estimate for this
+> mechanism is **+0.0009 to +0.0034 AUROC** across capacities 16/48/128/384
+> on the isotropic synthetic sweep (significant at 2 of 4 capacities), with
+> the real-feature and fidelity-extension numbers reported in `main.tex`
+> §4.3 and Appendix A. Read those, not the table above.
 
 **Capacity-sweep follow-up, corrected (four rounds of review,
 `02d_corrected_capacity_placebo_sweep.py`):** the obvious objection to
@@ -140,11 +152,25 @@ than translating it into a cleaner narrative.
 harness models only the final "keep the best-val-AUC checkpoint" decision.
 MultiHaluDet's real trainer also steps an LR scheduler and ties early
 stopping to the same validation fold every epoch. Porting this mechanic
-in (after two rounds of its own control-construction bugs, documented in
-Appendix A item 10) finds a substantially larger gap, $+0.0111$
-($p=4.3\times10^{-9}$) -- roughly $5.2\times$ the checkpoint-only
-estimate on a like-for-like comparison at the same capacity and
-calibration.
+in (after four rounds of its own control-construction and configuration
+bugs, documented in main.tex Appendix A items 10, 12 and 13) finds a
+larger gap: **+0.0221** (BCa 95% CI [+0.0159, +0.0292], Wilcoxon
+p=1.9e-9, paired permutation p<0.0001, n=100 seeds, capacity 128),
+against **+0.0093** for the checkpoint-selection-only harness on the same
+features under the same label-free calibration — a like-for-like ratio of
+**2.4x**.
+
+Two earlier figures in this document are retracted: the "+0.0111 /
+roughly 5.2x" reported before the early-stopping patience was corrected
+(the harness used the LR scheduler's `patience=3` for the early-stopping
+break instead of the audited repo's own `config.patience = 15`), and the
+"3-4x" before that (which compared across operating points entirely).
+Because the patience fix and the label-free calibration fix landed
+together, they were varied factorially (`code/54`); the patience
+correction's sign actually *flips* with the operating point — shrinking
+the gap at ~0.96 and growing it at ~0.89-0.92 — so neither correction is
+credited with the whole move. Even 2.4x is an upper bound: the two
+harnesses do not land at identical operating points (~0.918 vs ~0.940).
 
 ## Why this matters for the paper's framing
 
@@ -154,12 +180,14 @@ claim that "this mechanism's severity scales with model capacity" and
 the intermediate, seed-confounded claim that the effect was "possibly
 entirely a training-budget artifact."** The final data show a small,
 real, inconsistently-significant-across-capacity residual leak -- not a
-capacity trend, and not a null. HaRP's own +0.19 AUROC
-catastrophic inflation from full-dataset fit-then-score leakage (Case
-Study 1) remains severe regardless of model size and is unaffected by any
-of this section's corrections -- it is a structurally different mechanism
-(the model literally trains on the labels it is later scored against),
-not a checkpoint-selection subtlety.
+capacity trend, and not a null. HaRP's own reported +0.19 AUROC
+inflation from full-dataset fit-then-score leakage (Case Study 1) is a
+structurally different mechanism (the model literally trains on the
+labels it is later scored against), not a checkpoint-selection subtlety
+— but note that figure is **not** re-verifiable from the submitted
+artifact (no supporting script, log, or data file ships with the paper),
+so it is excluded from the paper's abstract severity range and from
+every cross-mechanism comparison.
 
 This still does **not** mean MultiHaluDet's reported 98.55% AUROC's exact
 inflation is now known -- even our largest-capacity reconstruction (384
@@ -180,13 +208,38 @@ and +0.0009-to-+0.0034 (Case Study 3) numbers below are not measurements
 on the same scale and must not be read as "mechanism 3 is roughly
 20-200x milder than mechanism 1." The first is a real-hidden-state
 effect size; the second is a linear-Gaussian synthetic-proxy effect
-size. The only claim the comparison licenses is that mechanism (1)'s
-severity does not depend on the measurement substrate being real vs.
-synthetic (it is catastrophic either way, by construction: the model
-trains on its own scoring labels), while mechanism (3)'s severity on
-real MultiHaluDet geometry is simply unmeasured.** There is a real
-severity spectrum for the mechanisms
-themselves --
+size.**
+
+> **UPDATE (later review round) — two corrections to the paragraph above.**
+>
+> 1. **Case Study 1's `+0.19` is not verifiable from the submitted
+>    artifact.** No script, log, or data file supporting it ships with the
+>    paper. It is excluded from the abstract's severity range and from
+>    every cross-mechanism comparison. It should not be used as the top of
+>    a "severity spectrum."
+> 2. **Mechanism 3's severity on real MultiHaluDet geometry is no longer
+>    "simply unmeasured."** It has been measured on real
+>    Mistral-7B/HaluEval features (MultiHaluDet's own unmodified
+>    feature-extraction code) through the paper's own 5-fold
+>    OOF-plus-meta-learner architecture, under a label-free calibration
+>    that reaches chance exactly at zero separation. The measured values:
+>    **+0.0093** (capacity 128, BCa 95% CI [+0.0060, +0.0134], Wilcoxon
+>    p=7.3e-7, paired permutation p<0.0001) and **+0.0077** (capacity 384,
+>    CI [+0.0050, +0.0109], Wilcoxon p=1.4e-5, permutation p<0.0001), at
+>    an achieved operating point of ~0.94-0.95; and **+0.0221** for the
+>    LR-scheduler fidelity extension (CI [+0.0159, +0.0292]). These
+>    supersede the +0.0021 / +0.0022 previously reported under the
+>    superseded label-conditional calibration.
+>
+> **The "severity spectrum" framing below is also retracted.** Measured
+> against matched controls, the mechanisms do *not* differ sharply: every
+> mechanism in this paper with a code-verified AUROC-scale estimate falls
+> between roughly 0.000 and +0.027 AUROC. What moves severity is the
+> number of candidates selected among and the operating point — a 48.6x
+> swing from AUROC_0=0.70 to 0.985, larger than any between-mechanism
+> difference measured here. See `main.tex` §5.
+
+For the record, the original (now-superseded) spectrum framing read --
 
 1. **Severe, scale-independent** (Case Study 1, HaRP): a feature-generating
    model fit on *all* labels, scored on those same labels, feeding a

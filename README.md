@@ -1,7 +1,17 @@
 # Leakage Audit
 
-Code, results, and paper source for "Not All Leaks Are Equal: A Taxonomy and
-Audit of Label-Information Leakage in Hidden-State Hallucination Detection."
+Code, results, and paper source for "Selection-Induced Optimism in
+Hidden-State Hallucination Detection: A Code-Verified Taxonomy, and Why
+Severity Tracks Candidate Count and Operating Point Rather Than Mechanism."
+
+## Reproducibility status, up front
+
+| Case study | Reproducible from this repo? |
+|---|---|
+| 3 (MultiHaluDet) | Yes — pinned third-party commit vendored, all scripts and result JSONs included |
+| 4 (quantized-LLM paper) | Yes — pinned commit vendored; `code/45` recomputes the severity estimate from shipped per-layer result files |
+| 2 (GUARDIAN) | Yes, from a derived artifact — the original 171 MB hidden-state cache is too large to ship, so `code/48` emits `results/case_study_2_probe_scores.npz` (~1 MB: per-layer, per-sample CV fold assignments and probe scores) and `code/51` recomputes and asserts every reported number from it |
+| 1 (HaRP) | **No.** No script, log, or data file supporting its `+0.19` figure is included. The paper states this explicitly, excludes the number from its abstract severity range, and excludes it from every cross-mechanism comparison. |
 
 ## What's included
 
@@ -25,9 +35,16 @@ Audit of Label-Information Leakage in Hidden-State Hallucination Detection."
   Study 3's own repository (`46`), a K/validation-set-size/operating-point
   sweep testing whether severity scales the way extreme-value theory
   predicts (`47`), a full 32-layer decomposition of Case Study 2's
-  selection-optimism gap (`48`), and a fidelity extension modeling Case
+  selection-optimism gap (`48`), a fidelity extension modeling Case
   Study 3's actual LR-scheduler/early-stopping training loop rather than
-  just its checkpoint selection (`49`).
+  just its checkpoint selection (`49`), an honest re-fit of the K-scaling
+  law that shows the extreme-value functional form does *not* fit once
+  each cell's own measured sigma is used (`50`), a replay script that
+  re-derives every Case Study 2 number from the small shipped derived
+  artifact with no access to the 171 MB raw cache (`51`), and the
+  LaTeX-to-markdown sync script that makes `draft/paper_draft.md` a
+  mechanical function of `draft/latex/main.tex` so the two cannot drift
+  (`52`).
 - `code/external/` — the seven third-party repositories this paper audits
   or scans: `MultiHaluDet` and `HallucinationPatternDetection` (Case
   Studies 3-4, vendored at the pinned commits cited in the paper), plus
