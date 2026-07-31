@@ -12,22 +12,31 @@ hallucination-detection tool, with reported AUROCs routinely exceeding
 leak into these numbers: (1) full-dataset fit-then-score feature leakage
 (+0.19 AUROC, our own pipeline, HaRP); (2) cross-validation-based layer
 selection reported as held-out performance (an 18.8-point gap, our own
-pipeline, GUARDIAN -- a full 32-layer sweep shows this is typical of the
-selection procedure, not a fluke of one layer); (3) per-fold checkpoint
+pipeline, GUARDIAN -- a full 32-layer sweep shows a comparably large
+CV-vs-held-out gap at nearly every layer, though a corrected,
+randomization-based estimate finds the additional penalty specifically
+attributable to argmax-over-layers selection is small, +0.007 (SD
+0.030), once the dataset's own non-random layer-selection split is
+replaced with proper random resampling); (3) per-fold checkpoint
 selection that reuses the same fold as "out-of-fold" features, verified
 in a published pipeline (MultiHaluDet); (4) test-set-driven layer
 selection with no multiplicity correction, verified in a second
 published paper; (5) test-set-driven decision-threshold selection, found
-in the same pipeline audited for Mechanism 3 -- and substantially more
-severe once both are measured on the same harness.
+in the same pipeline audited for Mechanism 3 -- leaves AUROC exactly
+unaffected by construction but materially inflates every
+threshold-dependent metric (F1, accuracy, MCC) the same pipeline reports
+alongside it.
 
 Severity differs sharply by mechanism, not by pipeline. Mechanism 1 is
 catastrophic regardless of scale. Mechanism 3's severity is small under
 a checkpoint-selection-only harness (+0.0009 to +0.0034 AUROC) but
-roughly 5x larger once we model the pipeline's actual training loop (an
+roughly 3-4x larger once we model the pipeline's actual training loop (an
 LR scheduler and early stopping both reacting to the same validation
-fold). Mechanism 5 is an order of magnitude more severe than Mechanism 3
-and far more statistically decisive. While deriving Mechanism 3's
+fold). Mechanism 5's F1/accuracy gaps (+0.021 to +0.034) are not directly
+comparable to Mechanism 3's AUROC gaps -- different metrics measuring
+different things, a distinction an earlier draft of this paper
+conflated -- but are themselves large and highly significant (p<10^-31).
+While deriving Mechanism 3's
 severity estimate, we found that our own measurement instrument had
 committed exactly the leakage pattern this paper audits for -- a
 full-dataset calibration transform evaluated across the split it was fit
@@ -54,9 +63,10 @@ hallucination detector (HaRP, targeting Qwen2.5-3B), we found and fixed a
 nested-cross-validation leakage bug that had inflated our own reported
 AUROC by 0.19 points. That raised a question: is this an isolated
 mistake, or a structural hazard the broader literature shares? We find
-four *distinct* mechanisms by which evaluation labels can leak into a
-reported metric, verify two of them in externally published, code-available
-pipelines, and show via controlled reconstruction that these mechanisms
+five *distinct* mechanisms by which evaluation labels can leak into a
+reported metric, verify three of them (Mechanisms 3-5) in two externally
+published, code-available pipelines, and show via controlled
+reconstruction that these mechanisms
 differ substantially in how much inflation they actually cause -- a
 distinction the field currently has no vocabulary for.
 
@@ -65,7 +75,11 @@ distinction the field currently has no vocabulary for.
    pipeline (HaRP), with an independent cross-check confirming the fix.
 2. A verified, quantified CV-based hyperparameter-selection optimism bias
    in a second pipeline of ours (GUARDIAN): an 18.8-point gap between the
-   CV-selection number and genuine held-out performance.
+   CV-selection number and genuine held-out performance at the selected
+   layer, plus a full 32-layer decomposition and a randomization-based
+   correction isolating how much of that gap is specifically attributable
+   to layer selection (small, +0.007 SD 0.030) versus a general
+   CV-vs-held-out optimism present at nearly every layer.
 3. A code-verified identification of a third, distinct mechanism
    (per-fold checkpoint selection) in an externally published pipeline's
    released code, plus a controlled synthetic reconstruction -- calibrated
@@ -283,19 +297,45 @@ hidden-state cache contains the complete (700, 32, 4096) Mistral-7B
 representations -- all 700 samples (the 400-sample CV pool and the
 300-sample held-out set) at full dimensionality, every layer, not just
 L11. `code/48_case_study_2_layer_decomposition.py` repeats the identical
-CV-vs-held-out comparison at all 32 layers (sanity-checked to reproduce
-the published L11 numbers exactly: CV$=0.804$, held-out$=0.616$). The
-18.8-point gap at L11 is not an outlier: mean optimism gap across all 32
-layers is $+0.192$ (SD $0.053$), statistically indistinguishable from
-L11's own $+0.188$, and $18$ of the other $31$ layers show a *larger*
-gap than the one GUARDIAN's own selection procedure happened to land
-on -- the gap also grows with depth (later layers, L24-L31, show gaps of
-$+0.24$ to $+0.26$). This means CV-based layer-selection optimism is a
-general property of this selection procedure across the network's full
-depth, not a fluke of the specific layer GUARDIAN's argmax selected --
-if anything, L11 is a below-median example of the severity this
-mechanism can produce. Full results:
-`results/case_study_2_layer_decomposition.json`.
+CV-vs-held-out comparison at all 32 layers under GUARDIAN's own
+sequential `H[:400]`/`H[400:]` split (sanity-checked to reproduce
+the published L11 numbers exactly: CV$=0.804$, held-out$=0.616$). Under
+this split, the mean optimism gap across all 32 layers is $+0.192$ (SD
+$0.053$), statistically indistinguishable from L11's own $+0.188$, and
+$18$ of the other $31$ layers show a *larger* gap than L11.
+
+**Correction: the sequential split confounds selection optimism with a
+population-difference artifact.** A subsequent adversarial review of
+this very analysis found that GUARDIAN's `H[:400]`/`H[400:]` split is a
+fixed slice of whatever order the dataset happens to store samples in,
+not a random partition -- and the two halves are separable by a
+hidden-state probe at AUROC $0.734$-$0.776$, i.e. they are systematically
+different populations, not exchangeable draws. The quantity that
+isolates selection optimism specifically is the *selection-specific
+component*, gap-at-selected-layer minus the mean gap across all 32
+layers: under GUARDIAN's own sequential split this component is
+$-0.004$ -- indistinguishable from zero, meaning the 18.8-point gap is
+not disproportionately concentrated at the selected layer at all once
+the population-difference confound is present in every layer equally.
+Reversing which half is used for selection (`H[400:]` selects, `H[:400]`
+held out) flips the sign of L11's own gap entirely (to $-0.014$,
+selection-specific component $-0.083$), which is itself direct evidence
+that the sequential-split number was tracking which half happens to be
+easier, not a stable property of the selection procedure. Recomputing
+the selection-specific component under $8$ randomized stratified
+$400/300$ splits (never touching the sequential order) gives a mean of
+$+0.007$ (SD $0.030$, range across reps $-0.033$ to $+0.058$) -- small,
+sign-unstable across resamples, and about $11.5\times$ smaller than the
+sequential split's apparent $+0.188$. **The corrected conclusion is
+narrower than originally stated**: CV-based layer selection on this
+dataset does exhibit a large, real CV-vs-held-out optimism gap
+($\sim$19 points, present at essentially every layer), but the
+*additional* penalty specifically attributable to argmax-over-layers
+selection, once a proper random split is used, is small and not reliably
+distinguishable from zero at this sample size -- not the sharply
+concentrated 18.8-point selection-specific effect the original
+sequential-split analysis appeared to show. Full results, all three
+splits: `results/case_study_2_layer_decomposition.json`.
 
 ### 4.3 Case Study 3 (severity: real but modest at tested scale): Per-fold checkpoint-selection leakage — MultiHaluDet
 
@@ -614,9 +654,17 @@ full analysis.
 of the reused fold's own labels -- is unambiguous and code-verified. Its
 quantified severity, once budget- and seed-matched, is small ($+0.0009$
 to $+0.0034$ AUROC on the synthetic sweep) and significant at most but not
-all tested capacities, and this significance strengthens under the
-stricter adaptive-selection control above, and again (if anything, more
-strongly, though with a reshuffled rather than uniformly stronger
+all tested capacities. The LEAKY-vs-CLEAN_MATCHED_ADAPTIVE gap is larger
+and more significant still, but -- as disclosed above -- that widened gap
+is at least partly confounded by CLEAN_MATCHED_ADAPTIVE's own
+underperformance relative to blind CLEAN_MATCHED, itself most plausibly a
+symptom of the smaller ($15\%$) carve-out being a noisier selection
+signal rather than confirmation that fold-reuse leakage is larger than
+the primary estimate; we do not treat this control as straightforwardly
+strengthening the headline severity number, only as failing to support
+the alternative "any adaptive selection helps" explanation it was built
+to rule out. Severity is again small (if anything, more
+strongly significant, though with a reshuffled rather than uniformly stronger
 capacity pattern -- see Appendix A) under a second generative process
 replacing the isotropic calibration with a real, anisotropic covariance
 structure. A real-feature validation attempt went through three further
@@ -699,23 +747,47 @@ Bayes-optimal AUROC target), with a simple logistic-regression classifier
 in place of the full SweepMLP-plus-meta-learner architecture (threshold-selection
 leakage does not depend on which classifier produced the probabilities,
 so a simpler classifier keeps this demonstration self-contained;
-`code/46_mechanism5_threshold_selection.py`). Comparing a threshold
+`code/46_mechanism5_threshold_selection.py`). **Correction:** an earlier
+version of this synthetic generator itself committed the exact
+calibration-inversion class of error Lesson 5a (Appendix A) already
+documents finding once elsewhere in this paper's own tooling -- the
+class-mean offset used the full separation rather than half of it on
+each side, silently quadrupling the realized Fisher $J$ relative to the
+labeled operating point. This was caught by a subsequent independent
+review and fixed (verified via a dedicated, non-tautological calibration
+guardrail, `code/sanity_checks.py`, now mandatory before any synthetic
+generator in this project returns data). Comparing a threshold
 selected on the test labels (`find_best_thresholds`, verbatim ported from
 MultiHaluDet's own code) against a threshold selected on an independent
 validation split never touching the test labels, across five operating
-points spanning this paper's other severity estimates: F1 gaps of
-$+0.0322$ (AUROC target $0.70$) down to $+0.0058$ ($0.985$, MultiHaluDet's
-own reported regime), all significant at $p<10^{-17}$ over $200$ seeds
-(BCa 95\% CIs excluding zero throughout); accuracy gaps of comparable
-magnitude ($+0.0082$ to $+0.0334$). This mechanism's severity is
-**larger** than Mechanism 3's checkpoint-selection leakage
-($+0.0009$ to $+0.0034$ AUROC) at every operating point tested, and its
-statistical significance is far stronger (Mechanism 3's smallest
-$p\approx0.007$; this mechanism's largest $p\approx10^{-17}$) -- direct
-support for this paper's "not all leaks are equal" thesis, since two
-mechanisms found in the *same* audited pipeline differ by roughly an
-order of magnitude in severity, once both are actually measured rather
-than assumed comparable.
+points spanning this paper's other severity estimates, under the
+corrected calibration: F1 gaps ranging from $+0.0212$ ($0.985$,
+MultiHaluDet's own reported regime) to $+0.0338$ (AUROC target $0.80$,
+the largest of the five points, with no clean monotonic trend across
+operating points: $0.70{\to}0.0228$, $0.80{\to}0.0338$, $0.90{\to}0.0311$,
+$0.95{\to}0.0233$, $0.985{\to}0.0212$), all significant at $p<10^{-31}$
+over $200$ seeds (BCa 95\% CIs excluding zero throughout); accuracy gaps
+of comparable magnitude ($+0.0215$ to $+0.0457$).
+
+**A necessary caveat on comparing this to Mechanism 3: these are not the
+same metric, and the comparison is not like-for-like.** AUROC is
+threshold-free by construction, so test-set threshold selection has
+*exactly zero* effect on it -- Mechanism 5's severity on the one metric
+it shares with Mechanism 3 is not small but precisely nil. The F1 gap
+reported above is also structurally guaranteed non-negative: the LEAKY
+threshold is chosen by an argmax over the very same grid the test F1 is
+then scored on, so it cannot do worse than any other threshold drawn from
+that grid, including HONEST's. An earlier draft of this section compared
+these F1/accuracy gaps directly against Mechanism 3's AUROC gaps and
+described Mechanism 5 as "an order of magnitude more severe" -- that
+comparison conflated two different metrics measuring two different
+things and has been removed. The honest statement is narrower: Mechanism
+5 leaves the pipeline's reported AUROC entirely unaffected, but
+materially inflates every threshold-dependent metric (F1, accuracy, MCC,
+Cohen's $\kappa$, and any ECE computed from those threshold-derived
+predictions) that MultiHaluDet also reports at that same selected
+threshold -- a distinct, real leak in its own right, not a directly
+rankable "more or less severe than Mechanism 3."
 
 ## 5. A Checklist for This Literature
 
@@ -797,7 +869,7 @@ tool a reader should rely on today.
 
 **Scope note.** This paper makes no inference-economy claim. It is an
 evaluation-protocol audit, not an inference-time method; fixing any of
-the four leakage mechanisms makes no claimed difference to deployment
+the five leakage mechanisms makes no claimed difference to deployment
 cost. The paper's value is entirely in correcting reported detection
 metrics.
 
@@ -851,18 +923,24 @@ Five distinct label-information-leakage mechanisms recur across
 hidden-state hallucination-detection pipelines, including our own, and
 differ substantially in severity. Case Study 1 is catastrophic ($+0.19$
 AUROC) regardless of scale. Case Study 3's checkpoint-selection mechanism
-is a small residual gap, significant at 2 of 4 tested capacities, that
-strengthens rather than weakens under a stricter control isolating fold
-reuse from adaptive selection in general (Appendix A documents why a
-defensible estimate here requires several controls to hold
-simultaneously) -- and a K/selection-set-size sweep (Appendix A) confirms
+is a small residual gap, significant at 2 of 4 tested capacities. A
+stricter control isolating fold reuse from adaptive selection in general
+finds an even larger, more significant gap, but that widened gap is
+itself at least partly confounded by the control's own noisier,
+smaller-carve-out selection signal (§4.3, Appendix A), so we do not read
+it as simply confirming a larger severity than the primary estimate --
+only as failing to support the alternative "any adaptive selection
+helps" explanation. A K/selection-set-size sweep (Appendix A) confirms
 this severity scales with the number of candidates and the selection-set
 size, as extreme-value theory predicts, rather than with model capacity
 as the original sweep varied. Mechanism 5, the test-set threshold
-selection found in this same pipeline, is roughly an order of magnitude
-more severe and far more statistically decisive -- the clearest single
-piece of evidence in this paper that severity is a property of the
-mechanism, not of "this pipeline" as a whole. That difficulty --
+selection found in this same pipeline, leaves AUROC exactly unaffected by
+construction but produces F1/accuracy gaps ($+0.021$ to $+0.034$) that
+are large and highly significant on their own terms -- not directly
+comparable in magnitude to Mechanism 3's AUROC-scale severity, since the
+two measure different metrics, but a clear case that a pipeline can be
+simultaneously clean on one reported metric and leaking on another. That
+difficulty --
 needing calibration, budget-matching, seed-matching, and an
 alternative-confound test all to hold at once before trusting a single
 number -- is the strongest argument in this paper for the checklist we
@@ -893,7 +971,7 @@ reached, and additional robustness checks omitted from the main text for
 length.** §4.3 states the result directly; nothing below is required to
 verify it.
 
-**TL;DR.** Ten issues were found and fixed via iterative review while
+**TL;DR.** Eleven issues were found and fixed via iterative review while
 deriving this case study's severity estimate (full table below). In
 order: (1) an uncalibrated
 synthetic sweep saturated at AUROC=1.0; (2) the calibration formula
@@ -920,9 +998,15 @@ share neither the architecture-mismatch (4) nor the split-leakage (8)
 problem the real-feature test needed fixing for. A tenth, later addition
 -- the fidelity extension modeling MultiHaluDet's actual LR-scheduler and
 early-stopping-tied-to-validation behavior, not just checkpoint
-selection -- found a substantially *larger* gap ($+0.0099$,
-$p=3.6\times10^{-8}$) than the checkpoint-selection-only harness above,
-described later in this appendix.
+selection -- went through two further, sequential control-construction
+bugs of its own (an earlier version selected the retrain epoch count from
+the leaky run itself, which cannot differ from it by construction; the
+fix for that then discarded its own correctly-trained control model and
+retrained blind with no scheduler at all, reintroducing a different
+confound) before converging on a genuine, scheduler-bearing,
+disjoint-carve-out control, which found a substantially *larger* gap
+($+0.0111$, $p=4.3\times10^{-9}$) than the checkpoint-selection-only
+harness above, described later in this appendix.
 
 **Correction table.** Each row is one issue found by iterative review while
 deriving §4.3's severity estimate; full derivations live in the cited
@@ -939,7 +1023,8 @@ script/result files, not below.
 | 7 | A permutation-null number ($0.504\pm0.043$) was misattributed to this calibration check | Reconciled: $0.504$ is a different, unrelated check; this check's real value is $0.1202\pm0.0170$ | Both numbers now correctly labeled |
 | 8 | **The calibration transform itself leaked label information across the split it was evaluated on** -- full-sample class-mean centering before the split forces $\cos(\Delta\mu_{\text{tr}},\Delta\mu_{\text{te}})\approx-1$ by construction (verified: $-0.9999\pm0.0000$, train$\to$test AUROC$=0.062$) | Re-center on train indices only (`code/43`, `apply_calibration_train_only`); re-run alpha search per-fold | $\alpha=0.1328$; $\cos=0.0000\pm0.0007$, AUROC$=0.584\pm0.059$ (no longer inverted) |
 | 9 | Operating-point mismatch (issue 5) survives the leakage fix: train-only-calibrated pipeline still runs at AUROC$\approx0.96$-$0.97$, not $0.80$ | Report at the test's own operating point rather than retire it | LEAKY beats CLEAN\_MATCHED by $+0.0021$ (cap. 128, $p=0.0025$) / $+0.0022$ (cap. 384, $p=0.0003$) -- **the number §4.3 reports** |
-| 10 | Checkpoint-selection-only harness may understate MultiHaluDet's actual leak: the real trainer couples an LR scheduler and early stopping to the same validation fold every epoch, not just a final checkpoint pick | Port the scheduler+shared-patience mechanic into the harness (`code/49`), with a genuine budget-matched control (an earlier version used the leaky run's own epoch count, which can never differ from it by construction -- caught before reporting) | LEAKY\_PLUS\_LRSCHED beats CLEAN\_MATCHED\_PLUS\_LRSCHED by $+0.0099$ ($p=3.6\times10^{-8}$) -- **$\approx5\times$ larger** than the checkpoint-only estimate |
+| 10 | Checkpoint-selection-only harness may understate MultiHaluDet's actual leak: the real trainer couples an LR scheduler and early stopping to the same validation fold every epoch, not just a final checkpoint pick | Port the scheduler+shared-patience mechanic into the harness (`code/49`). Two sequential bugs found along the way: (a) an early version selected the retrain epoch count from the leaky run's own loop, which can never differ from it by construction; (b) the fix for (a) then discarded the correctly-trained control model and retrained blind with no scheduler at all, confounding "reuses the leaky fold" with "has an adaptive LR mechanism at all." Final fix: keep the model already trained with a real scheduler on a disjoint carve-out, rather than discarding it | LEAKY\_PLUS\_LRSCHED beats CLEAN\_MATCHED\_PLUS\_LRSCHED by $+0.0111$ ($p=4.3\times10^{-9}$) -- **roughly $3$-$4\times$ larger** than the checkpoint-only estimate (CLEAN\_MATCHED\_PLUS\_LRSCHED itself beats PLACEBO\_PLUS\_LRSCHED decisively, $+0.0498$, $p=3.7\times10^{-16}$) |
+| 11 | Two of this paper's own synthetic-data generators (`code/46`, Mechanism 5; `code/47`, the K/selection-set-size sweep) independently committed the same calibration-inversion error class as issue 2, in a new form: the per-class mean offset used the full separation ($\pm\text{class\_sep}$) rather than half ($\pm\text{class\_sep}/2$), silently realizing $4\times$ the intended Fisher $J$ | Corrected both generators to the $\pm\text{class\_sep}/2$ convention already used elsewhere (`code/02d`), and added a new, mandatory, non-tautological guardrail (`code/sanity_checks.py`) every synthetic generator in this project must now call before returning data. The guardrail checks the bias-corrected realized Fisher $J$ ratio directly (not a fitted classifier's CV AUROC, which undershoots by regularization, a separate real effect -- see issue 5) | Ratio cleanly separates correct generators (0.33-1.83 across 2000 seeds, five operating points) from the $4\times$ bug (never below 2.77) |
 
 **Issue 8 is the load-bearing finding of this appendix**, and the reason
 this paper's own severity-measurement instrument is used as a worked
@@ -988,23 +1073,43 @@ the reported score by $\text{gap}\approx c\cdot\sigma_{\text{val}}
 \sqrt{2\ln K}$, shrinking with validation-set size $n_{\text{val}}$.
 `code/47_selection_multiplicity_sweep.py` tests this directly (decoupled
 `data_seed`/`split_seed`/`fold_seed_base`/`init_seed_base`, so no single
-draw can produce all three patterns by coincidence). Sweeping
-$K\in\{1,3,5,10,15,25,45,75,135,225\}$ at fixed capacity gives a gap that
-is non-monotone at small $K$ but trends from $+0.0000$ to $+0.0005$
-overall, fit by $c=0.00299$, $R^2=0.544$ ($10$-point grid; barely moved
-from a 5-point grid's $R^2=0.536$) -- suggestive, not a tight
-confirmation of the exponent. Sweeping $n_{\text{val}}$ (via
-$N_{\text{SAMPLES}}\in\{350,700,2800\}$) shrinks the gap toward zero as
-predicted ($+0.0007\to+0.0000$). Sweeping the operating point
-($\text{TARGET\_AUROC}\in\{0.70,\ldots,0.985\}$) shrinks the gap toward
-the ceiling overall, but the two points closest to MultiHaluDet's own
-real regime ($0.95$, $0.985$) break the monotone pattern and remain
-statistically decisive despite being numerically smallest ($p=0.0026$,
-$p=0.0016$) -- MultiHaluDet's own operating point ($\approx0.9855$) sits
-almost exactly at this sweep's most significant cell. All three
-qualitative dependencies point the predicted direction; none is fit
-tightly enough to confirm the theory's exact exponents. Full per-cell
-results: `results/selection_multiplicity_sweep.json`.
+draw can produce all three patterns by coincidence). **Correction:** an
+earlier version of this sweep's synthetic generator had the same
+calibration bug as Mechanism 5 (Appendix A, issue 11) -- corrected here
+using the identical fix and the same non-tautological
+`sanity_checks.py` guardrail. Sweeping
+$K\in\{1,3,5,10,15,25,45,75,135,225\}$ at fixed capacity now gives a gap
+that rises essentially monotonically with $K$ ($+0.0000$ at $K{=}1$ to
+$+0.0052$ at $K{=}225$, with only a brief plateau between $K{=}10$ and
+$K{=}15$), fit by $c=0.0417$, $R^2=0.756$ -- a substantially tighter fit
+than the uncorrected sweep previously reported ($R^2=0.54$), and every
+cell from $K{=}3$ upward is individually significant ($p<0.0002$
+throughout). Sweeping $n_{\text{val}}$ (via
+$N_{\text{SAMPLES}}\in\{350,700,2800\}$) does not shrink cleanly toward
+zero as the simplest reading of the theory predicts: the gap is smallest
+and significant at the largest $n_{\text{val}}$ ($+0.0005$,
+$n_{\text{val}}{\approx}448$, $p=0.047$), but is *larger*, not smaller,
+at $n_{\text{val}}{\approx}112$ ($+0.0036$, $p=0.0012$) than at
+$n_{\text{val}}{\approx}56$ ($+0.0026$, not significant, $p=0.33$, CI
+crossing zero) -- consistent with the theory's qualitative claim that
+very small validation sets are noisy enough to leave the winner's-curse
+signal underpowered, but not with a clean monotone $1/\sqrt{n_{\text{val}}}$
+decline across all three points tested. Sweeping the operating point
+($\text{TARGET\_AUROC}\in\{0.70,\ldots,0.985\}$) gives a cleanly monotone
+*point-estimate* decline toward the ceiling ($+0.0093\to+0.0002$), but
+significance is not monotone: $0.70$, $0.80$, and $0.95$ are each
+significant ($p=0.0001$, $p=0.0012$, $p=0.037$), while $0.90$ and $0.985$
+-- MultiHaluDet's own operating point -- are not ($p=0.067$, $p=0.219$),
+the latter consistent with the ceiling-effect ranking noise this paper's
+own severity harness already documents (Appendix A, issue 5) rather than
+with the mechanism vanishing at high AUROC specifically. Taken together:
+the $K$-scaling prediction is now confirmed with a materially tighter
+fit than previously reported; the $n_{\text{val}}$- and operating-point
+dependencies point in the theory's qualitative direction but are neither
+perfectly monotone nor individually significant at every cell, so we read
+this as supportive of, not a precise quantitative confirmation of, the
+extreme-value-theory account. Full per-cell results:
+`results/selection_multiplicity_sweep.json`.
 
 ## References
 

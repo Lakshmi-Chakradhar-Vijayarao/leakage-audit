@@ -18,6 +18,21 @@ quantified. This reruns the LEAKY vs. CLEAN_MATCHED vs. PLACEBO comparison
 with this scheduler+patience mechanic ported in, on the same train-only-
 calibrated real features (alpha=0.1328, code/43) at capacity 128, to see
 whether it adds severity beyond the checkpoint-selection-only harness.
+
+CORRECTION (independent adversarial review found this): an earlier version
+of CLEAN_MATCHED_PLUS_LRSCHED discarded the model already trained with a
+real ReduceLROnPlateau scheduler on a disjoint carve-out (tr2_idx/es_idx)
+and retrained from scratch with `train_fixed_epochs` -- plain constant-LR
+Adam, no scheduler at all -- merely matched to LEAKY's epoch *count*. That
+confounded "reuses the leaky val fold as the scheduler's feedback signal"
+with "has an adaptive LR/early-stopping mechanism at all," since LEAKY and
+PLACEBO both had an active scheduler while the control did not. The fix:
+CLEAN_MATCHED_PLUS_LRSCHED now IS that first model -- trained with the
+same real scheduler+early-stopping mechanic, but fed by the disjoint
+es_idx carve-out instead of the reused val_idx fold. This costs a small,
+disclosed reduction in training-set size (tr2_idx is ~85% of tr_idx, the
+ES_HOLD_FRACTION=0.15 carve-out) rather than an exact data-budget match,
+in exchange for actually isolating the mechanism under test.
 """
 import json
 from pathlib import Path
@@ -130,23 +145,6 @@ def train_with_scheduler_and_earlystop(X_tr, y_tr, X_sel, y_sel, hidden, max_epo
     return model, best_epoch
 
 
-def train_fixed_epochs(X_tr, y_tr, hidden, n_epochs, seed):
-    torch.manual_seed(seed)
-    model = SweepMLP(X_tr.shape[1], hidden)
-    opt = torch.optim.Adam(model.parameters(), lr=2e-3, weight_decay=6e-5)
-    crit = nn.BCEWithLogitsLoss()
-    Xt = torch.tensor(X_tr, dtype=torch.float32)
-    yt = torch.tensor(y_tr, dtype=torch.float32)
-    for _ in range(max(n_epochs, 1)):
-        model.train()
-        opt.zero_grad()
-        loss = crit(model(Xt), yt)
-        loss.backward()
-        opt.step()
-    model.eval()
-    return model
-
-
 def extract_features(model, X):
     model.eval()
     with torch.no_grad():
@@ -181,20 +179,21 @@ def run_one_seed(X, y, hidden, seed):
         oof["leaky_plus_lrsched"][val_idx] = extract_features(model_leaky, X_train[val_idx])
         test_feat["leaky_plus_lrsched"] += extract_features(model_leaky, X_test)
 
-        # CLEAN: scheduler+early-stop react to a genuine, disjoint ES-holdout
-        # carved from tr_idx (never touches val_idx) -- gives an independently
-        # selected epoch count, not LEAKY's own.
+        # CLEAN_MATCHED: scheduler+early-stop react to a genuine, disjoint
+        # ES-holdout carved from tr_idx (never touches val_idx). FIXED
+        # (independent adversarial review found this): this used to be
+        # discarded in favor of retraining on the full tr_idx with
+        # train_fixed_epochs -- plain constant-LR Adam, no scheduler at all,
+        # confounding "reuses the leaky val fold" with "has an adaptive
+        # LR/early-stop mechanism at all." Now this model IS the control:
+        # same real scheduler+early-stopping mechanic as LEAKY, but fed by
+        # the disjoint es_idx carve-out instead of the reused val_idx fold.
         tr2_idx, es_idx = train_test_split(
             tr_idx, test_size=ES_HOLD_FRACTION, stratify=y_train[tr_idx], random_state=fold_seed,
         )
-        _, best_epoch_clean = train_with_scheduler_and_earlystop(
+        model_clean_matched, _ = train_with_scheduler_and_earlystop(
             X_train[tr2_idx], y_train[tr2_idx], X_train[es_idx], y_train[es_idx], hidden, MAX_EPOCHS, fold_seed,
         )
-
-        # CLEAN_MATCHED: budget-matched to LEAKY (retrained on the FULL tr_idx,
-        # same seed as LEAKY), but for CLEAN's independently-selected epoch
-        # count, with no scheduler reacting to val_idx.
-        model_clean_matched = train_fixed_epochs(X_train[tr_idx], y_train[tr_idx], hidden, best_epoch_clean, fold_seed)
         oof["clean_matched_plus_lrsched"][val_idx] = extract_features(model_clean_matched, X_train[val_idx])
         test_feat["clean_matched_plus_lrsched"] += extract_features(model_clean_matched, X_test)
 

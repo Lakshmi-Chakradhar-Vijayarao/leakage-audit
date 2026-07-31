@@ -1,18 +1,20 @@
 # A checklist for label-information leakage in hidden-state hallucination probing
 
-Derived from four case studies in this paper: two internal (HaRP's nested-
+Derived from four case studies in this paper -- two internal (HaRP's nested-
 CV feature leakage; GUARDIAN's CV-based layer-selection optimism) and two
 external (MultiHaluDet's per-fold checkpoint-selection leakage; the
-quantized-LLM paper's test-set-driven best-layer selection). All four are
-instances of the same root hazard -- **using the evaluation labels, even
-indirectly, to make a choice, then reporting the resulting metric as if
-that choice were free** -- surfacing through four structurally different
-mechanisms. This is the paper's reusable, actionable contribution: a set
-of concrete questions a researcher (or reviewer) can ask of any hidden-
-state hallucination-detection pipeline to identify which, if any, of these
-four mechanisms it is vulnerable to.
+quantized-LLM paper's test-set-driven best-layer selection) -- plus a fifth,
+structurally distinct mechanism (MultiHaluDet's test-set-driven
+decision-threshold selection) found while auditing the third case study's
+own repository. All five are instances of the same root hazard -- **using
+the evaluation labels, even indirectly, to make a choice, then reporting
+the resulting metric as if that choice were free** -- surfacing through
+five structurally different mechanisms. This is the paper's reusable,
+actionable contribution: a set of concrete questions a researcher (or
+reviewer) can ask of any hidden-state hallucination-detection pipeline to
+identify which, if any, of these five mechanisms it is vulnerable to.
 
-## The four mechanisms, as questions to ask of a pipeline
+## The five mechanisms, as questions to ask of a pipeline
 
 ### 1. Full-dataset fit-then-score leakage (severity: SEVERE — Case Study 1)
 **Ask:** Is there any feature (a probe's predicted probability, a class
@@ -65,6 +67,33 @@ of its severity in this reconstruction is a small, real, but
 capacity-inconsistent residual, not a null and not a clean capacity-growing
 trend.
 
+**A further fidelity extension: this may still understate the real
+mechanism.** The checkpoint-selection-only harness above ports only the
+final "keep the best-val-AUC checkpoint" decision. MultiHaluDet's actual
+trainer also steps a `ReduceLROnPlateau` scheduler and ties early stopping
+to the same validation fold's AUC *every epoch*, not just once at the end
+-- a continuous, epoch-by-epoch reactive coupling to validation feedback.
+Porting this mechanic in (`code/49_mechanism3_fidelity_extension.py`) took
+two further rounds of correction to isolate properly: an early version
+selected the control's retrain epoch count from the leaky run's own
+training loop (which can never differ from it by construction); the fix
+for that then discarded the correctly-trained control model and retrained
+from scratch with no scheduler at all, silently confounding "reuses the
+leaky fold" with "has an adaptive LR/early-stopping mechanism at all"
+since the leaky and placebo conditions both kept their scheduler. The
+final, corrected control keeps the model already trained with a real
+scheduler on a genuinely disjoint carve-out, rather than discarding it.
+Under this corrected harness, LEAKY beats the scheduler-bearing
+CLEAN\_MATCHED control by $+0.0111$ ($p=4.3\times10^{-9}$, $n=100$ seeds) --
+roughly 3-4x larger than the checkpoint-selection-only estimate above --
+while the scheduler-bearing control itself still beats PLACEBO decisively
+($+0.0498$, $p=3.7\times10^{-16}$), confirming it is a strongly
+informative, non-degenerate honest baseline. **Lesson: when a real
+pipeline reacts to validation feedback continuously (a scheduler, early
+stopping), a "clean" control that reacts to it not at all is a different,
+easy-to-underestimate confound in its own right -- match the mechanism's
+presence, not just its final output, between leaky and clean conditions.**
+
 ### 3. Test-set-driven multiple-hypothesis selection (severity: UNQUANTIFIED HERE, MECHANISM CONFIRMED — Case Study 4)
 **Ask:** Is a "best" layer, probe type, or model configuration chosen by
 taking the argmax of a metric computed on the *same test set* that gets
@@ -80,7 +109,7 @@ validation-only criterion, not the test-set argmax).
 re-extracting hidden states from the audited 7B-scale models); the
 mechanism itself is code-verified.
 
-### 4. Selection-based optimism in cross-validated hyperparameter choice (severity: 18.8 AUROC points, one demonstrated instance — Case Study 2)
+### 4. Selection-based optimism in cross-validated hyperparameter choice (severity: real, but selection-specific component small once measured with a proper random split — Case Study 2)
 **Ask:** Was a hyperparameter (a layer, a regularization strength, a
 threshold) chosen by maximizing a cross-validated metric, and is that same
 CV number then reported as the model's performance, without a further,
@@ -89,25 +118,95 @@ genuinely held-out evaluation at the chosen setting?
 `report(cv_auroc[best_layer])` with no separate held-out check.
 **Fix:** after selecting via CV, evaluate exactly once more on a disjoint
 held-out set that played no role in the selection, and report that number
-as the headline result.
+as the headline result. **A second, easy-to-miss fix requirement, learned
+the hard way in this paper's own GUARDIAN case study: make sure that
+disjoint held-out set is an actual random partition, not a fixed slice of
+whatever order the data happens to be stored in** -- see below.
 **Measured severity (this paper, Case Study 2):** 18.8 AUROC points
 (CV-selection number 0.804 vs. true held-out 0.616) at N=700, GUARDIAN's
-own Mistral-7B pipeline.
+own Mistral-7B pipeline, at the specific layer (L11) GUARDIAN's own
+argmax selected.
+**Correction, found by a subsequent independent review:** GUARDIAN's own
+held-out split is `H[:400]`/`H[400:]`, a fixed sequential slice, not a
+random partition -- the two halves are separable by a hidden-state probe
+at AUROC 0.734-0.776, i.e. they are systematically different
+populations. A full 32-layer decomposition of the same CV-vs-held-out gap
+shows a comparably large gap ($+0.19$ mean, SD $0.05$) at nearly every
+layer under this sequential split, meaning the *selection-specific*
+component (gap at the selected layer, minus the mean gap across all
+layers) is only $-0.004$ under GUARDIAN's own split -- indistinguishable
+from zero. Reversing which half selects flips L11's own gap sign
+entirely ($-0.014$), direct evidence the sequential-split number tracks
+which half happens to be easier, not selection optimism. Recomputing the
+selection-specific component under 8 randomized stratified splits gives
+a mean of $+0.007$ (SD $0.030$, range $-0.033$ to $+0.058$ across reps)
+-- small, sign-unstable, and about 11.5x smaller than the sequential
+split's apparent effect. **The corrected lesson is narrower than the
+original 18.8-point headline suggests:** CV-based layer selection here
+does coincide with a large, real CV-vs-held-out optimism gap present at
+essentially every layer, but the *additional* penalty specifically
+attributable to argmax-over-layers selection, once measured with a
+proper random split, is small and not reliably distinguishable from zero
+at this sample size. **Lesson: "held out" must mean "randomly
+partitioned," not merely "a different index range" -- a fixed sequential
+split can itself be a leakage-adjacent confound if the underlying data
+has any structure correlated with storage order (batching, collection
+date, source file boundaries).**
+
+### 5. Test-set-driven decision-threshold selection (severity: leaves AUROC exactly unaffected by construction, but materially inflates every threshold-dependent metric — Mechanism 5, found while auditing Case Study 3's own repository)
+**Ask:** Is a decision threshold (or other operating point: a Youden-J
+cutoff, an F1-maximizing cutoff) chosen by optimizing a metric on the
+*test* labels themselves, with that same test set then used to report
+every threshold-dependent metric (F1, accuracy, MCC, Cohen's kappa,
+balanced accuracy, or an ECE computed from those threshold-derived
+predictions) at that selected threshold?
+**Red flag pattern:** `best_thresh = find_best_thresholds(probs_test, y_test)`,
+then `f1_score(y_test, (probs_test >= best_thresh).astype(int))` reported
+as the headline metric.
+**Fix:** select the threshold on an independent validation split that
+never touches the test labels, then apply it as-is to the test set.
+**Measured severity (this paper, isotropic-Gaussian calibrated synthetic
+reconstruction, `code/46_mechanism5_threshold_selection.py`, $n=200$
+seeds):** F1 gaps (leaky-selected threshold vs. honestly-selected
+threshold) ranging from $+0.0212$ (AUROC target $0.985$, MultiHaluDet's
+own reported regime) to $+0.0338$ (AUROC target $0.80$), all significant
+at $p<10^{-31}$; accuracy gaps of comparable magnitude ($+0.0215$ to
+$+0.0457$). **Important caveat, found in this paper's own first attempt
+at reporting this result:** an earlier draft's severity numbers were
+themselves computed from a synthetic generator with the exact calibration
+bug this checklist's own lesson-5a warns about (class-mean offset off by
+a factor of 2, quadrupling the realized effect size) -- fixed here, and
+now guarded against for every generator in this project by a mandatory,
+non-tautological calibration check (`code/sanity_checks.py`). **A second
+caveat: this mechanism's severity is not directly comparable to Mechanism
+2's AUROC-scale severity above.** AUROC is threshold-free by
+construction, so test-set threshold selection has *exactly zero* effect
+on it; the F1 gap is also structurally guaranteed non-negative, since the
+leaky threshold is chosen by an argmax over the same grid the test F1 is
+then scored on. An earlier draft of this paper described Mechanism 5 as
+"an order of magnitude more severe" than Mechanism 2 by comparing these
+F1/accuracy gaps directly to Mechanism 2's AUROC gaps -- a category
+error, since the two measure different things, now corrected. The honest
+statement: this mechanism leaves AUROC entirely unaffected, but
+materially inflates every other metric the same pipeline reports
+alongside it -- a distinct, real leak in its own right, not a directly
+rankable "more or less severe."
 
 ## Using this checklist
 
 For any hidden-state hallucination/factuality-probing paper (your own, or
-one you are reviewing), work through the four questions above in order.
+one you are reviewing), work through the five questions above in order.
 None of them require re-running the paper's experiments to *ask* -- each
 is answerable by reading the training/evaluation code directly, the way
-all four case studies in this paper were identified. Quantifying the
-resulting inflation, if you choose to, requires either the paper's
-released code+data (Case Studies 1-3) or a controlled, difficulty-
-calibrated synthetic reconstruction of the specific mechanism when the
-original compute scale isn't reproducible (Case Study 3's approach,
-generalizable to any of the four patterns).
+all four case studies (plus Mechanism 5, found while auditing one of
+them) in this paper were identified. Quantifying the resulting inflation,
+if you choose to, requires either the paper's released code+data (Case
+Studies 1-3) or a controlled, difficulty-calibrated synthetic
+reconstruction of the specific mechanism when the original compute scale
+isn't reproducible (Case Study 3's and Mechanism 5's approach,
+generalizable to any of the five patterns).
 
-## A fifth, cross-cutting lesson: quantifying a mechanism needs a placebo, not just a clean/leaky pair
+## An additional, cross-cutting lesson: quantifying a mechanism needs a placebo, not just a clean/leaky pair
 
 Case Study 3's own reconstruction taught us this the hard way, via
 independent adversarial review. A first attempt at quantifying mechanism

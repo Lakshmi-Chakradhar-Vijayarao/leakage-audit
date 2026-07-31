@@ -112,6 +112,35 @@ both to select X and to report Y is vulnerable to this exact gap. The size
 of the gap (18.8 points here) suggests this is not a negligible, ignorable
 effect at the sample sizes (N≈700) common in this literature.
 
+### Correction: the held-out split above is not actually random
+
+A subsequent independent review found that the `H[:400]`/`H[400:]` split
+used for "True held-out" in the table above is a fixed sequential slice
+of the dataset's storage order, not a random partition — a hidden-state
+probe can separate the two halves at AUROC 0.734-0.776, meaning they are
+systematically different populations, not exchangeable draws. Decomposing
+the CV-vs-held-out gap at all 32 layers (not just L11) under this
+sequential split shows a comparably large gap ($+0.19$ mean, SD $0.05$) at
+nearly every layer, which means the gap specifically attributable to
+*selecting* L11 via argmax (gap at L11 minus the mean gap across all
+layers) is only $-0.004$ under this split — indistinguishable from zero.
+Reversing which half selects flips L11's own gap sign entirely
+($-0.014$), itself evidence the sequential-split number tracks which half
+happens to be easier rather than a stable property of the selection
+procedure. Recomputing this selection-specific component under 8
+randomized stratified splits gives a mean of $+0.007$ (SD $0.030$, range
+$-0.033$ to $+0.058$) — small, sign-unstable, and about 11.5x smaller
+than the sequential split's apparent effect. **The corrected claim is
+narrower**: CV-based layer selection here does coincide with a large,
+real CV-vs-held-out optimism gap present at essentially every layer, but
+the *additional* penalty specifically attributable to argmax-over-layers
+selection, once measured with a genuinely random split, is small and not
+reliably distinguishable from zero at this sample size. The broader
+methodological lesson survives unchanged and is arguably strengthened:
+"held out" must mean "randomly partitioned," not merely "a different
+index range" — this project's own held-out split needed exactly the same
+scrutiny it recommends applying to others.
+
 ---
 
 ## What Paper 2 needs next (external validation)

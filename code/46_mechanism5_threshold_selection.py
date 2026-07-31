@@ -29,12 +29,16 @@ predictions:
           to the test set.
 """
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 from scipy.stats import bootstrap, norm, wilcoxon
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, accuracy_score, roc_curve
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sanity_checks import assert_calibration
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_PATH = ROOT / "results" / "mechanism5_threshold_selection.json"
@@ -49,16 +53,24 @@ RNG_GLOBAL = np.random.default_rng(2026)
 
 
 def make_synthetic_data(seed, target_auroc):
+    """FIXED (independent adversarial review found this): per-dimension mean
+    difference must be class_sep, not 2*class_sep, to realize ||delta_mu||^2
+    = j_target as intended (matching code/02d's mean_pos=CLASS_SEP/2,
+    mean_neg=-CLASS_SEP/2 convention). The original +-class_sep version
+    silently quadrupled the realized Fisher J, so every "operating point"
+    label in this script's output was wrong (e.g. the labeled 0.985 cell
+    actually realized Bayes AUROC ~0.99994, not 0.985)."""
     rng = np.random.default_rng(seed)
     j_target = 2 * (norm.ppf(target_auroc)) ** 2
     class_sep = np.sqrt(j_target / FEAT_DIM)
     n_pos = N_SAMPLES // 2
     n_neg = N_SAMPLES - n_pos
-    X_pos = class_sep + rng.standard_normal((n_pos, FEAT_DIM))
-    X_neg = -class_sep + rng.standard_normal((n_neg, FEAT_DIM))
+    X_pos = class_sep / 2 + rng.standard_normal((n_pos, FEAT_DIM))
+    X_neg = -class_sep / 2 + rng.standard_normal((n_neg, FEAT_DIM))
     X = np.vstack([X_pos, X_neg]).astype(np.float64)
     y = np.array([1] * n_pos + [0] * n_neg)
     perm = rng.permutation(len(y))
+    assert_calibration(X, y, target_auroc)
     return X[perm], y[perm]
 
 

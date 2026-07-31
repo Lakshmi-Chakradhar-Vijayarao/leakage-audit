@@ -29,6 +29,7 @@ variable decoupled into `data_seed` (which synthetic sample), `split_seed`
 `init_seed` (torch model initialization).
 """
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -40,6 +41,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import StandardScaler
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sanity_checks import assert_calibration
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_PATH = ROOT / "results" / "selection_multiplicity_sweep.json"
@@ -73,16 +77,22 @@ class SweepMLP(nn.Module):
 
 
 def make_synthetic_data(data_seed, n_samples, target_auroc):
+    """FIXED (independent adversarial review found this, same bug as
+    code/46): per-dimension mean difference must be class_sep, not
+    2*class_sep, to realize ||delta_mu||^2 = j_target as intended (matching
+    code/02d's mean_pos=CLASS_SEP/2, mean_neg=-CLASS_SEP/2 convention). The
+    original +-class_sep version silently quadrupled the realized Fisher J."""
     rng = np.random.default_rng(data_seed)
     j_target = 2 * (norm.ppf(target_auroc)) ** 2
     class_sep = np.sqrt(j_target / FEAT_DIM)
     n_pos = n_samples // 2
     n_neg = n_samples - n_pos
-    X_pos = class_sep + rng.standard_normal((n_pos, FEAT_DIM))
-    X_neg = -class_sep + rng.standard_normal((n_neg, FEAT_DIM))
+    X_pos = class_sep / 2 + rng.standard_normal((n_pos, FEAT_DIM))
+    X_neg = -class_sep / 2 + rng.standard_normal((n_neg, FEAT_DIM))
     X = np.vstack([X_pos, X_neg]).astype(np.float32)
     y = np.array([1] * n_pos + [0] * n_neg)
     perm = rng.permutation(len(y))
+    assert_calibration(X, y, target_auroc)
     return X[perm], y[perm]
 
 
