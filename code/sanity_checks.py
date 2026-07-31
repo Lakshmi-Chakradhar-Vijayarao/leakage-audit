@@ -31,6 +31,32 @@ bug's realized AUROC deviates from target by only ~0.015, smaller than the
 ~0.03-0.07 sampling noise band needed to avoid false positives at
 target=0.70.
 
+LOAD-BEARING ASSUMPTION, STATED EXPLICITLY (an independent adversarial review
+found it undocumented here and in the paper): the finite-sample bias
+correction below,
+
+    J_hat = ||mean_pos - mean_neg||^2 - d * (1/n_pos + 1/n_neg),
+
+is exactly right ONLY under identity within-class covariance, Sigma = I. The
+subtracted term is the expected inflation of a squared mean-difference from
+sampling noise, and it equals d*(1/n_pos + 1/n_neg) only when every dimension
+has unit variance and dimensions are uncorrelated. Under a general Sigma the
+correct term is trace(Sigma)*(1/n_pos + 1/n_neg), and the target J itself
+would have to be the Mahalanobis quantity delta_mu^T Sigma^-1 delta_mu rather
+than the plain squared Euclidean norm used here.
+
+CONSEQUENCE, which is stronger than "not yet retrofitted": for an anisotropic
+generator such as code/27_anisotropic_covariance_capacity_sweep.py -- which
+deliberately fits and reuses the REAL, correlated within-class covariance of
+Mistral-7B/HaluEval features -- this guardrail is not merely unused, it is
+NOT DIRECTLY APPLICABLE. Calling it there would compare a Euclidean J_hat
+against a Mahalanobis target J while subtracting the wrong bias term, so it
+could both reject correct data and pass buggy data. Making it applicable to
+anisotropic generators requires the trace(Sigma) bias term and a Mahalanobis
+target, i.e. a modification, not a call site. Every generator this guardrail
+currently gates (code/46, code/47) is isotropic by construction, so the
+assumption holds where it is used.
+
 Instead this checks the ratio realized_J / target_J directly, which is
 scale-invariant: the bug is a fixed, structural 4x multiplier on J (using
 class_sep instead of class_sep/2 doubles the per-dimension mean gap, and
@@ -69,7 +95,13 @@ def assert_calibration(X, y, target_auroc, ratio_bounds=(0.2, 2.6)):
     estimates carries sampling noise of variance (1/n_pos + 1/n_neg), and
     squaring a noisy estimate inflates its expectation by that noise
     variance, summed over all dimensions. Subtracting this known bias term
-    recovers an unbiased Fisher J estimate."""
+    recovers an unbiased Fisher J estimate.
+
+    ASSUMES Sigma = I (identity within-class covariance). Under a general
+    Sigma the bias term is trace(Sigma)*(1/n_pos + 1/n_neg) and the target is
+    a Mahalanobis rather than a Euclidean quantity, so this function is not
+    directly applicable to anisotropic generators (e.g. code/27) without
+    modification. See the module docstring."""
     y = np.asarray(y)
     n_pos = int((y == 1).sum())
     n_neg = int((y == 0).sum())

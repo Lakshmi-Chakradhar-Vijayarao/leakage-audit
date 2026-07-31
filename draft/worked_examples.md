@@ -9,9 +9,9 @@ we bring in external targets. Both come from projects in this portfolio.
 >
 > - **Case Study 2 (GUARDIAN)** is reproducible from what ships with the
 >   paper. Its original 171 MB hidden-state cache is too large to include,
->   so `code/48` emits a ~1 MB derived artifact (per-layer, per-sample CV
+>   so `code/48` emits a 4.0 MB derived artifact (per-layer, per-sample CV
 >   fold assignments and probe scores for all 32 layers, for the
->   sequential split, the reversed split and all 8 randomized reps) and
+>   sequential split, the reversed split and all 50 randomized reps) and
 >   `code/51` recomputes and asserts every reported number from it.
 > - **Case Study 1 (HaRP)** is **not** independently re-verifiable from
 >   the submitted artifact. No script, log, or data file supporting its
@@ -113,8 +113,8 @@ maximized CV AUROC on this specific sample. **That attribution is
 retracted** — see "Correction: the held-out split above is not actually
 random" below. Under a proper random partition, the general CV-vs-held-out
 gap is indistinguishable from zero, and the component genuinely
-attributable to argmax-over-layers selection is $+0.027$ (SD $0.021$,
-$p=0.009$), about 7x smaller than the 18.8-point headline. The 18.8-point
+attributable to argmax-over-layers selection is $+0.0255$ (SD $0.0186$,
+over 50 randomized splits), about 7x smaller than the 18.8-point headline. The 18.8-point
 number is retained here only as the original, uncorrected observation.
 
 A second, independent demonstration of the same fragility: which layer
@@ -129,13 +129,21 @@ disagree about which layer the paper's own headline claim should be about.
 Any paper in this space that reports "we swept all layers and found layer
 X is optimal, achieving AUROC Y" and uses the *same* cross-validation run
 both to select X and to report Y is vulnerable to this exact gap. The
-correctly-isolated size of that gap here, however, is small: $+0.027$
-AUROC (SD $0.021$, $p=0.009$) under randomized splits, not the 18.8 points
-the confounded sequential split suggested. It is a real and statistically
-significant effect at the sample sizes (N≈700) common in this literature,
+correctly-isolated size of that gap here, however, is small: $+0.0255$
+AUROC (SD $0.0186$) under 50 randomized splits, not the 18.8 points
+the confounded sequential split suggested. It is a consistently positive
+effect at the sample sizes (N≈700) common in this literature,
 but a small one — consistent with every other code-verified severity
 estimate in this paper, all of which fall between roughly $0.000$ and
-$+0.027$ AUROC.
+$+0.034$ AUROC. Two caveats travel with it and are stated in main.tex §4.2:
+all reps resample splits of the *same* 700 samples, so the accompanying
+t-test is a within-dataset robustness statistic rather than a
+population-generalizing one; and the selection-specific component is
+positive in expectation even under a pure-noise null, because the selected
+layer is the argmax of CV AUROC and the gap contains that same CV term. The
+second is the winner's curse the metric exists to measure, not a defect —
+but it means the number's significance is not evidence of anything beyond
+argmax-over-a-noisy-statistic.
 
 ### Correction: the held-out split above is not actually random
 
@@ -158,15 +166,25 @@ half selects picks L17 (not L11) and gives a component of $+0.074$ — a
 large swing in both which layer is picked and what the component
 measures, itself evidence the sequential-split number tracks split
 order rather than a stable property of the selection procedure.
-Recomputing this selection-specific component under 8 randomized
-stratified splits, each evaluated at its own selected layer (L10, L11,
-L12, L14, L16, L18, L19, L19 across the 8 reps), gives a mean of
-$+0.027$ (SD $0.021$; $t=3.60$, $p=0.0087$; Wilcoxon $p=0.023$) — small
-but, for the first time, correctly measured and statistically
-significant, about 7x smaller than the sequential split's apparent
+Recomputing this selection-specific component under 50 randomized
+stratified splits (raised from 8; the stopping point is set by the size of
+the shipped replay artifact at ~100 KB/rep, not by runtime, and the RNG
+stream is unchanged so the original 8 still give $+0.0270$), each evaluated
+at its own selected layer — which varies across 14 distinct layers from L5
+to L23 — gives a mean of
+$+0.0255$ (SD $0.0186$; $t=9.71$; Wilcoxon $p=7.7\times10^{-12}$) — small
+but, for the first time, correctly measured and consistently
+positive, about 7x smaller than the sequential split's apparent
 effect. Separately, the *general* CV-vs-held-out gap averaged across all
-32 layers is $+0.192$ under the sequential split but only $-0.005$ (SD
-$0.073$) under the same randomized splits — indistinguishable from zero.
+32 layers is $+0.192$ under the sequential split but only $-0.0023$ (SD
+$0.0541$) under the same randomized splits — indistinguishable from zero.
+A regularization robustness check (adding `StandardScaler` and sweeping the
+probe's `C` over five decades) leaves both conclusions intact: the
+selection-specific component stays in $[+0.0324, +0.0412]$ and the general
+gap in $[-0.0044, +0.0088]$. The probe also converges comfortably — the
+largest `n_iter_` over the 9,600 fits behind the primary result is 125 of
+`max_iter=1000`, with zero convergence warnings — so "the estimate is
+dominated by a probe pinned to its prior" is not what is happening.
 **The corrected claim reverses, not just narrows, the original one**:
 the large, real, ~19-point gap "present at essentially every layer" was
 itself entirely an artifact of the sequential split's

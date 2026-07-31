@@ -15,11 +15,34 @@ Sweep A -- K (number of candidate checkpoints, i.e. EPOCHS): {1,5,15,45,135}.
   extreme-value-theory scaling for the expected max of K noisy estimates.
   K=1 has no selection at all and must give a gap of ~0 by construction.
 
-Sweep B -- n_val (selection-set size, via N_SAMPLES): {350, 700, 2800}.
-  Pre-registered prediction: gap ~ 1/sqrt(n_val).
+Sweep B -- TOTAL SAMPLE SIZE (N_SAMPLES): {350, 700, 2800}.
+  RELABELLED (an independent adversarial review found this mislabelled). This
+  sweep was previously described, here and in the paper, as an "n_val sweep."
+  It is not one. Varying N_SAMPLES moves the train-set size, the test-set size
+  AND the per-fold validation-set size simultaneously and proportionally, so
+  the resulting gaps cannot be attributed to n_val alone: any comparison
+  against the winner's-curse prediction gap ~ 1/sqrt(n_val) is confounded by
+  the training set (hence the achievable fit) and the test set (hence the
+  granularity and variance of the reported AUROC) moving with it. It is
+  reported below as a sample-size sweep, with that confound stated, and the
+  paper's extreme-value-theory discussion is qualified accordingly.
 
 Sweep C -- operating point (TARGET_AUROC): {0.70, 0.80, 0.90, 0.95, 0.985}.
   The last matches MultiHaluDet's actual reported AUROC (0.9855).
+
+Sweep D -- n_val ISOLATED, via the number of inner CV folds K_CV in
+  {2, 3, 5, 10}, at fixed N_SAMPLES=700. This is the sweep Sweep B was
+  mislabelled as. Holding the dataset and the outer train/test split fixed and
+  varying only K_CV changes the per-fold validation-set size
+  (n_val = n_train/K_CV = 280/187/112/56) without touching the total sample,
+  the training pool, or the test set the metric is reported on.
+  Disclosed residual coupling, inherent to cross-validation rather than to
+  this design: the per-fold TRAINING subset size necessarily moves inversely
+  (n_tr_fold = n_train - n_val = 280/373/448/504), because a fold's train and
+  validation parts partition the same fixed pool. So Sweep D isolates n_val
+  from total/test-set size but not from per-fold train size. It is still a
+  strictly cleaner test of the 1/sqrt(n_val) prediction than Sweep B, and it
+  costs nothing beyond the CV structure the harness already has.
 
 Everything else -- SweepMLP, the isotropic-Gaussian generative process,
 LEAKY/CLEAN/CLEAN_MATCHED/PLACEBO logic -- is an exact port of
@@ -29,6 +52,7 @@ variable decoupled into `data_seed` (which synthetic sample), `split_seed`
 `init_seed` (torch model initialization).
 """
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -141,14 +165,15 @@ def extract_features(model, X):
         return model.features(torch.tensor(X, dtype=torch.float32)).numpy()
 
 
-def run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, epochs, n_samples, target_auroc):
+def run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, epochs, n_samples,
+                 target_auroc, n_inner_folds=N_INNER_FOLDS):
     X, y = make_synthetic_data(data_seed, n_samples, target_auroc)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, stratify=y, random_state=split_seed)
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train); X_test = scaler.transform(X_test)
 
     rng = np.random.default_rng(fold_seed_base + 10000)
-    skf = StratifiedKFold(n_splits=N_INNER_FOLDS, shuffle=True, random_state=fold_seed_base)
+    skf = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=fold_seed_base)
     feat_dim_out = hidden // 2
     n_tr = len(y_train)
     conditions = ["leaky", "clean", "clean_matched", "placebo"]
@@ -179,14 +204,14 @@ def run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, 
 
     aucs = {}
     for k in oof:
-        test_feat[k] /= N_INNER_FOLDS
+        test_feat[k] /= n_inner_folds
         clf = LogisticRegression(max_iter=2000).fit(oof[k], y_train)
         aucs[k] = roc_auc_score(y_test, clf.predict_proba(test_feat[k])[:, 1])
     aucs["_val_auc_std"] = float(np.mean(val_stds))
     return aucs
 
 
-def run_sweep_cell(n_seeds, hidden, epochs, n_samples, target_auroc):
+def run_sweep_cell(n_seeds, hidden, epochs, n_samples, target_auroc, n_inner_folds=N_INNER_FOLDS):
     all_aucs = {k: [] for k in ["leaky", "clean", "clean_matched", "placebo"]}
     val_stds = []
     for seed in range(n_seeds):
@@ -194,7 +219,8 @@ def run_sweep_cell(n_seeds, hidden, epochs, n_samples, target_auroc):
         split_seed = seed + 100000
         fold_seed_base = seed + 200000
         init_seed_base = seed + 300000
-        aucs = run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, epochs, n_samples, target_auroc)
+        aucs = run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, epochs, n_samples,
+                            target_auroc, n_inner_folds=n_inner_folds)
         for k in all_aucs:
             all_aucs[k].append(aucs[k])
         val_stds.append(aucs["_val_auc_std"])
@@ -210,10 +236,75 @@ def run_sweep_cell(n_seeds, hidden, epochs, n_samples, target_auroc):
     }
 
 
+def run_sweep_D(out, n_seeds, t0):
+    """n_val isolated via the inner-CV fold count, at fixed N_SAMPLES.
+
+    This is the sweep Sweep B was mislabelled as. N_SAMPLES (and therefore the
+    outer train/test split, and the test set the metric is reported on) is held
+    fixed at DEFAULT_N_SAMPLES; only K_CV moves, which moves n_val = n_train /
+    K_CV. Residual coupling disclosed in the module docstring: per-fold train
+    size moves inversely, because a fold's train and val parts partition one
+    fixed pool. Nothing here can be decoupled further without leaving
+    cross-validation entirely."""
+    print("\n=== Sweep D: n_val ISOLATED via K_CV (N_SAMPLES fixed) ===", flush=True)
+    n_train = int(DEFAULT_N_SAMPLES * (1 - TEST_SIZE))
+    for k_cv in [2, 3, 5, 10]:
+        r = run_sweep_cell(n_seeds, CAPACITY, DEFAULT_EPOCHS, DEFAULT_N_SAMPLES,
+                           DEFAULT_TARGET_AUROC, n_inner_folds=k_cv)
+        n_val = n_train // k_cv
+        out.setdefault("sweep_D_n_val_isolated", {})[str(k_cv)] = {
+            **r, "k_cv": k_cv, "n_val_exact": n_val,
+            "n_train_fold_exact": n_train - n_val, "n_samples": DEFAULT_N_SAMPLES,
+        }
+        print(f"  K_CV={k_cv} (n_val={n_val}, n_tr_fold={n_train - n_val}): "
+              f"gap={r['gap_mean']:+.4f} CI={r['gap_bca_ci_95']} p={r['wilcoxon_p']:.4g} "
+              f"val_auc_std={r['mean_val_auc_std']:.4f}  elapsed={time.time()-t0:.0f}s", flush=True)
+    out["sweep_D_note"] = (
+        "True n_val sweep: total sample size, outer train/test split and test set all held "
+        "fixed at N_SAMPLES=700; only the inner CV fold count K_CV varies, which varies n_val. "
+        "Residual coupling (inherent to CV, disclosed rather than claimed away): per-fold "
+        "training-subset size moves inversely with n_val. Compare against sweep_B_sample_size, "
+        "which was previously mislabelled an n_val sweep and in which train, test and val all "
+        "move together."
+    )
+    return out
+
+
 def main():
     t0 = time.time()
     N_SEEDS = 100
-    out = {"sweep_A_K": {}, "sweep_B_n_val": {}, "sweep_C_operating_point": {}}
+    only = os.environ.get("ONLY_SWEEP", "").upper()
+
+    if only == "D":
+        # Additive rerun: keep every previously committed cell, add Sweep D.
+        # Sweeps A/B/C are deterministic given their seeds and are not affected
+        # by this change, so they are not recomputed; only the mislabelled key
+        # is migrated in place.
+        out = json.load(open(OUT_PATH))
+        if "sweep_B_n_val" in out:
+            out["sweep_B_sample_size"] = out.pop("sweep_B_n_val")
+            for cell in out["sweep_B_sample_size"].values():
+                n = None
+                for k, v in out["sweep_B_sample_size"].items():
+                    if v is cell:
+                        n = int(k)
+                cell["n_train_approx"] = int(n * (1 - TEST_SIZE))
+                cell["n_test_approx"] = int(n * TEST_SIZE)
+            out["sweep_B_confound_note"] = (
+                "CONFOUNDED, and relabelled from 'sweep_B_n_val' accordingly. Varying N_SAMPLES "
+                "moves train, test AND validation set sizes together, so these gaps are not "
+                "attributable to n_val alone and do not constitute a test of gap ~ 1/sqrt(n_val). "
+                "See sweep_D_n_val_isolated, which holds N_SAMPLES (and hence train and test "
+                "sizes) fixed and varies only the inner CV fold count."
+            )
+        run_sweep_D(out, N_SEEDS, t0)
+        with open(OUT_PATH, "w") as f:
+            json.dump(out, f, indent=2)
+        print(f"\nSaved (Sweep D merged into existing cells): {OUT_PATH}")
+        print(f"Total runtime: {(time.time()-t0)/60:.1f} min")
+        return
+
+    out = {"sweep_A_K": {}, "sweep_B_sample_size": {}, "sweep_C_operating_point": {}}
 
     print("=== Sweep A: K (number of candidate checkpoints) ===", flush=True)
     SWEEP_A_K_VALUES = [1, 3, 5, 10, 15, 25, 45, 75, 135, 225]
@@ -241,13 +332,26 @@ def main():
     out["sweep_A_fit"] = {"c_fit": c_fit, "r_squared": r2, "sigma_val_used": float(sigma_val)}
     print(f"  Extreme-value fit: gap ~= {c_fit} * sigma_val * sqrt(2 ln K), R^2={r2}", flush=True)
 
-    print("\n=== Sweep B: n_val (selection-set size, via N_SAMPLES) ===", flush=True)
+    print("\n=== Sweep B: TOTAL SAMPLE SIZE (N_SAMPLES) -- NOT an isolated n_val sweep ===", flush=True)
     for n_samples in [350, 700, 2800]:
         r = run_sweep_cell(N_SEEDS, CAPACITY, DEFAULT_EPOCHS, n_samples, DEFAULT_TARGET_AUROC)
         n_val_approx = int(n_samples * (1 - TEST_SIZE) / N_INNER_FOLDS)
-        out["sweep_B_n_val"][str(n_samples)] = {**r, "n_val_approx": n_val_approx}
-        print(f"  N_SAMPLES={n_samples} (n_val~={n_val_approx}): gap={r['gap_mean']:+.4f} "
+        out["sweep_B_sample_size"][str(n_samples)] = {
+            **r, "n_val_approx": n_val_approx,
+            "n_train_approx": int(n_samples * (1 - TEST_SIZE)),
+            "n_test_approx": int(n_samples * TEST_SIZE),
+        }
+        print(f"  N_SAMPLES={n_samples} (n_val~={n_val_approx}, n_train~="
+              f"{int(n_samples * (1 - TEST_SIZE))}, n_test~={int(n_samples * TEST_SIZE)}): "
+              f"gap={r['gap_mean']:+.4f} "
               f"CI={r['gap_bca_ci_95']} p={r['wilcoxon_p']:.4g}  elapsed={time.time()-t0:.0f}s", flush=True)
+    out["sweep_B_confound_note"] = (
+        "CONFOUNDED, and relabelled from 'sweep_B_n_val' accordingly. Varying N_SAMPLES moves "
+        "train, test AND validation set sizes together, so these gaps are not attributable to "
+        "n_val alone and do not constitute a test of gap ~ 1/sqrt(n_val). See sweep_D_n_val_"
+        "isolated, which holds N_SAMPLES (and hence train and test sizes) fixed and varies only "
+        "the inner CV fold count."
+    )
 
     print("\n=== Sweep C: operating point (TARGET_AUROC) ===", flush=True)
     for target_auroc in [0.70, 0.80, 0.90, 0.95, 0.985]:
@@ -255,6 +359,8 @@ def main():
         out["sweep_C_operating_point"][str(target_auroc)] = r
         print(f"  TARGET_AUROC={target_auroc}: gap={r['gap_mean']:+.4f} CI={r['gap_bca_ci_95']} "
               f"p={r['wilcoxon_p']:.4g}  elapsed={time.time()-t0:.0f}s", flush=True)
+
+    run_sweep_D(out, N_SEEDS, t0)
 
     with open(OUT_PATH, "w") as f:
         json.dump(out, f, indent=2)

@@ -55,6 +55,69 @@ but still chose which class offset to subtract from each point -- test points
 included -- by looking at that point's own label, a residual instance of the
 Mechanism-1 pattern this paper audits for. The alpha used here is read from
 code/43's output rather than hardcoded, so the two harnesses cannot drift.
+
+FOURTH CORRECTION (a further independent adversarial review): calling this a
+"fidelity extension" while silently differing from the audited trainer on
+half a dozen optimizer/data-pipeline settings was itself an overclaim. That
+review enumerated the gaps; the tractable ones are now ported, and the
+remainder are enumerated explicitly here and in the paper (Appendix A, issue
+14) rather than left undisclosed. Exactly what is and is not ported:
+
+  PORTED FROM THE AUDITED REPO (config.py / trainer.py / run_pipeline.py):
+    - learning_rate = 2e-4          (config.py:17; this script previously
+                                     used 2e-3, a 10x mismatch)
+    - AdamW                         (trainer.py:75; previously plain Adam)
+    - batch_size = 28 mini-batching (config.py:15; previously full-batch,
+                                     i.e. exactly one gradient step/epoch)
+    - warmup_epochs = 5             (config.py:21; linear LR ramp over the
+                                     first 5 epochs -- trainer.py:88-91 --
+                                     during which the scheduler is NOT
+                                     stepped: trainer.py:134 gates
+                                     `scheduler.step` on
+                                     `epoch >= config.warmup_epochs`)
+    - grad_clip = 0.5               (config.py:30, trainer.py:113)
+    - min_lr = 1e-7                 (config.py:20; previously 1e-5)
+    - epochs = 45                   (config.py:16; previously 60)
+    - RobustScaler on the input features (run_pipeline.py:81,85; previously
+                                     StandardScaler)
+    - StandardScaler on the deep OOF features before the meta-learner
+                                    (run_pipeline.py:130; previously none)
+    - and, from before this correction: ReduceLROnPlateau(mode='max',
+      factor=0.5, patience=3) stepped on the reused val fold's AUROC,
+      early-stopping at config.patience=15 on the same signal,
+      best-val-AUROC checkpoint retention, weight_decay=6e-5, 5 inner folds,
+      test_size=0.20.
+
+  DELIBERATELY NOT PORTED (out of scope for this harness; each would change
+  the objective or the model class, not just the optimizer schedule):
+    - EMA of the weights (config.use_ema, decay 0.999) -- the audited trainer
+      evaluates and checkpoints under the EMA shadow weights.
+    - The composite loss: 0.45*BCE + 0.35*FocalLoss(gamma=2) +
+      0.20*AsymmetricLoss(gamma_neg=3, gamma_pos=1, clip=0.03), plus a
+      0.20-weighted ContrastiveLoss(temp=0.04) auxiliary term on the
+      embedding. This harness uses plain BCEWithLogitsLoss.
+    - BCE pos_weight class rebalancing (trainer.py:51,70) -- porting it alone,
+      without the other three loss terms it is only 45% of, would not be
+      more faithful than omitting it.
+    - label_smoothing = 0.02.
+    - mixup (alpha 0.15) and cutmix (alpha 0.15), each applied to ~33% of
+      batches.
+    - The model itself: the audited pipeline trains a 6-layer, 8-head,
+      384-hidden multi-scale transformer (src/models/multihaludet.py); this
+      harness trains the 3-layer MLP the rest of this paper's severity
+      sweeps use, so that the fidelity extension is comparable to the
+      checkpoint-selection-only harness it is meant to be contrasted with.
+    - SWA is listed in config.py (use_swa, swa_start=30, swa_lr=5e-5) but is
+      never referenced anywhere in the audited repository's Python sources,
+      so there is nothing to port.
+
+  This means "fidelity extension" here refers specifically to fidelity of
+  the *validation-signal coupling and optimizer schedule*, not of the loss
+  function or the model class. The quantity being measured is the
+  incremental severity of continuous scheduler/early-stopping coupling over
+  a final-checkpoint argmax, holding this paper's own harness architecture
+  fixed; it is not an estimate of MultiHaluDet's own reported number's
+  inflation, which would require their model and loss as well.
 """
 import json
 import os
@@ -67,7 +130,7 @@ from scipy.stats import bootstrap, wilcoxon
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import RobustScaler, StandardScaler
 
 ROOT = Path(__file__).resolve().parent.parent
 FEATS_PATH = ROOT / "results" / "real_features_mistral7b_halueval.npz"
@@ -77,10 +140,16 @@ CALIB_PATH = ROOT / "results" / "calibration_leakage_diagnostic.json"
 
 N_SEEDS = N_SEEDS_OVERRIDE or 100
 HIDDEN = 128
-N_INNER_FOLDS = 5
-MAX_EPOCHS = 60
+N_INNER_FOLDS = 5          # config.py:5   n_inner_folds
+MAX_EPOCHS = 45            # config.py:16  epochs (was 60 before the 4th correction)
 ES_HOLD_FRACTION = 0.15
-TEST_SIZE = 0.20
+TEST_SIZE = 0.20           # config.py:6   test_size
+# --- ported optimizer/data-pipeline settings (4th correction; see docstring) ---
+LEARNING_RATE = 2e-4       # config.py:17  (was 2e-3 -- a 10x mismatch)
+BATCH_SIZE = 28            # config.py:15  (was full-batch: 1 step/epoch)
+WARMUP_EPOCHS = 5          # config.py:21  (linear ramp; scheduler not stepped)
+GRAD_CLIP = 0.5            # config.py:30
+WEIGHT_DECAY = 6e-5        # config.py:18
 # Read from code/43's output so this harness and the checkpoint-selection-only
 # harness can never drift apart on the calibration strength.
 ALPHA_TRAIN_ONLY = float(json.load(open(CALIB_PATH))["train_only_calibration_alpha"])
@@ -94,7 +163,7 @@ LR_PATIENCE = 3    # trainer.py:76 -- ReduceLROnPlateau's own reduction threshol
 # number always uses the repo-faithful value 15.
 ES_PATIENCE = int(os.environ.get("ES_PATIENCE_OVERRIDE", 15))
 LR_FACTOR = 0.5
-MIN_LR = 1e-5
+MIN_LR = 1e-7              # config.py:20 (was 1e-5 before the 4th correction)
 RNG_GLOBAL = np.random.default_rng(2026)
 
 
@@ -172,15 +241,22 @@ if os.environ.get("USE_SUPERSEDED_CALIBRATION") == "1":
 
 
 def train_with_scheduler_and_earlystop(X_tr, y_tr, X_sel, y_sel, hidden, max_epochs, seed):
-    """Faithful port of MultiHaluDet's trainer.py mechanics: ReduceLROnPlateau
+    """Port of MultiHaluDet's trainer.py mechanics: ReduceLROnPlateau
     (its own patience=3) stepped on the SAME validation fold's AUC every
     epoch, plus early stopping on a no-improvement counter over that same
     signal at the repo's own separate threshold (config.patience=15), plus
     best-val-AUC checkpoint tracking -- all three reacting to the identical
-    val signal, at the two distinct thresholds the repo actually uses."""
+    val signal, at the two distinct thresholds the repo actually uses.
+
+    Since the 4th correction this also matches the audited optimizer schedule:
+    AdamW at lr=2e-4, batch_size=28 mini-batching, a 5-epoch linear LR warmup
+    during which the scheduler is NOT stepped, grad clipping at 0.5, and
+    min_lr=1e-7. See the module docstring for the exhaustive
+    ported/not-ported list -- notably the loss function and model class are
+    NOT ported."""
     torch.manual_seed(seed)
     model = SweepMLP(X_tr.shape[1], hidden)
-    opt = torch.optim.Adam(model.parameters(), lr=2e-3, weight_decay=6e-5)
+    opt = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         opt, mode="max", factor=LR_FACTOR, patience=LR_PATIENCE, min_lr=MIN_LR
     )
@@ -188,14 +264,25 @@ def train_with_scheduler_and_earlystop(X_tr, y_tr, X_sel, y_sel, hidden, max_epo
     Xt = torch.tensor(X_tr, dtype=torch.float32)
     yt = torch.tensor(y_tr, dtype=torch.float32)
     Xs = torch.tensor(X_sel, dtype=torch.float32)
+    n_tr = Xt.shape[0]
+    shuffle_gen = torch.Generator().manual_seed(seed)
     best_auc, best_state, best_epoch = -1.0, None, 0
     patience_counter = 0
     for ep in range(max_epochs):
+        # trainer.py:88-91 -- linear LR warmup, applied before the epoch's steps.
+        if ep < WARMUP_EPOCHS:
+            warmup_lr = LEARNING_RATE * (ep + 1) / WARMUP_EPOCHS
+            for pg in opt.param_groups:
+                pg["lr"] = warmup_lr
         model.train()
-        opt.zero_grad()
-        loss = crit(model(Xt), yt)
-        loss.backward()
-        opt.step()
+        perm = torch.randperm(n_tr, generator=shuffle_gen)
+        for start in range(0, n_tr, BATCH_SIZE):
+            bidx = perm[start:start + BATCH_SIZE]
+            opt.zero_grad()
+            loss = crit(model(Xt[bidx]), yt[bidx])
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            opt.step()
         model.eval()
         with torch.no_grad():
             probs = torch.sigmoid(model(Xs)).numpy()
@@ -203,7 +290,9 @@ def train_with_scheduler_and_earlystop(X_tr, y_tr, X_sel, y_sel, hidden, max_epo
             auc = roc_auc_score(y_sel, probs)
         except ValueError:
             auc = 0.5
-        scheduler.step(auc)
+        # trainer.py:134-135 -- the scheduler is NOT stepped during warmup.
+        if ep >= WARMUP_EPOCHS:
+            scheduler.step(auc)
         if auc > best_auc:
             best_auc = auc
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
@@ -230,7 +319,9 @@ def run_one_seed(X, y, hidden, seed):
     X_calibrated = CALIBRATION_FN(
         X, y, ALPHA_TRAIN_ONLY, X_train_idx, seed=seed
     ).astype(np.float32)
-    scaler = StandardScaler()
+    # run_pipeline.py:81,85 -- the audited pipeline scales its input features
+    # with RobustScaler, not StandardScaler (4th correction).
+    scaler = RobustScaler()
     X_train = scaler.fit_transform(X_calibrated[X_train_idx])
     X_test = scaler.transform(X_calibrated[X_test_idx])
     y_train, y_test = y[X_train_idx], y[X_test_idx]
@@ -281,8 +372,13 @@ def run_one_seed(X, y, hidden, seed):
     aucs = {}
     for k in oof:
         test_feat[k] /= N_INNER_FOLDS
-        clf = LogisticRegression(max_iter=2000).fit(oof[k], y_train)
-        aucs[k] = roc_auc_score(y_test, clf.predict_proba(test_feat[k])[:, 1])
+        # run_pipeline.py:130 -- the audited pipeline standardizes the deep OOF
+        # features (fit on train, applied to test) before the meta-learner.
+        deep_scaler = StandardScaler()
+        oof_k = deep_scaler.fit_transform(oof[k])
+        test_k = deep_scaler.transform(test_feat[k])
+        clf = LogisticRegression(max_iter=2000).fit(oof_k, y_train)
+        aucs[k] = roc_auc_score(y_test, clf.predict_proba(test_k)[:, 1])
     return aucs
 
 
@@ -339,7 +435,10 @@ def main():
         "n_seeds": N_SEEDS, "hidden": HIDDEN, "alpha_train_only": ALPHA_TRAIN_ONLY,
         "means": {k: float(np.mean(v)) for k, v in results.items()},
         "lr_patience": LR_PATIENCE, "es_patience": ES_PATIENCE,
-        "calibration_method": "label_free_axis_noising",
+        # FIXED: this field was hardcoded to "label_free_axis_noising" even in the
+        # 2x2 ablation's superseded-calibration cells, mislabelling two of the four
+        # result files. It now reports whichever transform actually ran.
+        "calibration_method": CALIBRATION_FN.__name__,
         "leaky_plus_lrsched_minus_clean_matched_plus_lrsched": {
             "gap_mean": float(gap_lp_cmp.mean()), "bca_ci_95": ci_lp_cmp, "wilcoxon_p": float(p_lp_cmp),
             "paired_permutation_p": paired_permutation_p(

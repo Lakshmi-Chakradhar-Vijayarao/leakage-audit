@@ -152,25 +152,45 @@ than translating it into a cleaner narrative.
 harness models only the final "keep the best-val-AUC checkpoint" decision.
 MultiHaluDet's real trainer also steps an LR scheduler and ties early
 stopping to the same validation fold every epoch. Porting this mechanic
-in (after four rounds of its own control-construction and configuration
-bugs, documented in main.tex Appendix A items 10, 12 and 13) finds a
-larger gap: **+0.0221** (BCa 95% CI [+0.0159, +0.0292], Wilcoxon
-p=1.9e-9, paired permutation p<0.0001, n=100 seeds, capacity 128),
+in (after five rounds of its own control-construction, configuration and
+fidelity bugs, documented in main.tex Appendix A items 10, 12, 13 and 14)
+finds a larger gap: **+0.0338** (BCa 95% CI [+0.0279, +0.0405], Wilcoxon
+p=6.2e-15, paired permutation p<0.0001, n=100 seeds, capacity 128),
 against **+0.0093** for the checkpoint-selection-only harness on the same
 features under the same label-free calibration — a like-for-like ratio of
-**2.4x**.
+**3.6x**.
 
-Two earlier figures in this document are retracted: the "+0.0111 /
-roughly 5.2x" reported before the early-stopping patience was corrected
-(the harness used the LR scheduler's `patience=3` for the early-stopping
-break instead of the audited repo's own `config.patience = 15`), and the
-"3-4x" before that (which compared across operating points entirely).
-Because the patience fix and the label-free calibration fix landed
-together, they were varied factorially (`code/54`); the patience
-correction's sign actually *flips* with the operating point — shrinking
-the gap at ~0.96 and growing it at ~0.89-0.92 — so neither correction is
-credited with the whole move. Even 2.4x is an upper bound: the two
-harnesses do not land at identical operating points (~0.918 vs ~0.940).
+**What "fidelity extension" covers, and what it does not.** Ported from the
+pinned commit: learning rate 2e-4 (the harness had used 2e-3), AdamW,
+`batch_size=28` mini-batching (the harness had been full-batch), a 5-epoch
+linear warmup during which the scheduler is not stepped, gradient clipping
+at 0.5, `min_lr=1e-7`, 45 epochs, `RobustScaler` on inputs and
+`StandardScaler` on the deep OOF features — alongside the scheduler,
+early-stopping and checkpoint mechanics. **Not** ported: EMA, the composite
+BCE/focal/asymmetric/contrastive objective, `pos_weight` class rebalancing,
+label smoothing, mixup, cutmix, and the 6-layer multi-scale transformer
+itself. So this is fidelity of the *validation-signal coupling and optimizer
+schedule*, not of the objective or the model class, and it is not an
+estimate of MultiHaluDet's own reported number's inflation.
+
+Three earlier figures in this document are superseded: "+0.0111 /
+roughly 5.2x" (reported before the early-stopping patience was corrected —
+the harness used the LR scheduler's `patience=3` for the early-stopping
+break instead of the audited repo's own `config.patience = 15`), the
+"3-4x" before that (which compared across operating points entirely), and
+"+0.0221 / 2.4x" (reported before the optimizer/data-pipeline fidelity port
+above). **One claim is retracted outright rather than merely updated:** this
+document previously reported that the patience correction's sign *flips*
+with the operating point, shrinking the gap at ~0.96 and growing it at
+~0.89-0.92. Rerun under the fidelity port, the sign does not flip — the
+patience correction shrinks the gap at both calibrations (-0.0029 and
+-0.0004). The earlier flip was an artifact of the full-batch,
+10x-learning-rate training loop. The factorial ablation (`code/54`) does
+still show that the *calibration* fix, not the patience fix, is what moves
+this number. The operating-point non-equivalence previously disclosed here
+(~0.918 vs ~0.940) has also largely closed: the two harnesses now sit at
+0.9424 and 0.9403, so 3.6x is no longer reported as an upper bound on that
+account.
 
 ## Why this matters for the paper's framing
 
@@ -226,15 +246,15 @@ size.**
 >    **+0.0093** (capacity 128, BCa 95% CI [+0.0060, +0.0134], Wilcoxon
 >    p=7.3e-7, paired permutation p<0.0001) and **+0.0077** (capacity 384,
 >    CI [+0.0050, +0.0109], Wilcoxon p=1.4e-5, permutation p<0.0001), at
->    an achieved operating point of ~0.94-0.95; and **+0.0221** for the
->    LR-scheduler fidelity extension (CI [+0.0159, +0.0292]). These
+>    an achieved operating point of ~0.94-0.95; and **+0.0338** for the
+>    LR-scheduler fidelity extension (CI [+0.0279, +0.0405]). These
 >    supersede the +0.0021 / +0.0022 previously reported under the
 >    superseded label-conditional calibration.
 >
 > **The "severity spectrum" framing below is also retracted.** Measured
 > against matched controls, the mechanisms do *not* differ sharply: every
 > mechanism in this paper with a code-verified AUROC-scale estimate falls
-> between roughly 0.000 and +0.027 AUROC. What moves severity is the
+> between roughly 0.000 and +0.034 AUROC. What moves severity is the
 > number of candidates selected among and the operating point — a 48.6x
 > swing from AUROC_0=0.70 to 0.985, larger than any between-mechanism
 > difference measured here. See `main.tex` §5.
@@ -253,7 +273,7 @@ For the record, the original (now-superseded) spectrum framing read --
    capacities tested, once training-budget and random-seed confounds are
    both properly controlled for.
 3. **A related but distinct bias family entirely** (test-set-driven
-   best-layer selection with no correction for having tried ~30
+   best-layer selection with no correction for having tried 33
    hypotheses -- see the quantized-LLM paper secondary case study) --
    not "nested CV leakage" in the classical sense at all, but the same
    broad hazard (using labels to make a choice, then reporting performance

@@ -1,0 +1,411 @@
+{
+  "n_seeds": 100,
+  "capacities": [
+    16,
+    48,
+    128,
+    384
+  ],
+  "n_inner_folds": 5,
+  "readouts": {
+    "averaged": "code/02d's shipped pipeline: mean of the K fold-models' test-feature activations, then the meta-learner. Control condition.",
+    "single_model": "No cross-model averaging: the meta-learner scores each fold-model's own test features; the K AUROCs are averaged after scoring.",
+    "oof_apparent": "APPARENT (in-sample) AUROC of the meta-learner on the OOF feature matrix itself, which is per-fold by construction and never averaged across models. Upward-biased in absolute terms for every condition; use comparatively only.",
+    "oof_crossfold_cv": "Diagnostic. 5-fold CV on the OOF matrix, which trains on rows from some fold-models and scores rows from others. Comes out below chance, showing the fold-models' feature spaces do not transfer -- direct evidence that cross-model averaging really does mix incompatible bases, which is what makes the 'single_model' readout the load-bearing one."
+  },
+  "n_inner_folds_1_note": "N_INNER_FOLDS=1 is not runnable and this is structural, not a budget limit: with a single fold there is no out-of-fold partition, so no OOF features exist to train the meta-learner on. The 'single_model' readout is the correct un-averaged equivalent -- same trained models, no activation ever mixed across models.",
+  "by_capacity": {
+    "16": {
+      "averaged": {
+        "means": {
+          "leaky": 0.7610877551020405,
+          "clean": 0.7567020408163265,
+          "clean_matched": 0.7602326530612246,
+          "placebo": 0.7272102040816327
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.000855102040816329,
+          "wilcoxon_p": 0.30893476843429146,
+          "bca_ci_95": [
+            -0.0009201979264481817,
+            0.0026983886118247045
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.03302244897959184,
+          "wilcoxon_p": 3.554914629432476e-08,
+          "bca_ci_95": [
+            0.0233,
+            0.04737115989548113
+          ]
+        }
+      },
+      "single_model": {
+        "means": {
+          "leaky": 0.7016595918367347,
+          "clean": 0.6897491836734695,
+          "clean_matched": 0.6974110204081633,
+          "placebo": 0.6049051020408162
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.004248571428571424,
+          "wilcoxon_p": 0.001236525482234956,
+          "bca_ci_95": [
+            0.0014900738401256064,
+            0.006934697328521221
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.09250591836734695,
+          "wilcoxon_p": 9.318997235593412e-18,
+          "bca_ci_95": [
+            0.08225294627753502,
+            0.10247122991501674
+          ]
+        }
+      },
+      "oof_apparent": {
+        "means": {
+          "leaky": 0.7025798469387756,
+          "clean": 0.6894064413265306,
+          "clean_matched": 0.6966072066326531,
+          "placebo": 0.6285626913265306
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.005972640306122453,
+          "wilcoxon_p": 5.4812242048264435e-06,
+          "bca_ci_95": [
+            0.0037007894792635814,
+            0.008348120743781284
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.06804451530612245,
+          "wilcoxon_p": 7.117077537219983e-18,
+          "bca_ci_95": [
+            0.060307285581887714,
+            0.07649206570226642
+          ]
+        }
+      },
+      "oof_crossfold_cv": {
+        "means": {
+          "leaky": 0.495170918367347,
+          "clean": 0.49567264030612246,
+          "clean_matched": 0.4948744897959183,
+          "placebo": 0.4875733418367346
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0002964285714285758,
+          "wilcoxon_p": 0.9917699870208231,
+          "bca_ci_95": [
+            -0.0053358263134703435,
+            0.005482287924677409
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.007301147959183674,
+          "wilcoxon_p": 0.20823741115716032,
+          "bca_ci_95": [
+            -0.009279034572776587,
+            0.023276313769417665
+          ]
+        }
+      }
+    },
+    "48": {
+      "averaged": {
+        "means": {
+          "leaky": 0.7647020408163264,
+          "clean": 0.7616591836734695,
+          "clean_matched": 0.7630510204081632,
+          "placebo": 0.7374755102040816
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0016510204081632718,
+          "wilcoxon_p": 0.015131365078273503,
+          "bca_ci_95": [
+            0.00018163265306124336,
+            0.002970594905331944
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.02557551020408162,
+          "wilcoxon_p": 1.771562929346796e-11,
+          "bca_ci_95": [
+            0.0183182188619288,
+            0.03806889463381727
+          ]
+        }
+      },
+      "single_model": {
+        "means": {
+          "leaky": 0.7347955102040816,
+          "clean": 0.7222697959183674,
+          "clean_matched": 0.7280200000000001,
+          "placebo": 0.6321155102040816
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.006775510204081632,
+          "wilcoxon_p": 0.0005562655608196943,
+          "bca_ci_95": [
+            0.003871702524058841,
+            0.010196171126153388
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.09590448979591837,
+          "wilcoxon_p": 1.3732250242604875e-17,
+          "bca_ci_95": [
+            0.08535128970604637,
+            0.10688975928811319
+          ]
+        }
+      },
+      "oof_apparent": {
+        "means": {
+          "leaky": 0.7655830357142858,
+          "clean": 0.7533567602040816,
+          "clean_matched": 0.7571502551020408,
+          "placebo": 0.6946044642857142
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.008432780612244893,
+          "wilcoxon_p": 1.1001604981442856e-08,
+          "bca_ci_95": [
+            0.006044286799164584,
+            0.011172393451660018
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.06254579081632654,
+          "wilcoxon_p": 7.55704804907942e-18,
+          "bca_ci_95": [
+            0.05605184863369827,
+            0.06926627626325293
+          ]
+        }
+      },
+      "oof_crossfold_cv": {
+        "means": {
+          "leaky": 0.5153636479591837,
+          "clean": 0.5116767857142858,
+          "clean_matched": 0.5103889030612244,
+          "placebo": 0.5054855867346938
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0049747448979591755,
+          "wilcoxon_p": 0.2895979344328722,
+          "bca_ci_95": [
+            -0.004264765232776015,
+            0.0138671986436865
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.004903316326530628,
+          "wilcoxon_p": 0.42305657051311696,
+          "bca_ci_95": [
+            -0.013043359715298863,
+            0.02241923588112197
+          ]
+        }
+      }
+    },
+    "128": {
+      "averaged": {
+        "means": {
+          "leaky": 0.7604142857142857,
+          "clean": 0.7555346938775511,
+          "clean_matched": 0.7570530612244899,
+          "placebo": 0.7308530612244897
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0033612244897959164,
+          "wilcoxon_p": 0.007505584692767849,
+          "bca_ci_95": [
+            0.001365731435297277,
+            0.005550440998583527
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.02619999999999999,
+          "wilcoxon_p": 3.4606265711101075e-14,
+          "bca_ci_95": [
+            0.020806572821880774,
+            0.03287038741946242
+          ]
+        }
+      },
+      "single_model": {
+        "means": {
+          "leaky": 0.7257742857142858,
+          "clean": 0.7118546938775511,
+          "clean_matched": 0.7170538775510203,
+          "placebo": 0.6441628571428573
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.008720408163265301,
+          "wilcoxon_p": 1.2011760739291653e-07,
+          "bca_ci_95": [
+            0.005894693877551014,
+            0.012045738880342646
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.07289102040816325,
+          "wilcoxon_p": 4.8134317638549386e-18,
+          "bca_ci_95": [
+            0.064739551717151,
+            0.08111007307985499
+          ]
+        }
+      },
+      "oof_apparent": {
+        "means": {
+          "leaky": 0.8092246173469385,
+          "clean": 0.7980617346938774,
+          "clean_matched": 0.8009017857142858,
+          "placebo": 0.7631545918367344
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.008322831632653042,
+          "wilcoxon_p": 2.902306422947117e-11,
+          "bca_ci_95": [
+            0.0065027514672401825,
+            0.01038294066424895
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.037747193877551016,
+          "wilcoxon_p": 9.318997235593412e-18,
+          "bca_ci_95": [
+            0.03283788836878529,
+            0.04299861040943436
+          ]
+        }
+      },
+      "oof_crossfold_cv": {
+        "means": {
+          "leaky": 0.5036181122448979,
+          "clean": 0.5008542091836735,
+          "clean_matched": 0.5027119897959185,
+          "placebo": 0.5040114795918368
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0009061224489795849,
+          "wilcoxon_p": 0.8608010376424908,
+          "bca_ci_95": [
+            -0.00877400613218679,
+            0.010393917178927035
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": -0.0012994897959183605,
+          "wilcoxon_p": 0.5554098019313718,
+          "bca_ci_95": [
+            -0.013301272628394655,
+            0.011804975839567149
+          ]
+        }
+      }
+    },
+    "384": {
+      "averaged": {
+        "means": {
+          "leaky": 0.7532816326530611,
+          "clean": 0.7474244897959185,
+          "clean_matched": 0.7505591836734693,
+          "placebo": 0.7349673469387755
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.002722448979591827,
+          "wilcoxon_p": 0.07717467514560129,
+          "bca_ci_95": [
+            0.00026122448979591076,
+            0.005463265306122435
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.01559183673469388,
+          "wilcoxon_p": 6.754568662598725e-11,
+          "bca_ci_95": [
+            0.011935839172053767,
+            0.019717550175986934
+          ]
+        }
+      },
+      "single_model": {
+        "means": {
+          "leaky": 0.7036514285714286,
+          "clean": 0.6896142857142857,
+          "clean_matched": 0.6953424489795919,
+          "placebo": 0.6640636734693877
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.008308979591836714,
+          "wilcoxon_p": 1.5469021764726103e-07,
+          "bca_ci_95": [
+            0.005560165861753264,
+            0.011185159146117337
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.03127877551020409,
+          "wilcoxon_p": 1.747734328604761e-16,
+          "bca_ci_95": [
+            0.026525317161037024,
+            0.036422019474129944
+          ]
+        }
+      },
+      "oof_apparent": {
+        "means": {
+          "leaky": 0.9007022959183674,
+          "clean": 0.8951727040816327,
+          "clean_matched": 0.8966588010204082,
+          "placebo": 0.8886559948979591
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.004043494897959179,
+          "wilcoxon_p": 2.471036938663165e-06,
+          "bca_ci_95": [
+            0.0026612040829285047,
+            0.005504599392673128
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.00800280612244898,
+          "wilcoxon_p": 3.223727507496339e-08,
+          "bca_ci_95": [
+            0.005655717759559638,
+            0.010523386260933156
+          ]
+        }
+      },
+      "oof_crossfold_cv": {
+        "means": {
+          "leaky": 0.5087678571428572,
+          "clean": 0.510859693877551,
+          "clean_matched": 0.5074701530612244,
+          "placebo": 0.5028929846938776
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0012977040816326525,
+          "wilcoxon_p": 0.9069368853915614,
+          "bca_ci_95": [
+            -0.007736606711483542,
+            0.010277865798368719
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.004577168367346941,
+          "wilcoxon_p": 0.4151392918786695,
+          "bca_ci_95": [
+            -0.006658602899728981,
+            0.015408889881860231
+          ]
+        }
+      }
+    }
+  }
+}

@@ -121,47 +121,6 @@
       "placebo_mean": 0.7271500000000001
     }
   },
-  "sweep_B_n_val": {
-    "350": {
-      "gap_mean": 0.002587755102040816,
-      "gap_bca_ci_95": [
-        -0.001763265306122453,
-        0.007110204081632647
-      ],
-      "wilcoxon_p": 0.33136450265017825,
-      "mean_val_auc_std": 0.03685669811767339,
-      "leaky_mean": 0.728661224489796,
-      "clean_matched_mean": 0.7260734693877552,
-      "placebo_mean": 0.6987591836734692,
-      "n_val_approx": 56
-    },
-    "700": {
-      "gap_mean": 0.0036489795918367273,
-      "gap_bca_ci_95": [
-        0.00187413327562061,
-        0.005694215860029832
-      ],
-      "wilcoxon_p": 0.0012363190170634885,
-      "mean_val_auc_std": 0.03411711253916284,
-      "leaky_mean": 0.758587755102041,
-      "clean_matched_mean": 0.754938775510204,
-      "placebo_mean": 0.7371000000000001,
-      "n_val_approx": 112
-    },
-    "2800": {
-      "gap_mean": 0.00047385204081632827,
-      "gap_bca_ci_95": [
-        8.602281332315633e-05,
-        0.0008713028573443345
-      ],
-      "wilcoxon_p": 0.0468826164963387,
-      "mean_val_auc_std": 0.030854233709398052,
-      "leaky_mean": 0.790472831632653,
-      "clean_matched_mean": 0.7899989795918368,
-      "placebo_mean": 0.7725742346938776,
-      "n_val_approx": 448
-    }
-  },
   "sweep_C_operating_point": {
     "0.7": {
       "gap_mean": 0.009316326530612241,
@@ -228,5 +187,120 @@
     "c_fit": 0.04166416560165224,
     "r_squared": 0.7563634103739665,
     "sigma_val_used": 0.03287400951343241
-  }
+  },
+  "sweep_B_sample_size": {
+    "350": {
+      "gap_mean": 0.002587755102040816,
+      "gap_bca_ci_95": [
+        -0.001763265306122453,
+        0.007110204081632647
+      ],
+      "wilcoxon_p": 0.33136450265017825,
+      "mean_val_auc_std": 0.03685669811767339,
+      "leaky_mean": 0.728661224489796,
+      "clean_matched_mean": 0.7260734693877552,
+      "placebo_mean": 0.6987591836734692,
+      "n_val_approx": 56,
+      "n_train_approx": 280,
+      "n_test_approx": 70
+    },
+    "700": {
+      "gap_mean": 0.0036489795918367273,
+      "gap_bca_ci_95": [
+        0.00187413327562061,
+        0.005694215860029832
+      ],
+      "wilcoxon_p": 0.0012363190170634885,
+      "mean_val_auc_std": 0.03411711253916284,
+      "leaky_mean": 0.758587755102041,
+      "clean_matched_mean": 0.754938775510204,
+      "placebo_mean": 0.7371000000000001,
+      "n_val_approx": 112,
+      "n_train_approx": 560,
+      "n_test_approx": 140
+    },
+    "2800": {
+      "gap_mean": 0.00047385204081632827,
+      "gap_bca_ci_95": [
+        8.602281332315633e-05,
+        0.0008713028573443345
+      ],
+      "wilcoxon_p": 0.0468826164963387,
+      "mean_val_auc_std": 0.030854233709398052,
+      "leaky_mean": 0.790472831632653,
+      "clean_matched_mean": 0.7899989795918368,
+      "placebo_mean": 0.7725742346938776,
+      "n_val_approx": 448,
+      "n_train_approx": 2240,
+      "n_test_approx": 560
+    }
+  },
+  "sweep_B_confound_note": "CONFOUNDED, and relabelled from 'sweep_B_n_val' accordingly. Varying N_SAMPLES moves train, test AND validation set sizes together, so these gaps are not attributable to n_val alone and do not constitute a test of gap ~ 1/sqrt(n_val). See sweep_D_n_val_isolated, which holds N_SAMPLES (and hence train and test sizes) fixed and varies only the inner CV fold count.",
+  "sweep_D_n_val_isolated": {
+    "2": {
+      "gap_mean": 0.008657142857142868,
+      "gap_bca_ci_95": [
+        0.005779732366648389,
+        0.012397840036979671
+      ],
+      "wilcoxon_p": 1.3823405655360142e-07,
+      "mean_val_auc_std": 0.033065799711498596,
+      "leaky_mean": 0.7474428571428572,
+      "clean_matched_mean": 0.7387857142857145,
+      "placebo_mean": 0.7103489795918366,
+      "k_cv": 2,
+      "n_val_exact": 280,
+      "n_train_fold_exact": 280,
+      "n_samples": 700
+    },
+    "3": {
+      "gap_mean": 0.0036224489795918325,
+      "gap_bca_ci_95": [
+        0.0014114060305654482,
+        0.005877551020408148
+      ],
+      "wilcoxon_p": 0.0018937853055294544,
+      "mean_val_auc_std": 0.03389090776898368,
+      "leaky_mean": 0.7523000000000001,
+      "clean_matched_mean": 0.748677551020408,
+      "placebo_mean": 0.7213367346938776,
+      "k_cv": 3,
+      "n_val_exact": 186,
+      "n_train_fold_exact": 374,
+      "n_samples": 700
+    },
+    "5": {
+      "gap_mean": 0.0036489795918367273,
+      "gap_bca_ci_95": [
+        0.0018541548198702778,
+        0.005766681341366641
+      ],
+      "wilcoxon_p": 0.0012363190170634885,
+      "mean_val_auc_std": 0.03411711253916284,
+      "leaky_mean": 0.758587755102041,
+      "clean_matched_mean": 0.754938775510204,
+      "placebo_mean": 0.7371000000000001,
+      "k_cv": 5,
+      "n_val_exact": 112,
+      "n_train_fold_exact": 448,
+      "n_samples": 700
+    },
+    "10": {
+      "gap_mean": 0.0005367346938775486,
+      "gap_bca_ci_95": [
+        -0.0010494892289194702,
+        0.0019945538223449986
+      ],
+      "wilcoxon_p": 0.22317011472968284,
+      "mean_val_auc_std": 0.03753972842394507,
+      "leaky_mean": 0.7599387755102042,
+      "clean_matched_mean": 0.7594020408163267,
+      "placebo_mean": 0.7436081632653061,
+      "k_cv": 10,
+      "n_val_exact": 56,
+      "n_train_fold_exact": 504,
+      "n_samples": 700
+    }
+  },
+  "sweep_D_note": "True n_val sweep: total sample size, outer train/test split and test set all held fixed at N_SAMPLES=700; only the inner CV fold count K_CV varies, which varies n_val. Residual coupling (inherent to CV, disclosed rather than claimed away): per-fold training-subset size moves inversely with n_val. Compare against sweep_B_sample_size, which was previously mislabelled an n_val sweep and in which train, test and val all move together."
 }

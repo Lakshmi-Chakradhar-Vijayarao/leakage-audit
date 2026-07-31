@@ -100,28 +100,49 @@ version was found to still condition the shrinkage on each point's own
 label. Because both landed together, they were varied factorially rather
 than reported jointly (`code/54`, n=100 seeds per cell):
 
+A third correction landed later still (main.tex Appendix A, issue 14): the
+harness was not actually faithful to the audited trainer's *optimizer or
+data pipeline* — it ran Adam at a 10x learning rate, full-batch (one
+gradient step per epoch), with the wrong scaler, no warmup and no gradient
+clipping. Those are now ported, and the table below is the ablation rerun
+under that port, so all four cells are on the same footing:
+
 | Calibration (LEAKY operating point) | ES patience 3 | ES patience 15 |
 |---|---|---|
-| Superseded label-conditional (~0.96) | +0.0111 | +0.0065 |
-| Label-free axis-noising (~0.89–0.92) | +0.0152 | **+0.0221** |
+| Superseded label-conditional (0.979 / 0.981) | +0.0081 | +0.0052 |
+| Label-free axis-noising (0.920 / 0.942) | +0.0342 | **+0.0338** |
 
-**The patience correction's sign flips with the operating point** — it
-shrinks the gap at ~0.96 and grows it at ~0.89–0.92 — so neither
-correction is credited with the whole move from +0.0111 to +0.0221. The
-reported cell is the bottom right: **+0.0221** (BCa 95% CI
-[+0.0159, +0.0292], Wilcoxon p=1.9e-9, paired permutation p<0.0001, 28
+**A claim this document previously made is retracted here.** Before the
+fidelity port, the patience correction shrank the gap at one calibration and
+grew it at the other, and that sign flip was presented as the
+operating-point relationship appearing inside a second harness. Under the
+ported training loop the sign does not flip: the patience correction shrinks
+the gap at both calibrations (-0.0029 and a negligible -0.0004). The earlier
+flip was an artifact of the full-batch, 10x-learning-rate loop. What the
+table does establish is that the *calibration* fix, not the patience fix,
+moves this number: +0.0081 -> +0.0342 at patience 3 and +0.0052 -> +0.0338
+at patience 15.
+
+The reported cell is the bottom right: **+0.0338** (BCa 95% CI
+[+0.0279, +0.0405], Wilcoxon p=6.2e-15, paired permutation p<0.0001, 28
 tied absolute differences of 100 pairs). Against the
 checkpoint-selection-only harness run on the same features under the same
 label-free calibration (+0.0093 at capacity 128), that is a genuinely
-like-for-like ratio of **2.4x**. The earlier "roughly 3-4x larger than
-the checkpoint-selection-only estimate" claim in this document, and the
-intermediate "5.2x", are both **retracted**: they compared across
+like-for-like ratio of **3.6x**. The earlier "roughly 3-4x larger than
+the checkpoint-selection-only estimate" claim in this document, the
+intermediate "5.2x", and the "2.4x" that preceded the fidelity port are all
+**superseded**: the first two compared across
 differently-calibrated harnesses at different operating points, which
-this paper's own Appendix A says is invalid. Even the 2.4x figure carries
-a disclosed residual non-equivalence — the two harnesses land at LEAKY
-operating points of ~0.918 and ~0.940 respectively, and since severity
-falls steeply with operating point (main.tex §5), 2.4x should be read as
-an upper bound rather than a point estimate. The scheduler-bearing
+this paper's own Appendix A says is invalid. The residual non-equivalence
+this document used to disclose — the two harnesses landing at LEAKY
+operating points of ~0.918 and ~0.940 — has largely closed under the
+fidelity port (now 0.9424 vs 0.9403), so 3.6x is no longer reported as an
+upper bound on that account. **What "fidelity" does not cover, stated so it
+is not over-read:** the audited trainer's EMA, its composite
+BCE/focal/asymmetric/contrastive objective, class rebalancing, label
+smoothing, mixup, cutmix and its 6-layer transformer are all *not* ported.
+This measures fidelity of the validation-signal coupling and the optimizer
+schedule only. The scheduler-bearing
 control itself still beats PLACEBO
 decisively, confirming it is a strongly informative, non-degenerate honest
 baseline. **Lesson: when a real
@@ -183,15 +204,30 @@ its own argmax layer. Reversing which half selects picks a different
 layer entirely (L17, not L11) and gives a component of $+0.074$ -- a
 large swing in both which layer is picked and what the component
 measures, itself evidence the sequential-split number tracks split
-order, not a stable selection-optimism estimate. Recomputing under 8
-randomized stratified splits, each evaluated at its own selected layer,
-gives a mean selection-specific component of $+0.027$ (SD $0.021$;
-$t=3.60$, $p=0.0087$; Wilcoxon $p=0.023$) -- small but, for the first
-time, correctly measured and statistically significant, about 7x
+order, not a stable selection-optimism estimate. Recomputing under 50
+randomized stratified splits (raised from 8 after a review noted that a
+small, unexplained rep count cannot be distinguished from one chosen after
+inspection; the stopping point is set by the size of the shipped replay
+artifact, ~100 KB/rep, not by runtime), each evaluated at its own selected
+layer, gives a mean selection-specific component of $+0.0255$ (SD $0.0186$;
+$t=9.71$; Wilcoxon $p=7.7\times10^{-12}$) -- small but, for the first
+time, correctly measured and consistently positive, about 7x
 smaller than the sequential split's apparent effect. Separately, the
 *general* CV-vs-held-out gap averaged across all 32 layers is $+0.192$
-under the sequential split but only $-0.005$ (SD $0.073$) under the same
-randomized splits -- indistinguishable from zero. **The corrected lesson
+under the sequential split but only $-0.0023$ (SD $0.0541$) under the same
+randomized splits -- indistinguishable from zero.
+
+**Two caveats on that number, both stated in main.tex §4.2 and repeated here
+because this document is read on its own.** (i) All 50 reps resample splits
+of the *same* 700 samples, so the SD is split-to-split variability under one
+dataset, not sampling variability across independent draws; the t-test's
+i.i.d. assumption is violated and its p-value is a within-dataset robustness
+statistic, not a population-generalizing significance test. (ii) The
+selection-specific component is positive *in expectation even under a
+pure-noise null*, because the selected layer is the argmax of CV AUROC and
+the gap contains that same CV term. That is exactly the winner's curse the
+metric is built to measure, but it means its significance is not evidence of
+anything beyond argmax-over-a-noisy-statistic. **The corrected lesson
 reverses, not just narrows, the original 18.8-point headline:** the
 "large, real, ~19-point gap present at essentially every layer" was
 itself entirely an artifact of the sequential split's
@@ -229,8 +265,12 @@ at reporting this result:** an earlier draft's severity numbers were
 themselves computed from a synthetic generator with the exact calibration
 bug this checklist's own lesson-5a warns about (class-mean offset off by
 a factor of 2, quadrupling the realized effect size) -- fixed here, and
-now guarded against for every generator in this project by a mandatory,
-non-tautological calibration check (`code/sanity_checks.py`). **A second
+now guarded against by a
+non-tautological calibration check (`code/sanity_checks.py`). **That check
+is not universal and its assumption is load-bearing:** its bias correction
+assumes identity within-class covariance, so it is not directly applicable
+to this project's anisotropic generators (`code/27`) without modification --
+not merely un-retrofitted to them. See main.tex Appendix A, issue 11. **A second
 caveat: this mechanism's severity is not directly comparable to Mechanism
 2's AUROC-scale severity above.** AUROC is threshold-free by
 construction, so test-set threshold selection has *exactly zero* effect

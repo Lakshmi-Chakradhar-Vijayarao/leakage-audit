@@ -22,7 +22,7 @@ The bug is one level up, in `src/detection/saplma.py::saplma_probe_per_layer`:
 ```python
 layerwise = train_layerwise_probes(hidden_states, labels, ...)  # trains one
                                                                   # probe PER LAYER
-                                                                  # (~30 layers x n_seeds runs),
+                                                                  # (33 layers x n_seeds runs),
                                                                   # each with its OWN held-out test AUROC
 best_layer = -1
 best_auc = -np.inf
@@ -38,13 +38,13 @@ per layer, and the metric it aggregates into `auroc_mean` is
 `ProbeMetrics.auroc` -- computed on `X_te`/`y_te`, the held-out **test**
 split, inside `train_probe` itself (`acc, f1, auroc, auprc = _metrics(y_te, prob)`).
 
-So `best_layer` is selected by taking the argmax, over ~30 layers (and
+So `best_layer` is selected by taking the argmax, over 33 layers (and
 multiple seeds), of a metric computed on the test set -- and that same
 test-set AUROC is then reported as the paper's headline number for that
 layer. This is not nested-CV leakage; it is **test-set-driven multiple-
 hypothesis selection with no correction** -- the classical "winner's
 curse" / "if you try enough things and report the best one, the best one
-looks better than it is" bias. Trying ~30 layers (times however many
+looks better than it is" bias. Trying 33 layers (times however many
 probe-type/model/dataset combinations get run) and keeping only the single
 best test-AUROC number, without a separate selection split or a multiple-
 comparisons correction, is exactly the setup under which a reported

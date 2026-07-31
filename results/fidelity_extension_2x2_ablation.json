@@ -5,14 +5,14 @@
       "es_patience": 3,
       "source_file": "results/abl_oldcal_es3.json",
       "alpha": 0.1328,
-      "gap_mean": 0.011063164477798614,
+      "gap_mean": 0.008061288305190756,
       "bca_ci_95": [
-        0.007729831144465268,
-        0.01474784921280165
+        0.006391494684177625,
+        0.010056285178236406
       ],
-      "wilcoxon_p": 4.331556057745149e-09,
+      "wilcoxon_p": 6.59892918345531e-14,
       "paired_permutation_p": 0.0,
-      "leaky_mean_auroc": 0.9579174484052534,
+      "leaky_mean_auroc": 0.9791432145090683,
       "is_reported_cell": false
     },
     {
@@ -20,14 +20,14 @@
       "es_patience": 15,
       "source_file": "results/abl_oldcal_es15.json",
       "alpha": 0.1328,
-      "gap_mean": 0.006466541588492799,
+      "gap_mean": 0.005196998123827382,
       "bca_ci_95": [
-        0.004371482176360221,
-        0.009018136335209499
+        0.004005217417696936,
+        0.006616635397123204
       ],
-      "wilcoxon_p": 9.192171550051134e-08,
+      "wilcoxon_p": 4.541850879198903e-12,
       "paired_permutation_p": 0.0,
-      "leaky_mean_auroc": 0.9634959349593495,
+      "leaky_mean_auroc": 0.9812132582864289,
       "is_reported_cell": false
     },
     {
@@ -35,14 +35,14 @@
       "es_patience": 3,
       "source_file": "results/mechanism3_fidelity_extension_espatience3_ablation.json",
       "alpha": 0.3359375,
-      "gap_mean": 0.015178236397748601,
+      "gap_mean": 0.03422138836772983,
       "bca_ci_95": [
-        0.007895766088381218,
-        0.02298936835522202
+        0.02711495412506531,
+        0.04240783889563622
       ],
-      "wilcoxon_p": 0.00025546793631038827,
-      "paired_permutation_p": 0.0001,
-      "leaky_mean_auroc": 0.8905878674171358,
+      "wilcoxon_p": 4.677718621948848e-13,
+      "paired_permutation_p": 0.0,
+      "leaky_mean_auroc": 0.9200125078173859,
       "is_reported_cell": false
     },
     {
@@ -50,21 +50,23 @@
       "es_patience": 15,
       "source_file": "results/mechanism3_fidelity_extension.json",
       "alpha": 0.3359375,
-      "gap_mean": 0.02205753595997498,
+      "gap_mean": 0.03384615384615384,
       "bca_ci_95": [
-        0.01586134054957525,
-        0.029199661127496983
+        0.027861163227016875,
+        0.04052444595331167
       ],
-      "wilcoxon_p": 1.911781488341891e-09,
+      "wilcoxon_p": 6.194614228255152e-15,
       "paired_permutation_p": 0.0,
-      "leaky_mean_auroc": 0.9176047529706066,
+      "leaky_mean_auroc": 0.9424265165728579,
       "is_reported_cell": true
     }
   ],
   "n_seeds_per_cell": 100,
-  "patience_effect_at_superseded_calibration": -0.004596622889305815,
-  "patience_effect_at_label_free_calibration": 0.00687929956222638,
-  "sign_of_patience_effect_flips": true,
-  "previously_reported_number": 0.011063164477798614,
-  "currently_reported_number": 0.02205753595997498
+  "patience_effect_at_superseded_calibration": -0.002864290181363374,
+  "patience_effect_at_label_free_calibration": -0.0003752345215759928,
+  "sign_of_patience_effect_flips": false,
+  "previously_reported_number": 0.008061288305190756,
+  "currently_reported_number": 0.03384615384615384,
+  "calibration_effect_at_patience_3": 0.026160100062539077,
+  "calibration_effect_at_patience_15": 0.028649155722326458
 }

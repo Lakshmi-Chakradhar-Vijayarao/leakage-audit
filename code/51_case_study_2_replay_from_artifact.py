@@ -10,7 +10,8 @@ WHY THIS EXISTS. `code/48` reads
 large to ship with a submission. That made Case Study 2's decomposition
 unreproducible for a reader in practice, even though the analysis itself is
 simple. `code/48` now also writes, per split variant (the sequential split,
-the reversed sequential split, and each of the 8 randomized stratified reps):
+the reversed sequential split, and each of the randomized stratified reps --
+50 of them since the third correction, up from 8):
 
     <variant>__y_sel      (n_sel,)             selection-pool labels
     <variant>__y_ho       (n_ho,)              held-out labels
@@ -29,6 +30,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from scipy.stats import ttest_1samp, wilcoxon
 from sklearn.metrics import roc_auc_score
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -131,6 +133,17 @@ def main():
                     r["mean_gap_all_32_layers_mean"])
     all_ok &= check("general gap across all layers (SD)", float(np.std(mean_gaps, ddof=1)),
                     r["mean_gap_all_32_layers_sd"])
+    t_stat, t_p = ttest_1samp(comps, 0.0)
+    _, w_p = wilcoxon(comps)
+    all_ok &= check("selection-specific component (one-sample t)", float(t_stat),
+                    r["selection_specific_component_t"], tol=1e-3)
+    all_ok &= check("selection-specific component (t-test p)", float(t_p),
+                    r["selection_specific_component_t_p"], tol=1e-6)
+    all_ok &= check("selection-specific component (Wilcoxon p)", float(w_p),
+                    r["selection_specific_component_wilcoxon_p"], tol=1e-6)
+    print("       NOTE: these reps share one 700-sample dataset, so t/p are "
+          "within-dataset robustness statistics, not population-generalizing "
+          "significance tests (see r['independence_caveat']).")
 
     print("\n" + ("ALL CHECKS PASSED -- every Case Study 2 number in the paper is "
                   "reproducible from the shipped derived artifact alone."

@@ -1,0 +1,288 @@
+{
+  "feat_dim": 64,
+  "n_samples": 700,
+  "n_seeds": 100,
+  "target_auroc": 0.8,
+  "j_target": 1.416652601601588,
+  "capacities": [
+    128,
+    384
+  ],
+  "by_capacity": {
+    "128": {
+      "powerlaw_beta0.0": {
+        "condition_number": 1.0,
+        "participation_ratio": 64.0,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.7523020408163263,
+          "clean": 0.7508612244897958,
+          "clean_matched": 0.7508244897959183,
+          "placebo": 0.7337020408163266
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0014775510204081566,
+          "wilcoxon_p": 0.60058584988407,
+          "bca_ci_95": [
+            -0.0005921177140285773,
+            0.003983673469387759
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.01712244897959184,
+          "wilcoxon_p": 1.1154683338388134e-11,
+          "bca_ci_95": [
+            0.012979665840942818,
+            0.021997787846484623
+          ]
+        }
+      },
+      "powerlaw_beta0.5": {
+        "condition_number": 8.0,
+        "participation_ratio": 44.94628579483808,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.7478489795918368,
+          "clean": 0.7417428571428571,
+          "clean_matched": 0.7440142857142855,
+          "placebo": 0.7237571428571428
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0038346938775510185,
+          "wilcoxon_p": 0.002020507417203554,
+          "bca_ci_95": [
+            0.0014123192446901538,
+            0.006519044836546828
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.020257142857142866,
+          "wilcoxon_p": 4.260124214426856e-11,
+          "bca_ci_95": [
+            0.014995918367346959,
+            0.028297153712679626
+          ]
+        }
+      },
+      "powerlaw_beta1.0": {
+        "condition_number": 64.0,
+        "participation_ratio": 13.811267732378777,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.7277428571428569,
+          "clean": 0.7217714285714284,
+          "clean_matched": 0.7233163265306122,
+          "placebo": 0.6898693877551022
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.00442653061224489,
+          "wilcoxon_p": 2.5347836810607983e-05,
+          "bca_ci_95": [
+            0.0027489795918367254,
+            0.0065316461760369215
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.033446938775510214,
+          "wilcoxon_p": 9.5894173555389e-13,
+          "bca_ci_95": [
+            0.02602384563486657,
+            0.042421962000679665
+          ]
+        }
+      },
+      "powerlaw_beta2.0": {
+        "condition_number": 4096.0,
+        "participation_ratio": 2.4530997054815007,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.5825857142857144,
+          "clean": 0.5644489795918367,
+          "clean_matched": 0.5722326530612245,
+          "placebo": 0.5500795918367346
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.010353061224489804,
+          "wilcoxon_p": 0.0004175907385843091,
+          "bca_ci_95": [
+            0.005628154644403383,
+            0.016162400030638426
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.022153061224489786,
+          "wilcoxon_p": 9.269865880600467e-07,
+          "bca_ci_95": [
+            0.014162745444920907,
+            0.030180361651617953
+          ]
+        }
+      },
+      "real_top64": {
+        "condition_number": 130.18944888363788,
+        "participation_ratio": 12.354226450293787,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.6928775510204082,
+          "clean": 0.6849265306122448,
+          "clean_matched": 0.6881265306122449,
+          "placebo": 0.6456816326530611
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.004751020408163263,
+          "wilcoxon_p": 0.00020562610620094917,
+          "bca_ci_95": [
+            0.002615116460113156,
+            0.007310867338733268
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.04244489795918367,
+          "wilcoxon_p": 3.5530821323653863e-14,
+          "bca_ci_95": [
+            0.03440708248643799,
+            0.05176938775510204
+          ]
+        }
+      }
+    },
+    "384": {
+      "powerlaw_beta0.0": {
+        "condition_number": 1.0,
+        "participation_ratio": 64.0,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.7471367346938778,
+          "clean": 0.7422387755102039,
+          "clean_matched": 0.7428510204081633,
+          "placebo": 0.7326755102040816
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0042857142857142825,
+          "wilcoxon_p": 0.008365019342976296,
+          "bca_ci_95": [
+            0.0016547246559097826,
+            0.007183673469387761
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.010175510204081629,
+          "wilcoxon_p": 1.2514635670966654e-05,
+          "bca_ci_95": [
+            0.006147003193070265,
+            0.014857142857142853
+          ]
+        }
+      },
+      "powerlaw_beta0.5": {
+        "condition_number": 8.0,
+        "participation_ratio": 44.94628579483808,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.7400673469387755,
+          "clean": 0.7356224489795921,
+          "clean_matched": 0.7364714285714286,
+          "placebo": 0.7218530612244898
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.0035959183673469385,
+          "wilcoxon_p": 0.0019149031816352358,
+          "bca_ci_95": [
+            0.0015201620217435556,
+            0.0064487680718360385
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.014618367346938776,
+          "wilcoxon_p": 6.603721611280944e-08,
+          "bca_ci_95": [
+            0.01006934963634421,
+            0.01951314810614943
+          ]
+        }
+      },
+      "powerlaw_beta1.0": {
+        "condition_number": 64.0,
+        "participation_ratio": 13.811267732378777,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.7201,
+          "clean": 0.7108857142857145,
+          "clean_matched": 0.7138714285714284,
+          "placebo": 0.696138775510204
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.006228571428571427,
+          "wilcoxon_p": 3.453361489180417e-05,
+          "bca_ci_95": [
+            0.003707460752330662,
+            0.008863265306122444
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.01773265306122449,
+          "wilcoxon_p": 2.2835227362253484e-08,
+          "bca_ci_95": [
+            0.012559154059199095,
+            0.023563251187248002
+          ]
+        }
+      },
+      "powerlaw_beta2.0": {
+        "condition_number": 4096.0,
+        "participation_ratio": 2.4530997054815007,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.5970979591836734,
+          "clean": 0.586430612244898,
+          "clean_matched": 0.5931530612244897,
+          "placebo": 0.5665999999999999
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.003944897959183671,
+          "wilcoxon_p": 0.22484758432406493,
+          "bca_ci_95": [
+            -4.127147882351634e-05,
+            0.008430678187175526
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.026553061224489808,
+          "wilcoxon_p": 1.910078506514523e-08,
+          "bca_ci_95": [
+            0.018850302433944685,
+            0.03455176299968449
+          ]
+        }
+      },
+      "real_top64": {
+        "condition_number": 130.18944888363788,
+        "participation_ratio": 12.354226450293787,
+        "j_realized_population": 1.4166526016015881,
+        "means": {
+          "leaky": 0.6894632653061223,
+          "clean": 0.6782591836734693,
+          "clean_matched": 0.6838244897959185,
+          "placebo": 0.6563612244897961
+        },
+        "leaky_minus_clean_matched": {
+          "mean": 0.005638775510204081,
+          "wilcoxon_p": 0.0035877801663343886,
+          "bca_ci_95": [
+            0.002636143954097504,
+            0.008942082866156205
+          ]
+        },
+        "clean_matched_minus_placebo": {
+          "mean": 0.027463265306122437,
+          "wilcoxon_p": 3.8120693284347955e-12,
+          "bca_ci_95": [
+            0.021204081632653044,
+            0.03453447627224099
+          ]
+        }
+      }
+    }
+  },
+  "note": "Discriminating experiment for the isotropic (code/02d, d=64) vs. anisotropic (code/27, d=414) comparison, which confounds covariance shape with dimensionality. Here d=64 is fixed and only the within-class eigenvalue profile varies, with the eigenbasis, the total within-class variance (trace), the mean-difference direction and the calibrated Mahalanobis J all held constant. beta=0 is the isotropic control; real_top64 transplants the real feature covariance's spectral shape into d=64."
+}
