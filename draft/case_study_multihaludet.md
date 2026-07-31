@@ -125,11 +125,26 @@ the edge of that capacity's minimum detectable effect).**
 Decomposing the confounded gap: budget mismatch explains 80% of the
 apparent effect at 16 units but only 31-54% at the other three
 capacities, leaving a majority-share residual that reaches significance
-at two of them. Our own pre-registered decision rule returns
-\texttt{MIXED} at all four capacities (its \texttt{CONFOUND\_CONFIRMED}
-branch is structurally unreachable, since LEAKY-vs-PLACEBO is always
-significant at $p<10^{-8}$) -- we report that verdict rather than
-translating it into a cleaner narrative.
+at two of them. Our pre-registered decision rule (\texttt{GENUINE\_LEAK\_CONFIRMED}
+/ \texttt{CONFOUND\_CONFIRMED\_NO\_REAL\_LEAK} / \texttt{MIXED}) returns
+\texttt{MIXED} on most tested versions of this experiment and
+\texttt{CONFOUND\_CONFIRMED\_NO\_REAL\_LEAK} on the one ceiling-confounded
+version -- an earlier claim that the confound-branch was structurally
+unreachable (on the reasoning that LEAKY-vs-PLACEBO is always significant
+at $p<10^{-8}$) was itself wrong, caught by a later independent review;
+\texttt{MIXED} is the modal but not universal honest label for what the
+data show across six tested configurations, and we report that rather
+than translating it into a cleaner narrative.
+
+**A further fidelity extension, not covered above:** the checkpoint-selection-only
+harness models only the final "keep the best-val-AUC checkpoint" decision.
+MultiHaluDet's real trainer also steps an LR scheduler and ties early
+stopping to the same validation fold every epoch. Porting this mechanic
+in (after two rounds of its own control-construction bugs, documented in
+Appendix A item 10) finds a substantially larger gap, $+0.0111$
+($p=4.3\times10^{-9}$) -- roughly $5.2\times$ the checkpoint-only
+estimate on a like-for-like comparison at the same capacity and
+calibration.
 
 ## Why this matters for the paper's framing
 

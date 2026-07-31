@@ -118,28 +118,45 @@ A subsequent independent review found that the `H[:400]`/`H[400:]` split
 used for "True held-out" in the table above is a fixed sequential slice
 of the dataset's storage order, not a random partition — a hidden-state
 probe can separate the two halves at AUROC 0.734-0.776, meaning they are
-systematically different populations, not exchangeable draws. Decomposing
-the CV-vs-held-out gap at all 32 layers (not just L11) under this
-sequential split shows a comparably large gap ($+0.19$ mean, SD $0.05$) at
-nearly every layer, which means the gap specifically attributable to
-*selecting* L11 via argmax (gap at L11 minus the mean gap across all
-layers) is only $-0.004$ under this split — indistinguishable from zero.
-Reversing which half selects flips L11's own gap sign entirely
-($-0.014$), itself evidence the sequential-split number tracks which half
-happens to be easier rather than a stable property of the selection
-procedure. Recomputing this selection-specific component under 8
-randomized stratified splits gives a mean of $+0.007$ (SD $0.030$, range
-$-0.033$ to $+0.058$) — small, sign-unstable, and about 11.5x smaller
-than the sequential split's apparent effect. **The corrected claim is
-narrower**: CV-based layer selection here does coincide with a large,
-real CV-vs-held-out optimism gap present at essentially every layer, but
-the *additional* penalty specifically attributable to argmax-over-layers
-selection, once measured with a genuinely random split, is small and not
-reliably distinguishable from zero at this sample size. The broader
-methodological lesson survives unchanged and is arguably strengthened:
-"held out" must mean "randomly partitioned," not merely "a different
-index range" — this project's own held-out split needed exactly the same
-scrutiny it recommends applying to others.
+systematically different populations, not exchangeable draws. The gap
+specifically attributable to *selecting* L11 via argmax (gap at the
+selected layer minus the mean gap across all layers) is only $-0.004$
+under this sequential split (where L11 is selected) — indistinguishable
+from zero.
+
+**A second review caught a bug in this correction itself:** an earlier
+version evaluated every randomized-split rep at a hardcoded L11 rather
+than at that rep's own selected layer, which does not measure selection
+optimism — a different split can select a different layer entirely.
+Fixed: every rep now uses its own argmax-selected layer. Reversing which
+half selects picks L17 (not L11) and gives a component of $+0.074$ — a
+large swing in both which layer is picked and what the component
+measures, itself evidence the sequential-split number tracks split
+order rather than a stable property of the selection procedure.
+Recomputing this selection-specific component under 8 randomized
+stratified splits, each evaluated at its own selected layer (L10, L11,
+L12, L14, L16, L18, L19, L19 across the 8 reps), gives a mean of
+$+0.027$ (SD $0.021$; $t=3.60$, $p=0.0087$; Wilcoxon $p=0.023$) — small
+but, for the first time, correctly measured and statistically
+significant, about 7x smaller than the sequential split's apparent
+effect. Separately, the *general* CV-vs-held-out gap averaged across all
+32 layers is $+0.192$ under the sequential split but only $-0.005$ (SD
+$0.073$) under the same randomized splits — indistinguishable from zero.
+**The corrected claim reverses, not just narrows, the original one**:
+the large, real, ~19-point gap "present at essentially every layer" was
+itself entirely an artifact of the sequential split's
+population-difference confound — under a proper random partition there
+is no general CV-vs-held-out optimism in this setup at all. What
+survives is narrower but genuine: a small, statistically significant,
+selection-specific penalty from CV-based argmax-over-layers selection,
+about 7x smaller than GUARDIAN's original headline number. The broader
+methodological lesson survives, and is arguably strengthened by the
+second bug: "held out" must mean "randomly partitioned," not merely "a
+different index range" — and a *selection-specific* quantity computed
+across multiple resamples must evaluate each resample at its own
+selected layer, not one hardcoded from a single split. This project's
+own held-out split, and its own first attempt at correcting it, both
+needed exactly the scrutiny this paper recommends applying to others.
 
 ---
 

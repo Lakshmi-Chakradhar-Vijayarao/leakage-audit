@@ -94,7 +94,7 @@ stopping), a "clean" control that reacts to it not at all is a different,
 easy-to-underestimate confound in its own right -- match the mechanism's
 presence, not just its final output, between leaky and clean conditions.**
 
-### 3. Test-set-driven multiple-hypothesis selection (severity: UNQUANTIFIED HERE, MECHANISM CONFIRMED — Case Study 4)
+### 3. Test-set-driven multiple-hypothesis selection (severity: small, mechanism confirmed — Case Study 4)
 **Ask:** Is a "best" layer, probe type, or model configuration chosen by
 taking the argmax of a metric computed on the *same test set* that gets
 reported as the paper's headline number, across many (layers x seeds x
@@ -105,9 +105,14 @@ then `best = max(results, key=results.get)` and `report(results[best])`.
 disjoint from the test set, or apply a multiple-comparisons-aware
 correction (e.g., report the test AUROC of the layer chosen by a
 validation-only criterion, not the test-set argmax).
-**Measured severity:** not quantified in this paper (would require
-re-extracting hidden states from the audited 7B-scale models); the
-mechanism itself is code-verified.
+**Measured severity:** initially believed to require re-extracting hidden
+states from the audited 7B-scale models; a fresh review found this
+unnecessary, since the audited repository ships per-layer, per-seed
+AUROC arrays for all 24 model/dataset/probe-type combinations tested.
+Selecting the best layer on two of three seeds and evaluating on the
+third held-out seed gives a directly-measured winner's-curse estimate:
+mean $+0.0047$ AUROC across all 24 combinations (max $+0.0288$), small
+and consistent in direction with Mechanism 3's.
 
 ### 4. Selection-based optimism in cross-validated hyperparameter choice (severity: real, but selection-specific component small once measured with a proper random split — Case Study 2)
 **Ask:** Was a hyperparameter (a layer, a regularization strength, a
@@ -130,28 +135,40 @@ argmax selected.
 held-out split is `H[:400]`/`H[400:]`, a fixed sequential slice, not a
 random partition -- the two halves are separable by a hidden-state probe
 at AUROC 0.734-0.776, i.e. they are systematically different
-populations. A full 32-layer decomposition of the same CV-vs-held-out gap
-shows a comparably large gap ($+0.19$ mean, SD $0.05$) at nearly every
-layer under this sequential split, meaning the *selection-specific*
-component (gap at the selected layer, minus the mean gap across all
-layers) is only $-0.004$ under GUARDIAN's own split -- indistinguishable
-from zero. Reversing which half selects flips L11's own gap sign
-entirely ($-0.014$), direct evidence the sequential-split number tracks
-which half happens to be easier, not selection optimism. Recomputing the
-selection-specific component under 8 randomized stratified splits gives
-a mean of $+0.007$ (SD $0.030$, range $-0.033$ to $+0.058$ across reps)
--- small, sign-unstable, and about 11.5x smaller than the sequential
-split's apparent effect. **The corrected lesson is narrower than the
-original 18.8-point headline suggests:** CV-based layer selection here
-does coincide with a large, real CV-vs-held-out optimism gap present at
-essentially every layer, but the *additional* penalty specifically
-attributable to argmax-over-layers selection, once measured with a
-proper random split, is small and not reliably distinguishable from zero
-at this sample size. **Lesson: "held out" must mean "randomly
-partitioned," not merely "a different index range" -- a fixed sequential
-split can itself be a leakage-adjacent confound if the underlying data
-has any structure correlated with storage order (batching, collection
-date, source file boundaries).**
+populations. The *selection-specific* component (gap at the layer that
+split's own argmax actually selects, minus the mean gap across all
+layers) is $-0.004$ under GUARDIAN's own sequential split (where L11 is
+selected) -- indistinguishable from zero. **A second review caught a bug
+in this correction itself**: an earlier version evaluated every
+randomized-split rep at a hardcoded L11, rather than at that rep's own
+selected layer -- which does not measure selection optimism, since a
+different split can select a different layer. Fixed: every rep now uses
+its own argmax layer. Reversing which half selects picks a different
+layer entirely (L17, not L11) and gives a component of $+0.074$ -- a
+large swing in both which layer is picked and what the component
+measures, itself evidence the sequential-split number tracks split
+order, not a stable selection-optimism estimate. Recomputing under 8
+randomized stratified splits, each evaluated at its own selected layer,
+gives a mean selection-specific component of $+0.027$ (SD $0.021$;
+$t=3.60$, $p=0.0087$; Wilcoxon $p=0.023$) -- small but, for the first
+time, correctly measured and statistically significant, about 7x
+smaller than the sequential split's apparent effect. Separately, the
+*general* CV-vs-held-out gap averaged across all 32 layers is $+0.192$
+under the sequential split but only $-0.005$ (SD $0.073$) under the same
+randomized splits -- indistinguishable from zero. **The corrected lesson
+reverses, not just narrows, the original 18.8-point headline:** the
+"large, real, ~19-point gap present at essentially every layer" was
+itself entirely an artifact of the sequential split's
+population-difference confound; under proper randomization there is no
+general CV-vs-held-out optimism in this setup at all. What survives is
+narrower but genuine: a small, statistically significant,
+selection-specific penalty from CV-based argmax-over-layers selection,
+about 7x smaller than GUARDIAN's original headline number. **Lesson:
+"held out" must mean "randomly partitioned," not merely "a different
+index range" -- and when computing a *selection-specific* quantity
+across multiple resamples, evaluate each resample at its own selected
+layer, not a layer hardcoded from one particular (e.g. the original)
+split.**
 
 ### 5. Test-set-driven decision-threshold selection (severity: leaves AUROC exactly unaffected by construction, but materially inflates every threshold-dependent metric — Mechanism 5, found while auditing Case Study 3's own repository)
 **Ask:** Is a decision threshold (or other operating point: a Youden-J

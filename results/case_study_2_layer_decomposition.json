@@ -206,34 +206,57 @@
     "note": "CONFOUNDED: sequential split, not a random partition. Two halves are separable by a hidden-state probe (AUROC 0.734-0.776), so this component conflates selection optimism with a population-difference artifact."
   },
   "reversed_sequential_split": {
-    "gap_at_L11": -0.01370934910563093,
-    "selection_specific_component": -0.08278625696659425,
-    "note": "Diagnostic only. Sign flip vs. the original sequential split confirms the sequential-split number is protocol-confounded, not a stable selection-optimism estimate."
+    "l_star_by_cv": 17,
+    "gap_at_selected_layer": 0.14293418176735206,
+    "selection_specific_component": 0.07385727390638874,
+    "note": "Diagnostic only, evaluated at THIS split's own argmax layer (not a hardcoded L11 -- an earlier version of this script had that bug). Sign flip vs. the original sequential split confirms the sequential-split number is protocol-confounded, not a stable selection-optimism estimate."
   },
   "randomized_stratified_splits": {
     "n_reps": 8,
-    "gap_at_L11_per_rep": [
-      0.1111987452295673,
-      -0.0770803047359021,
-      -0.04740202095936208,
-      0.05575597077936845,
-      0.07319800097502094,
+    "selected_layer_per_rep": [
+      18,
+      19,
+      16,
+      14,
+      19,
+      11,
+      10,
+      12
+    ],
+    "gap_at_selected_layer_per_rep": [
+      0.13616065379530862,
+      -0.01402065698841859,
+      -0.026923296606669145,
+      0.0746502985338543,
+      0.09809392833266628,
       -0.013750832880014996,
-      -0.03360788123152758,
-      -0.04799873091424256
+      -0.032653647800472974,
+      -0.04141956886787346
     ],
+    "mean_gap_all_32_layers_per_rep": [
+      0.10735288984328761,
+      -0.044789183794908455,
+      -0.019807915834945473,
+      0.05226678061604,
+      0.06609853868880378,
+      -0.017839392224894515,
+      -0.09184824222556905,
+      -0.08713444454308919
+    ],
+    "mean_gap_all_32_layers_mean": -0.004462621184409411,
+    "mean_gap_all_32_layers_sd": 0.07291025372061655,
     "selection_specific_component_per_rep": [
-      0.003845855386279684,
-      -0.03229112094099365,
-      -0.027594105124416606,
-      0.003489190163328444,
-      0.007099462286217162,
+      0.028807763952021004,
+      0.030768526806489865,
+      -0.007115380771723672,
+      0.022383517917814295,
+      0.031995389643862504,
       0.004088559344879519,
-      0.058240360994041465,
-      0.03913571362884663
+      0.05919459442509607,
+      0.04571487567521573
     ],
-    "selection_specific_component_mean": 0.007001739467272831,
-    "selection_specific_component_sd": 0.030306962303772778,
-    "note": "CORRECTED PRIMARY RESULT: mean selection-specific component across randomized stratified splits, replacing the original sequential-split-derived +0.188 claim."
+    "selection_specific_component_mean": 0.026979730874206916,
+    "selection_specific_component_sd": 0.02117702306893331,
+    "note": "CORRECTED PRIMARY RESULT: each rep's selection-specific component is now evaluated at THAT REP'S OWN argmax-selected layer (an earlier version of this script hardcoded L11 for every rep, which does not measure selection optimism -- it measures L11's own idiosyncrasy under each random split). Mean selection-specific component across randomized stratified splits, replacing the original sequential-split-derived +0.188 claim."
   }
 }
