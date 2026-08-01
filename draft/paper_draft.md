@@ -149,7 +149,7 @@ BCa bootstrap 95% CIs on that gap exclude zero at capacities 16 and 128 and incl
 
 **This table is a rerun under a randomization fix, and the change is instructive rather than cosmetic.** The harness behind it had aliased one integer across three independent randomization points; under the decoupled seed scheme the magnitudes are stable (the band moves from +0.0009–+0.0034 to +0.0011–+0.0036) but which capacities clear significance is not, and the fix cost this result one Holm-surviving cell. That the significance pattern is this movable across a change leaving effect sizes essentially fixed is the reason this paper rests on effect sizes with intervals rather than on per-cell significance labels (Appendix A.2).
 
-#### 4.3.2 Two alternative explanations, tested directly
+#### 4.3.2 Alternative explanations, tested directly
 
 **Is it "having adaptive checkpoint selection at all," rather than fold reuse?** A fifth condition with the full training budget and the identical *ongoing* adaptive selection LEAKY uses, but selecting against a disjoint carve-out (`code/22`), does not approach LEAKY: at capacity 128 LEAKY beats it by +0.0198 (p<0.0001), *larger* than the original LEAKY-CLEAN_MATCHED gap rather than smaller, and the pattern holds at 384 (+0.0143, p<0.0001). The alternative is directionally unsupported — but this control retains only 37.3% and 25.7% of honest selection's placebo-relative benefit at those two capacities, and selects against a carve-out 1.67x smaller than LEAKY's fold, so we do not treat it as having ruled the alternative out (Appendix A.3).
 
