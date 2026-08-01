@@ -35,13 +35,38 @@
   ],
   "sigma_val_ratio_max_over_min": 2.656507951501305,
   "corr_sigma_val_vs_gap": -0.8374630233058248,
+  "sigma_misspecification": {
+    "what_is_measured": "np.std over one training trajectory's per-epoch validation AUROCs (code/47, train_to_best_checkpoint)",
+    "what_EVT_requires": "the sampling-noise SD of K exchangeable candidate estimates around a common mean",
+    "consequence": "fit (a) is a test of the wrong quantity; its R^2 is not evidence for or against extreme value theory",
+    "verdict": "UNTESTABLE_IN_THIS_HARNESS_AS_INSTRUMENTED",
+    "unaffected": "the empirical log law gap = a + b ln K (R^2 = 0.970) never references sigma and stands as reported"
+  },
+  "achieved_operating_point_per_cell": {
+    "1": 0.6268938775510204,
+    "3": 0.6872112244897959,
+    "5": 0.7265918367346939,
+    "10": 0.7564551020408163,
+    "15": 0.7615632653061223,
+    "25": 0.7605183673469388,
+    "45": 0.7587979591836735,
+    "75": 0.7578755102040817,
+    "135": 0.7576908163265307,
+    "225": 0.7574051020408163
+  },
+  "achieved_operating_point_full_range": [
+    0.6268938775510204,
+    0.7615632653061223
+  ],
   "fits": {
     "evt_per_cell_sigma": {
       "form": "gap = c * sigma_K * sqrt(2 ln K), sigma_K measured per cell",
       "params": {
         "c": 0.0354526486898831
       },
-      "r_squared": -0.39861997319557374
+      "r_squared": -0.39861997319557374,
+      "verdict": "UNTESTABLE_IN_THIS_HARNESS_AS_INSTRUMENTED",
+      "why_not_a_falsification": "sigma_K here is np.std over one training trajectory's per-EPOCH validation AUROCs. EVT's sigma is the SAMPLING-NOISE SD of K exchangeable estimates around a common mean. A learning curve is neither exchangeable nor centred on a common mean, so this R^2 cannot distinguish 'EVT is wrong' from 'this is the wrong sigma'. Both anomalies previously cited as evidence against EVT (sigma falling 2.66x with K, and corr(sigma, gap) = -0.84) follow mechanically from the misspecification. A real test needs sigma across independent, exchangeable candidate evaluations at a fixed point in training, which this harness does not produce. RETRACTED: the previous revision described this as a falsification."
     },
     "evt_constant_sigma_as_previously_fit": {
       "form": "gap = c * mean(sigma) * sqrt(2 ln K)  [what code/47 fit]",
@@ -67,6 +92,20 @@
       },
       "r_squared": 0.8659230357796666,
       "n_cells_fit": 9
+    },
+    "log_two_parameter_K_ge_10": {
+      "form": "gap = a + b * ln K, restricted to K >= 10",
+      "params": {
+        "a": -0.00029186760079519177,
+        "b": 0.0010741224832534636
+      },
+      "r_squared": 0.9552446275133543,
+      "n_cells_fit": 7,
+      "achieved_operating_point_range": [
+        0.7564551020408163,
+        0.7615632653061223
+      ],
+      "why": "Sweep A's achieved operating point moves from 0.6269 (K=1) to 0.7574 (K=225) even though its nominal target is fixed at 0.80, so the full-range K law is partly confounded with the operating-point relationship SS5 reports. Restricted to K >= 10 the achieved operating point spans only 0.7565-0.7616 and the law is essentially unchanged, which is why the confound is disclosed rather than treated as a qualification."
     }
   }
 }

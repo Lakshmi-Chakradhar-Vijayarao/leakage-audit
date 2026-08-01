@@ -1,0 +1,80 @@
+{
+  "verdict": "HARNESS_SPECIFIC_NOT_A_TRANSPORTABLE_LAW",
+  "summary": "Three measurements of the same LEAKY-minus-CLEAN_MATCHED contrast at achieved operating points spanning only 0.0030 AUROC differ in gap by 51.8x. The 48.6x operating-point decline measured in code/47's Sweep C is therefore a property of that synthetic harness and its single fixed mechanism, not a severity law that transports across harnesses or mechanisms. The operating point remains a strong severity MODIFIER within a harness and must be matched before two severity numbers are compared; it is not a predictor of severity across them.",
+  "sweep_C_operating_point_relationship": {
+    "cells": [
+      {
+        "target_auroc": 0.7,
+        "achieved_leaky_auroc": 0.6307551020408163,
+        "gap": 0.009316326530612241
+      },
+      {
+        "target_auroc": 0.8,
+        "achieved_leaky_auroc": 0.758587755102041,
+        "gap": 0.0036489795918367273
+      },
+      {
+        "target_auroc": 0.9,
+        "achieved_leaky_auroc": 0.8836326530612244,
+        "gap": 0.0010877551020408228
+      },
+      {
+        "target_auroc": 0.95,
+        "achieved_leaky_auroc": 0.9433102040816326,
+        "gap": 0.0006530612244898004
+      },
+      {
+        "target_auroc": 0.985,
+        "achieved_leaky_auroc": 0.9831530612244898,
+        "gap": 0.00019183673469387984
+      }
+    ],
+    "decline_factor_0.70_to_0.985": 48.563829787233445,
+    "probit_loglinear_interpolation": {
+      "form": "log gap = m * Phi^-1(achieved AUROC) + b",
+      "slope_m": -2.126040884199271,
+      "intercept_b": -4.077149608698064,
+      "r_squared_in_log_space": 0.9921821695538107,
+      "note": "Fit on ACHIEVED operating points, not nominal targets, because that is the coordinate on which the real harnesses are matched."
+    }
+  },
+  "matched_operating_point_comparison": {
+    "reference_cell": {
+      "target_auroc": 0.95,
+      "achieved_leaky_auroc": 0.9433102040816326,
+      "gap": 0.0006530612244898004
+    },
+    "observations": [
+      {
+        "name": "synthetic Sweep C (code/47), AUROC_0 target 0.95",
+        "harness": "synthetic isotropic, checkpoint argmax only",
+        "achieved_operating_point": 0.9433102040816326,
+        "gap": 0.0006530612244898004,
+        "ratio_vs_sweep_C_matched_cell": 1.0,
+        "sweep_C_interpolated_prediction_at_this_operating_point": 0.0005854891166223171,
+        "ratio_vs_sweep_C_interpolated": 1.1154113816108253
+      },
+      {
+        "name": "real-feature checkpoint-only harness (code/43), capacity 128",
+        "harness": "real Mistral-7B/HaluEval features, checkpoint argmax only",
+        "achieved_operating_point": 0.9402689180737961,
+        "gap": 0.009324577861163232,
+        "ratio_vs_sweep_C_matched_cell": 14.278259849906101,
+        "sweep_C_interpolated_prediction_at_this_operating_point": 0.000618960076323611,
+        "ratio_vs_sweep_C_interpolated": 15.064910028685052
+      },
+      {
+        "name": "fidelity extension (code/49), capacity 128",
+        "harness": "real features, argmax + LR scheduler + early stopping on the same fold",
+        "achieved_operating_point": 0.9424265165728579,
+        "gap": 0.03384615384615384,
+        "ratio_vs_sweep_C_matched_cell": 51.82692307692271,
+        "sweep_C_interpolated_prediction_at_this_operating_point": 0.0005951644857954631,
+        "ratio_vs_sweep_C_interpolated": 56.868571048753
+      }
+    ],
+    "operating_point_spread": 0.0030412860078364856,
+    "gap_spread_ratio": 51.82692307692271
+  },
+  "what_this_does_not_show": "This does not falsify the operating-point relationship. Within code/47's synthetic harness it is monotone and strongly fit, and it is reported as such. What fails is TRANSPORT: the relationship's slope and level are harness-specific. Two of the three measurements here also differ in leakage MECHANIC (argmax only versus argmax plus scheduler plus early stopping), so mechanism and harness are not separated by this comparison -- which is itself the point, since the paper had claimed the operating point moves severity more than mechanism differences do."
+}

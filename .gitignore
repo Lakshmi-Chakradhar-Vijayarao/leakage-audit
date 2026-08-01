@@ -6,3 +6,7 @@ __pycache__/
 *.bin
 !results/real_features_mistral7b_halueval.npz
 !results/case_study_2_probe_scores.npz
+
+# code/57 per-cell resume cache (regenerable; the grid itself ships in
+# results/joint_severity_surface.json)
+results/.joint_surface_cell_cache/

@@ -7,9 +7,21 @@ code/02d had a per-run "calibration_sanity_check_auroc" field, but on
 inspection it turned out to be `norm.cdf(sqrt(FISHER_J/2))` recomputed from
 the *same* FISHER_J used to build the data -- a tautological restatement of
 the analytic target, not an empirical measurement. It would not have caught
-this bug class either. This module is the real, non-tautological check:
-every synthetic generator in this project must call assert_calibration()
-before returning data.
+this bug class either. This module is the real, non-tautological check.
+
+SCOPE, STATED ACCURATELY (a review found this docstring overclaiming, and
+Appendix A already retracts the same sentence in the paper text). An earlier
+version of this docstring said "every synthetic generator in this project
+must call assert_calibration() before returning data." That was aspirational,
+not true, and it is not true now. The only generators that actually call it
+are code/46 and code/47 (and therefore code/57, which imports code/47's
+harness verbatim). code/02d and its descendants predate this module and are
+not gated by it. code/56 deliberately does NOT call it: its anisotropic
+generator violates this module's Sigma = I assumption, which is documented
+below under "NOT DIRECTLY APPLICABLE". The rule going forward is that any NEW
+isotropic synthetic generator should
+call assert_calibration() before returning data. Do not read this module as a
+project-wide invariant that has already been enforced retroactively.
 
 Deliberately NOT implemented as "fit a classifier and score its CV AUROC":
 a standard LogisticRegression's L2 regularization systematically shrinks

@@ -3,9 +3,30 @@
     "llama3.1-8b__fever__linear": {
       "reported_best_layer_full_sample": 17,
       "reported_best_auroc_full_sample": 0.9547633937877841,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.954763393787784,
       "honest_held_out_auroc": 0.9547633937877841,
       "winners_curse_estimate": 0.0,
+      "winners_curse_estimate_unsnapped": 0.0,
+      "selected_layers_across_rotations": [
+        17,
+        17,
+        17
+      ],
+      "estimator_degenerate": true,
+      "degeneracy_reason": "All 3 rotations selected the same layer, so the rotation estimator is algebraically 0 for ANY data (see module docstring). This cell carries no information about the winner's curse and is excluded from the headline mean.",
+      "permutation_null_mean": 0.013680842193037302,
+      "permutation_null_ci_95": [
+        0.008651240358557466,
+        0.02303523035230352
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.0006214300604544147,
+      "bootstrap_max_bias_ci_95": [
+        -0.00583698144673761,
+        0.0133416718782573
+      ],
       "mean_over_all_layers": 0.8875528265772168,
       "worst_layer_auroc": 0.5,
       "spread_best_minus_worst": 0.4547633937877841,
@@ -15,33 +36,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 17,
           "naive_selection_auroc": 0.959349593495935,
           "held_out_auroc": 0.9455909943714822,
-          "winners_curse": 0.013758599124452764
+          "winners_curse": 0.013758599124452764,
+          "selected_layer": 17
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 17,
           "naive_selection_auroc": 0.9480925578486554,
           "held_out_auroc": 0.9681050656660413,
-          "winners_curse": -0.02001250781738584
+          "winners_curse": -0.02001250781738584,
+          "selected_layer": 17
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 17,
           "naive_selection_auroc": 0.9568480300187617,
           "held_out_auroc": 0.9505941213258287,
-          "winners_curse": 0.0062539086929330745
+          "winners_curse": 0.0062539086929330745,
+          "selected_layer": 17
         }
       ]
     },
     "llama3.1-8b__fever__mlp": {
       "reported_best_layer_full_sample": 17,
       "reported_best_auroc_full_sample": 0.9533041484260997,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9561184073379195,
       "honest_held_out_auroc": 0.9385032311861581,
       "winners_curse_estimate": 0.01761517615176152,
+      "winners_curse_estimate_unsnapped": 0.01761517615176152,
+      "selected_layers_across_rotations": [
+        15,
+        17,
+        13
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.019696476964769633,
+      "permutation_null_ci_95": [
+        0.011986658328121772,
+        0.02918490723368768
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 0.616191904047976,
+      "bootstrap_max_bias": 0.004948301021471773,
+      "bootstrap_max_bias_ci_95": [
+        -0.0033354179695642694,
+        0.025432562017927984
+      ],
       "mean_over_all_layers": 0.8960998351242254,
       "worst_layer_auroc": 0.5,
       "spread_best_minus_worst": 0.4533041484260997,
@@ -51,33 +93,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 15,
           "naive_selection_auroc": 0.9606003752345216,
           "held_out_auroc": 0.9362101313320825,
-          "winners_curse": 0.024390243902439046
+          "winners_curse": 0.024390243902439046,
+          "selected_layer": 15
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 17,
           "naive_selection_auroc": 0.9518449030644153,
           "held_out_auroc": 0.9562226391494684,
-          "winners_curse": -0.004377736085053097
+          "winners_curse": -0.004377736085053097,
+          "selected_layer": 17
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 13,
           "naive_selection_auroc": 0.9559099437148217,
           "held_out_auroc": 0.9230769230769231,
-          "winners_curse": 0.03283302063789861
+          "winners_curse": 0.03283302063789861,
+          "selected_layer": 13
         }
       ]
     },
     "llama3.1-8b__halueval_qa__linear": {
       "reported_best_layer_full_sample": 15,
       "reported_best_auroc_full_sample": 0.9981249999999999,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9983333333333334,
       "honest_held_out_auroc": 0.9902083333333334,
       "winners_curse_estimate": 0.008125000000000049,
+      "winners_curse_estimate_unsnapped": 0.008125000000000049,
+      "selected_layers_across_rotations": [
+        15,
+        4,
+        15
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.01708062500000001,
+      "permutation_null_ci_95": [
+        0.013333333333333308,
+        0.0219791666666667
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.002559895833333363,
+      "bootstrap_max_bias_ci_95": [
+        -0.001874999999999738,
+        0.009374999999999911
+      ],
       "mean_over_all_layers": 0.9928535353535354,
       "worst_layer_auroc": 0.9824999999999999,
       "spread_best_minus_worst": 0.015625,
@@ -87,33 +150,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 15,
           "naive_selection_auroc": 0.998125,
           "held_out_auroc": 0.9981249999999999,
-          "winners_curse": 1.1102230246251565e-16
+          "winners_curse": 1.1102230246251565e-16,
+          "selected_layer": 15
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 4,
           "naive_selection_auroc": 0.9996875000000001,
           "held_out_auroc": 0.9725,
-          "winners_curse": 0.02718750000000003
+          "winners_curse": 0.02718750000000003,
+          "selected_layer": 4
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 15,
           "naive_selection_auroc": 0.9971875,
           "held_out_auroc": 1.0,
-          "winners_curse": -0.0028124999999999956
+          "winners_curse": -0.0028124999999999956,
+          "selected_layer": 15
         }
       ]
     },
     "llama3.1-8b__halueval_qa__mlp": {
       "reported_best_layer_full_sample": 15,
       "reported_best_auroc_full_sample": 0.9977083333333333,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9979166666666668,
       "honest_held_out_auroc": 0.9952083333333334,
       "winners_curse_estimate": 0.0027083333333333126,
+      "winners_curse_estimate_unsnapped": 0.0027083333333333126,
+      "selected_layers_across_rotations": [
+        15,
+        23,
+        18
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.009412239583333343,
+      "permutation_null_ci_95": [
+        0.008229166666666657,
+        0.012708333333333321
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.001300625000000006,
+      "bootstrap_max_bias_ci_95": [
+        -0.0025000000000000577,
+        0.01520833333333338
+      ],
       "mean_over_all_layers": 0.9933459595959596,
       "worst_layer_auroc": 0.9781249999999999,
       "spread_best_minus_worst": 0.019583333333333397,
@@ -123,33 +207,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 15,
           "naive_selection_auroc": 0.9971875,
           "held_out_auroc": 0.99875,
-          "winners_curse": -0.0015625000000000222
+          "winners_curse": -0.0015625000000000222,
+          "selected_layer": 15
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 23,
           "naive_selection_auroc": 0.9996875000000001,
           "held_out_auroc": 0.9875,
-          "winners_curse": 0.012187500000000018
+          "winners_curse": 0.012187500000000018,
+          "selected_layer": 23
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 18,
           "naive_selection_auroc": 0.996875,
           "held_out_auroc": 0.999375,
-          "winners_curse": -0.0025000000000000577
+          "winners_curse": -0.0025000000000000577,
+          "selected_layer": 18
         }
       ]
     },
     "llama3.1-8b__synthetic__linear": {
       "reported_best_layer_full_sample": 32,
       "reported_best_auroc_full_sample": 1.0,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 1.0,
       "honest_held_out_auroc": 0.9987499999999999,
       "winners_curse_estimate": 0.0012499999999999734,
+      "winners_curse_estimate_unsnapped": 0.0012499999999999734,
+      "selected_layers_across_rotations": [
+        23,
+        14,
+        32
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.002104166666666665,
+      "permutation_null_ci_95": [
+        0.0012500000000000104,
+        0.0050000000000000044
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 0.9815092453773113,
+      "bootstrap_max_bias": 0.0014960416666666583,
+      "bootstrap_max_bias_ci_95": [
+        0.0,
+        0.024375000000000036
+      ],
       "mean_over_all_layers": 0.9617424242424243,
       "worst_layer_auroc": 0.7489583333333334,
       "spread_best_minus_worst": 0.2510416666666666,
@@ -159,33 +264,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 23,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 0.9975,
-          "winners_curse": 0.0024999999999999467
+          "winners_curse": 0.0024999999999999467,
+          "selected_layer": 23
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 14,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 0.99875,
-          "winners_curse": 0.0012499999999999734
+          "winners_curse": 0.0012499999999999734,
+          "selected_layer": 14
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 32,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 1.0,
-          "winners_curse": 0.0
+          "winners_curse": 0.0,
+          "selected_layer": 32
         }
       ]
     },
     "llama3.1-8b__synthetic__mlp": {
       "reported_best_layer_full_sample": 28,
       "reported_best_auroc_full_sample": 1.0,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 1.0,
       "honest_held_out_auroc": 0.9983333333333334,
       "winners_curse_estimate": 0.001666666666666668,
+      "winners_curse_estimate_unsnapped": 0.001666666666666668,
+      "selected_layers_across_rotations": [
+        28,
+        10,
+        28
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.002707708333333369,
+      "permutation_null_ci_95": [
+        0.0024999999999999836,
+        0.0031250000000000444
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.0008363541666666473,
+      "bootstrap_max_bias_ci_95": [
+        0.0,
+        0.008541666666666559
+      ],
       "mean_over_all_layers": 0.9736363636363637,
       "worst_layer_auroc": 0.7816666666666666,
       "spread_best_minus_worst": 0.21833333333333338,
@@ -195,33 +321,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 28,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 1.0,
-          "winners_curse": 0.0
+          "winners_curse": 0.0,
+          "selected_layer": 28
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 10,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 0.995,
-          "winners_curse": 0.0050000000000000044
+          "winners_curse": 0.0050000000000000044,
+          "selected_layer": 10
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 28,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 1.0,
-          "winners_curse": 0.0
+          "winners_curse": 0.0,
+          "selected_layer": 28
         }
       ]
     },
     "llama3.1-8b__truthfulqa__linear": {
       "reported_best_layer_full_sample": 13,
       "reported_best_auroc_full_sample": 0.9136960600375236,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9136960600375236,
       "honest_held_out_auroc": 0.9136960600375236,
       "winners_curse_estimate": 0.0,
+      "winners_curse_estimate_unsnapped": 0.0,
+      "selected_layers_across_rotations": [
+        13,
+        13,
+        13
+      ],
+      "estimator_degenerate": true,
+      "degeneracy_reason": "All 3 rotations selected the same layer, so the rotation estimator is algebraically 0 for ANY data (see module docstring). This cell carries no information about the winner's curse and is excluded from the headline mean.",
+      "permutation_null_mean": 0.00797086720867206,
+      "permutation_null_ci_95": [
+        0.0,
+        0.01209089013967061
+      ],
+      "permutation_null_degenerate_rate": 0.332,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": -8.13008130082361e-05,
+      "bootstrap_max_bias_ci_95": [
+        -0.011882426516572897,
+        0.016885553470919135
+      ],
       "mean_over_all_layers": 0.842916342916343,
       "worst_layer_auroc": 0.5004169272461956,
       "spread_best_minus_worst": 0.413279132791328,
@@ -231,33 +378,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 13,
           "naive_selection_auroc": 0.9196372732958098,
           "held_out_auroc": 0.9018136335209507,
-          "winners_curse": 0.017823639774859124
+          "winners_curse": 0.017823639774859124,
+          "selected_layer": 13
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 13,
           "naive_selection_auroc": 0.9052532833020639,
           "held_out_auroc": 0.9305816135084427,
-          "winners_curse": -0.025328330206378813
+          "winners_curse": -0.025328330206378813,
+          "selected_layer": 13
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 13,
           "naive_selection_auroc": 0.9161976235146967,
           "held_out_auroc": 0.908692933083177,
-          "winners_curse": 0.007504690431519689
+          "winners_curse": 0.007504690431519689,
+          "selected_layer": 13
         }
       ]
     },
     "llama3.1-8b__truthfulqa__mlp": {
       "reported_best_layer_full_sample": 14,
       "reported_best_auroc_full_sample": 0.9136960600375233,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9139045236606211,
       "honest_held_out_auroc": 0.9099437148217636,
       "winners_curse_estimate": 0.003960808838857632,
+      "winners_curse_estimate_unsnapped": 0.003960808838857632,
+      "selected_layers_across_rotations": [
+        13,
+        14,
+        14
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.007460965186574945,
+      "permutation_null_ci_95": [
+        0.003960808838857632,
+        0.009797790285595168
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.0015621221596832005,
+      "bootstrap_max_bias_ci_95": [
+        -0.0031269543464664817,
+        0.01646862622472378
+      ],
       "mean_over_all_layers": 0.8439807708100391,
       "worst_layer_auroc": 0.5004169272461956,
       "spread_best_minus_worst": 0.4132791327913278,
@@ -267,33 +435,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 13,
           "naive_selection_auroc": 0.9158849280800501,
           "held_out_auroc": 0.8993120700437773,
-          "winners_curse": 0.01657285803627273
+          "winners_curse": 0.01657285803627273,
+          "selected_layer": 13
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 14,
           "naive_selection_auroc": 0.9108818011257036,
           "held_out_auroc": 0.9193245778611632,
-          "winners_curse": -0.008442776735459567
+          "winners_curse": -0.008442776735459567,
+          "selected_layer": 14
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 14,
           "naive_selection_auroc": 0.91494684177611,
           "held_out_auroc": 0.9111944965603502,
-          "winners_curse": 0.0037523452157597337
+          "winners_curse": 0.0037523452157597337,
+          "selected_layer": 14
         }
       ]
     },
     "mistral-7b__fever__linear": {
       "reported_best_layer_full_sample": 14,
       "reported_best_auroc_full_sample": 0.9597665207421304,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9597665207421304,
       "honest_held_out_auroc": 0.9597665207421304,
       "winners_curse_estimate": 0.0,
+      "winners_curse_estimate_unsnapped": 0.0,
+      "selected_layers_across_rotations": [
+        14,
+        14,
+        14
+      ],
+      "estimator_degenerate": true,
+      "degeneracy_reason": "All 3 rotations selected the same layer, so the rotation estimator is algebraically 0 for ANY data (see module docstring). This cell carries no information about the winner's curse and is excluded from the headline mean.",
+      "permutation_null_mean": 0.0,
+      "permutation_null_ci_95": [
+        0.0,
+        0.0
+      ],
+      "permutation_null_degenerate_rate": 1.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.0006333124869710222,
+      "bootstrap_max_bias_ci_95": [
+        -0.0016677089847819682,
+        0.015843235355430307
+      ],
       "mean_over_all_layers": 0.8762642055324983,
       "worst_layer_auroc": 0.5,
       "spread_best_minus_worst": 0.4597665207421304,
@@ -303,33 +492,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 14,
           "naive_selection_auroc": 0.9599749843652282,
           "held_out_auroc": 0.9593495934959348,
-          "winners_curse": 0.000625390869293363
+          "winners_curse": 0.000625390869293363,
+          "selected_layer": 14
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 14,
           "naive_selection_auroc": 0.9587242026266416,
           "held_out_auroc": 0.9618511569731081,
-          "winners_curse": -0.0031269543464664817
+          "winners_curse": -0.0031269543464664817,
+          "selected_layer": 14
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 14,
           "naive_selection_auroc": 0.9606003752345215,
           "held_out_auroc": 0.9580988117573483,
-          "winners_curse": 0.0025015634771731188
+          "winners_curse": 0.0025015634771731188,
+          "selected_layer": 14
         }
       ]
     },
     "mistral-7b__fever__mlp": {
       "reported_best_layer_full_sample": 15,
       "reported_best_auroc_full_sample": 0.959349593495935,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9596622889305816,
       "honest_held_out_auroc": 0.9541380029184907,
       "winners_curse_estimate": 0.0055242860120909105,
+      "winners_curse_estimate_unsnapped": 0.0055242860120909105,
+      "selected_layers_across_rotations": [
+        16,
+        15,
+        15
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.014412132582864307,
+      "permutation_null_ci_95": [
+        0.00865124035855743,
+        0.018657494267250347
+      ],
+      "permutation_null_degenerate_rate": 0.0005,
+      "permutation_p_one_sided": 0.9995002498750625,
+      "bootstrap_max_bias": 0.00149385032311867,
+      "bootstrap_max_bias_ci_95": [
+        -0.007921617677715154,
+        0.014383989993746127
+      ],
       "mean_over_all_layers": 0.8943689553445652,
       "worst_layer_auroc": 0.5,
       "spread_best_minus_worst": 0.45934959349593496,
@@ -339,33 +549,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.9627892432770482,
           "held_out_auroc": 0.9387116948092558,
-          "winners_curse": 0.02407754846779242
+          "winners_curse": 0.02407754846779242,
+          "selected_layer": 16
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 15,
           "naive_selection_auroc": 0.952157598499062,
           "held_out_auroc": 0.9737335834896811,
-          "winners_curse": -0.02157598499061908
+          "winners_curse": -0.02157598499061908,
+          "selected_layer": 15
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 15,
           "naive_selection_auroc": 0.9640400250156348,
           "held_out_auroc": 0.9499687304565354,
-          "winners_curse": 0.01407129455909939
+          "winners_curse": 0.01407129455909939,
+          "selected_layer": 15
         }
       ]
     },
     "mistral-7b__halueval_qa__linear": {
       "reported_best_layer_full_sample": 18,
       "reported_best_auroc_full_sample": 0.9983333333333334,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9986458333333333,
       "honest_held_out_auroc": 0.9939583333333334,
       "winners_curse_estimate": 0.004687500000000029,
+      "winners_curse_estimate_unsnapped": 0.004687500000000029,
+      "selected_layers_across_rotations": [
+        18,
+        14,
+        20
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.012242916666666659,
+      "permutation_null_ci_95": [
+        0.00770833333333328,
+        0.01666666666666668
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 0.9995002498750625,
+      "bootstrap_max_bias": 0.0018851041666666912,
+      "bootstrap_max_bias_ci_95": [
+        -0.0008333333333333526,
+        0.008125000000000049
+      ],
       "mean_over_all_layers": 0.9920643939393938,
       "worst_layer_auroc": 0.9802083333333332,
       "spread_best_minus_worst": 0.01812500000000017,
@@ -375,33 +606,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 18,
           "naive_selection_auroc": 0.9978125,
           "held_out_auroc": 0.999375,
-          "winners_curse": -0.0015625000000000222
+          "winners_curse": -0.0015625000000000222,
+          "selected_layer": 18
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 14,
           "naive_selection_auroc": 0.999375,
           "held_out_auroc": 0.986875,
-          "winners_curse": 0.012500000000000067
+          "winners_curse": 0.012500000000000067,
+          "selected_layer": 14
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 20,
           "naive_selection_auroc": 0.99875,
           "held_out_auroc": 0.995625,
-          "winners_curse": 0.0031250000000000444
+          "winners_curse": 0.0031250000000000444,
+          "selected_layer": 20
         }
       ]
     },
     "mistral-7b__halueval_qa__mlp": {
       "reported_best_layer_full_sample": 18,
       "reported_best_auroc_full_sample": 0.998125,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9987499999999999,
       "honest_held_out_auroc": 0.9929166666666668,
       "winners_curse_estimate": 0.005833333333333357,
+      "winners_curse_estimate_unsnapped": 0.005833333333333357,
+      "selected_layers_across_rotations": [
+        18,
+        16,
+        32
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.008285208333333365,
+      "permutation_null_ci_95": [
+        0.004479166666666663,
+        0.015208333333333343
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 0.8680659670164917,
+      "bootstrap_max_bias": 0.0018715625000000626,
+      "bootstrap_max_bias_ci_95": [
+        -0.0008333333333332416,
+        0.007916666666666683
+      ],
       "mean_over_all_layers": 0.9935795454545455,
       "worst_layer_auroc": 0.9754166666666667,
       "spread_best_minus_worst": 0.02270833333333333,
@@ -411,33 +663,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 18,
           "naive_selection_auroc": 0.9978125,
           "held_out_auroc": 0.99875,
-          "winners_curse": -0.0009375000000000355
+          "winners_curse": -0.0009375000000000355,
+          "selected_layer": 18
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.9996875000000001,
           "held_out_auroc": 0.99375,
-          "winners_curse": 0.00593750000000004
+          "winners_curse": 0.00593750000000004,
+          "selected_layer": 16
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 32,
           "naive_selection_auroc": 0.99875,
           "held_out_auroc": 0.98625,
-          "winners_curse": 0.012500000000000067
+          "winners_curse": 0.012500000000000067,
+          "selected_layer": 32
         }
       ]
     },
     "mistral-7b__synthetic__linear": {
       "reported_best_layer_full_sample": 18,
       "reported_best_auroc_full_sample": 0.9983333333333334,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9991666666666666,
       "honest_held_out_auroc": 0.9947916666666666,
       "winners_curse_estimate": 0.004375000000000055,
+      "winners_curse_estimate_unsnapped": 0.004375000000000055,
+      "selected_layers_across_rotations": [
+        27,
+        18,
+        17
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.007640729166666719,
+      "permutation_null_ci_95": [
+        0.004375000000000055,
+        0.010833333333333398
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 0.9880059970014993,
+      "bootstrap_max_bias": 0.001302604166666673,
+      "bootstrap_max_bias_ci_95": [
+        -0.0002083333333333659,
+        0.007083333333333441
+      ],
       "mean_over_all_layers": 0.9362752525252526,
       "worst_layer_auroc": 0.7166666666666667,
       "spread_best_minus_worst": 0.28166666666666673,
@@ -447,33 +720,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 27,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 0.99125,
-          "winners_curse": 0.008750000000000036
+          "winners_curse": 0.008750000000000036,
+          "selected_layer": 27
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 18,
           "naive_selection_auroc": 0.9996875000000001,
           "held_out_auroc": 0.995625,
-          "winners_curse": 0.00406250000000008
+          "winners_curse": 0.00406250000000008,
+          "selected_layer": 18
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 17,
           "naive_selection_auroc": 0.9978125,
           "held_out_auroc": 0.9974999999999999,
-          "winners_curse": 0.00031250000000004885
+          "winners_curse": 0.00031250000000004885,
+          "selected_layer": 17
         }
       ]
     },
     "mistral-7b__synthetic__mlp": {
       "reported_best_layer_full_sample": 20,
       "reported_best_auroc_full_sample": 0.9987499999999999,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9991666666666666,
       "honest_held_out_auroc": 0.9958333333333332,
       "winners_curse_estimate": 0.0033333333333332624,
+      "winners_curse_estimate_unsnapped": 0.0033333333333332624,
+      "selected_layers_across_rotations": [
+        17,
+        20,
+        30
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.011035677083333318,
+      "permutation_null_ci_95": [
+        0.0028125000000000324,
+        0.023020833333333306
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 0.8950524737631185,
+      "bootstrap_max_bias": 0.0013951041666666732,
+      "bootstrap_max_bias_ci_95": [
+        0.0,
+        0.019166666666666665
+      ],
       "mean_over_all_layers": 0.9618118686868687,
       "worst_layer_auroc": 0.7604166666666666,
       "spread_best_minus_worst": 0.23833333333333329,
@@ -483,33 +777,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 17,
           "naive_selection_auroc": 0.9990625,
           "held_out_auroc": 0.9925,
-          "winners_curse": 0.006562499999999916
+          "winners_curse": 0.006562499999999916,
+          "selected_layer": 17
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 20,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 0.9962500000000001,
-          "winners_curse": 0.00374999999999992
+          "winners_curse": 0.00374999999999992,
+          "selected_layer": 20
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 30,
           "naive_selection_auroc": 0.9984375,
           "held_out_auroc": 0.99875,
-          "winners_curse": -0.00031250000000004885
+          "winners_curse": -0.00031250000000004885,
+          "selected_layer": 30
         }
       ]
     },
     "mistral-7b__truthfulqa__linear": {
       "reported_best_layer_full_sample": 16,
       "reported_best_auroc_full_sample": 0.9038982697519282,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9038982697519282,
       "honest_held_out_auroc": 0.9038982697519282,
       "winners_curse_estimate": 0.0,
+      "winners_curse_estimate_unsnapped": 0.0,
+      "selected_layers_across_rotations": [
+        16,
+        16,
+        16
+      ],
+      "estimator_degenerate": true,
+      "degeneracy_reason": "All 3 rotations selected the same layer, so the rotation estimator is algebraically 0 for ANY data (see module docstring). This cell carries no information about the winner's curse and is excluded from the headline mean.",
+      "permutation_null_mean": 0.012617521367521386,
+      "permutation_null_ci_95": [
+        0.0,
+        0.019908276005837
+      ],
+      "permutation_null_degenerate_rate": 0.067,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.0004895768188451363,
+      "bootstrap_max_bias_ci_95": [
+        -0.008755472170106304,
+        0.016051698978528317
+      ],
       "mean_over_all_layers": 0.8427363061509403,
       "worst_layer_auroc": 0.5004169272461956,
       "spread_best_minus_worst": 0.40348134250573264,
@@ -519,33 +834,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.906816760475297,
           "held_out_auroc": 0.8980612883051907,
-          "winners_curse": 0.008755472170106304
+          "winners_curse": 0.008755472170106304,
+          "selected_layer": 16
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.8958724202626641,
           "held_out_auroc": 0.9199499687304565,
-          "winners_curse": -0.02407754846779242
+          "winners_curse": -0.02407754846779242,
+          "selected_layer": 16
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.9090056285178236,
           "held_out_auroc": 0.8936835522201375,
-          "winners_curse": 0.015322076297686116
+          "winners_curse": 0.015322076297686116,
+          "selected_layer": 16
         }
       ]
     },
     "mistral-7b__truthfulqa__mlp": {
       "reported_best_layer_full_sample": 16,
       "reported_best_auroc_full_sample": 0.9080675422138839,
+      "n_probed_layers": 33,
       "naive_selection_auroc_loo": 0.9080675422138839,
       "honest_held_out_auroc": 0.9080675422138839,
-      "winners_curse_estimate": 3.700743415417188e-17,
+      "winners_curse_estimate": 0.0,
+      "winners_curse_estimate_unsnapped": 3.700743415417188e-17,
+      "selected_layers_across_rotations": [
+        16,
+        16,
+        16
+      ],
+      "estimator_degenerate": true,
+      "degeneracy_reason": "All 3 rotations selected the same layer, so the rotation estimator is algebraically 0 for ANY data (see module docstring). This cell carries no information about the winner's curse and is excluded from the headline mean.",
+      "permutation_null_mean": 0.02932572441109032,
+      "permutation_null_ci_95": [
+        0.014800917239941702,
+        0.04044194288096733
+      ],
+      "permutation_null_degenerate_rate": 0.001,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.0014227642276422143,
+      "bootstrap_max_bias_ci_95": [
+        -0.013133208255159512,
+        0.02001250781738584
+      ],
       "mean_over_all_layers": 0.8462770292038585,
       "worst_layer_auroc": 0.5004169272461956,
       "spread_best_minus_worst": 0.4076506149676883,
@@ -555,33 +891,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.908692933083177,
           "held_out_auroc": 0.9068167604752971,
-          "winners_curse": 0.0018761726078798668
+          "winners_curse": 0.0018761726078798668,
+          "selected_layer": 16
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.8980612883051908,
           "held_out_auroc": 0.9280800500312696,
-          "winners_curse": -0.030018761726078758
+          "winners_curse": -0.030018761726078758,
+          "selected_layer": 16
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.9174484052532834,
           "held_out_auroc": 0.8893058161350844,
-          "winners_curse": 0.028142589118199002
+          "winners_curse": 0.028142589118199002,
+          "selected_layer": 16
         }
       ]
     },
     "qwen2.5-7b__fever__linear": {
       "reported_best_layer_full_sample": 20,
       "reported_best_auroc_full_sample": 0.9205753595997498,
+      "n_probed_layers": 29,
       "naive_selection_auroc_loo": 0.9265165728580363,
       "honest_held_out_auroc": 0.8918073796122576,
       "winners_curse_estimate": 0.034709193245778626,
+      "winners_curse_estimate_unsnapped": 0.034709193245778626,
+      "selected_layers_across_rotations": [
+        21,
+        24,
+        21
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.031844903064415266,
+      "permutation_null_ci_95": [
+        0.015113612674588254,
+        0.04763393787784035
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 0.2768615692153923,
+      "bootstrap_max_bias": 0.012485303314571613,
+      "bootstrap_max_bias_ci_95": [
+        -0.004377736085053208,
+        0.07317073170731703
+      ],
       "mean_over_all_layers": 0.8424482255432635,
       "worst_layer_auroc": 0.5,
       "spread_best_minus_worst": 0.4205753595997498,
@@ -591,33 +948,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 21,
           "naive_selection_auroc": 0.9208880550343965,
           "held_out_auroc": 0.9180737961225767,
-          "winners_curse": 0.0028142589118198558
+          "winners_curse": 0.0028142589118198558,
+          "selected_layer": 21
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 24,
           "naive_selection_auroc": 0.9249530956848031,
           "held_out_auroc": 0.8649155722326454,
-          "winners_curse": 0.06003752345215774
+          "winners_curse": 0.06003752345215774,
+          "selected_layer": 24
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 21,
           "naive_selection_auroc": 0.9337085678549093,
           "held_out_auroc": 0.892432770481551,
-          "winners_curse": 0.04127579737335829
+          "winners_curse": 0.04127579737335829,
+          "selected_layer": 21
         }
       ]
     },
     "qwen2.5-7b__fever__mlp": {
       "reported_best_layer_full_sample": 21,
       "reported_best_auroc_full_sample": 0.9270377319157808,
+      "n_probed_layers": 29,
       "naive_selection_auroc_loo": 0.9309985407546383,
       "honest_held_out_auroc": 0.9145299145299145,
       "winners_curse_estimate": 0.016468626224723854,
+      "winners_curse_estimate_unsnapped": 0.016468626224723854,
+      "selected_layers_across_rotations": [
+        21,
+        27,
+        19
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.019291901188242668,
+      "permutation_null_ci_95": [
+        0.013550135501355087,
+        0.021912132582864226
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 0.896551724137931,
+      "bootstrap_max_bias": 0.00762945590994372,
+      "bootstrap_max_bias_ci_95": [
+        -0.0014592453616844026,
+        0.03377110694183871
+      ],
       "mean_over_all_layers": 0.8513474657292993,
       "worst_layer_auroc": 0.5,
       "spread_best_minus_worst": 0.42703773191578076,
@@ -627,33 +1005,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 21,
           "naive_selection_auroc": 0.9283927454659162,
           "held_out_auroc": 0.9243277048155096,
-          "winners_curse": 0.004065040650406582
+          "winners_curse": 0.004065040650406582,
+          "selected_layer": 21
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 27,
           "naive_selection_auroc": 0.9315196998123827,
           "held_out_auroc": 0.9180737961225766,
-          "winners_curse": 0.013445903689806138
+          "winners_curse": 0.013445903689806138,
+          "selected_layer": 27
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 19,
           "naive_selection_auroc": 0.933083176985616,
           "held_out_auroc": 0.9011882426516572,
-          "winners_curse": 0.031894934333958846
+          "winners_curse": 0.031894934333958846,
+          "selected_layer": 19
         }
       ]
     },
     "qwen2.5-7b__halueval_qa__linear": {
       "reported_best_layer_full_sample": 19,
       "reported_best_auroc_full_sample": 0.9968749999999998,
+      "n_probed_layers": 29,
       "naive_selection_auroc_loo": 0.9970833333333333,
       "honest_held_out_auroc": 0.9927083333333333,
       "winners_curse_estimate": 0.004375000000000018,
+      "winners_curse_estimate_unsnapped": 0.004375000000000018,
+      "selected_layers_across_rotations": [
+        19,
+        13,
+        16
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.011346822916666627,
+      "permutation_null_ci_95": [
+        0.0074999999999999884,
+        0.014895833333333294
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.001666562500000047,
+      "bootstrap_max_bias_ci_95": [
+        -0.0016666666666667052,
+        0.0183333333333332
+      ],
       "mean_over_all_layers": 0.9919432471264368,
       "worst_layer_auroc": 0.9816666666666668,
       "spread_best_minus_worst": 0.015208333333333046,
@@ -663,33 +1062,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 19,
           "naive_selection_auroc": 0.9953125,
           "held_out_auroc": 1.0,
-          "winners_curse": -0.004687499999999956
+          "winners_curse": -0.004687499999999956,
+          "selected_layer": 19
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 13,
           "naive_selection_auroc": 0.9984375,
           "held_out_auroc": 0.983125,
-          "winners_curse": 0.015312499999999951
+          "winners_curse": 0.015312499999999951,
+          "selected_layer": 13
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 16,
           "naive_selection_auroc": 0.9975,
           "held_out_auroc": 0.995,
-          "winners_curse": 0.0025000000000000577
+          "winners_curse": 0.0025000000000000577,
+          "selected_layer": 16
         }
       ]
     },
     "qwen2.5-7b__halueval_qa__mlp": {
       "reported_best_layer_full_sample": 25,
       "reported_best_auroc_full_sample": 0.9974999999999999,
+      "n_probed_layers": 29,
       "naive_selection_auroc_loo": 0.9980208333333334,
       "honest_held_out_auroc": 0.9927083333333333,
       "winners_curse_estimate": 0.005312500000000016,
+      "winners_curse_estimate_unsnapped": 0.005312500000000016,
+      "selected_layers_across_rotations": [
+        24,
+        17,
+        28
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.013696249999999993,
+      "permutation_null_ci_95": [
+        0.010729166666666679,
+        0.015729166666666645
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.001702916666666677,
+      "bootstrap_max_bias_ci_95": [
+        -0.0012499999999997513,
+        0.007708333333333317
+      ],
       "mean_over_all_layers": 0.9918390804597701,
       "worst_layer_auroc": 0.9779166666666667,
       "spread_best_minus_worst": 0.019583333333333286,
@@ -699,33 +1119,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 24,
           "naive_selection_auroc": 0.9971875,
           "held_out_auroc": 0.9974999999999999,
-          "winners_curse": -0.00031249999999993783
+          "winners_curse": -0.00031249999999993783,
+          "selected_layer": 24
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 17,
           "naive_selection_auroc": 0.9990625,
           "held_out_auroc": 0.985625,
-          "winners_curse": 0.013437499999999991
+          "winners_curse": 0.013437499999999991,
+          "selected_layer": 17
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 28,
           "naive_selection_auroc": 0.9978125,
           "held_out_auroc": 0.995,
-          "winners_curse": 0.0028124999999999956
+          "winners_curse": 0.0028124999999999956,
+          "selected_layer": 28
         }
       ]
     },
     "qwen2.5-7b__synthetic__linear": {
       "reported_best_layer_full_sample": 17,
       "reported_best_auroc_full_sample": 1.0,
+      "n_probed_layers": 29,
       "naive_selection_auroc_loo": 1.0,
       "honest_held_out_auroc": 0.9997916666666667,
       "winners_curse_estimate": 0.0002083333333333289,
+      "winners_curse_estimate_unsnapped": 0.0002083333333333289,
+      "selected_layers_across_rotations": [
+        17,
+        16,
+        17
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.00020833333333332893,
+      "permutation_null_ci_95": [
+        0.0002083333333333289,
+        0.0002083333333333289
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.00048572916666664827,
+      "bootstrap_max_bias_ci_95": [
+        0.0,
+        0.009166666666666656
+      ],
       "mean_over_all_layers": 0.9480675287356323,
       "worst_layer_auroc": 0.7441666666666666,
       "spread_best_minus_worst": 0.25583333333333336,
@@ -735,33 +1176,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 17,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 1.0,
-          "winners_curse": 0.0
+          "winners_curse": 0.0,
+          "selected_layer": 17
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 16,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 0.999375,
-          "winners_curse": 0.0006249999999999867
+          "winners_curse": 0.0006249999999999867,
+          "selected_layer": 16
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 17,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 1.0,
-          "winners_curse": 0.0
+          "winners_curse": 0.0,
+          "selected_layer": 17
         }
       ]
     },
     "qwen2.5-7b__synthetic__mlp": {
       "reported_best_layer_full_sample": 18,
       "reported_best_auroc_full_sample": 1.0,
+      "n_probed_layers": 29,
       "naive_selection_auroc_loo": 1.0,
       "honest_held_out_auroc": 0.99125,
       "winners_curse_estimate": 0.008749999999999999,
+      "winners_curse_estimate_unsnapped": 0.008749999999999999,
+      "selected_layers_across_rotations": [
+        18,
+        12,
+        18
+      ],
+      "estimator_degenerate": false,
+      "degeneracy_reason": null,
+      "permutation_null_mean": 0.012079687499999985,
+      "permutation_null_ci_95": [
+        0.009166666666666656,
+        0.01437499999999999
+      ],
+      "permutation_null_degenerate_rate": 0.0,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.0025214583333333413,
+      "bootstrap_max_bias_ci_95": [
+        0.0,
+        0.009791666666666643
+      ],
       "mean_over_all_layers": 0.9593462643678161,
       "worst_layer_auroc": 0.7512500000000001,
       "spread_best_minus_worst": 0.24874999999999992,
@@ -771,33 +1233,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 18,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 1.0,
-          "winners_curse": 0.0
+          "winners_curse": 0.0,
+          "selected_layer": 18
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 12,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 0.97375,
-          "winners_curse": 0.026249999999999996
+          "winners_curse": 0.026249999999999996,
+          "selected_layer": 12
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 18,
           "naive_selection_auroc": 1.0,
           "held_out_auroc": 1.0,
-          "winners_curse": 0.0
+          "winners_curse": 0.0,
+          "selected_layer": 18
         }
       ]
     },
     "qwen2.5-7b__truthfulqa__linear": {
       "reported_best_layer_full_sample": 19,
       "reported_best_auroc_full_sample": 0.9145299145299145,
+      "n_probed_layers": 29,
       "naive_selection_auroc_loo": 0.9145299145299145,
       "honest_held_out_auroc": 0.9145299145299145,
       "winners_curse_estimate": 0.0,
+      "winners_curse_estimate_unsnapped": 0.0,
+      "selected_layers_across_rotations": [
+        19,
+        19,
+        19
+      ],
+      "estimator_degenerate": true,
+      "degeneracy_reason": "All 3 rotations selected the same layer, so the rotation estimator is algebraically 0 for ANY data (see module docstring). This cell carries no information about the winner's curse and is excluded from the headline mean.",
+      "permutation_null_mean": 0.027100740045861976,
+      "permutation_null_ci_95": [
+        0.0,
+        0.04429851990827597
+      ],
+      "permutation_null_degenerate_rate": 0.0975,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": -0.0006790702522409504,
+      "bootstrap_max_bias_ci_95": [
+        -0.022722534917656856,
+        0.025432562017927873
+      ],
       "mean_over_all_layers": 0.8181514308511786,
       "worst_layer_auroc": 0.5004169272461956,
       "spread_best_minus_worst": 0.4141129872837189,
@@ -807,33 +1290,54 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 19,
           "naive_selection_auroc": 0.925891181988743,
           "held_out_auroc": 0.8918073796122576,
-          "winners_curse": 0.03408380237648534
+          "winners_curse": 0.03408380237648534,
+          "selected_layer": 19
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 19,
           "naive_selection_auroc": 0.9018136335209506,
           "held_out_auroc": 0.9399624765478424,
-          "winners_curse": -0.03814884302689181
+          "winners_curse": -0.03814884302689181,
+          "selected_layer": 19
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 19,
           "naive_selection_auroc": 0.9158849280800501,
           "held_out_auroc": 0.9118198874296436,
-          "winners_curse": 0.004065040650406471
+          "winners_curse": 0.004065040650406471,
+          "selected_layer": 19
         }
       ]
     },
     "qwen2.5-7b__truthfulqa__mlp": {
       "reported_best_layer_full_sample": 19,
       "reported_best_auroc_full_sample": 0.924953095684803,
+      "n_probed_layers": 29,
       "naive_selection_auroc_loo": 0.924953095684803,
       "honest_held_out_auroc": 0.924953095684803,
-      "winners_curse_estimate": -3.700743415417188e-17,
+      "winners_curse_estimate": 0.0,
+      "winners_curse_estimate_unsnapped": -3.700743415417188e-17,
+      "selected_layers_across_rotations": [
+        19,
+        19,
+        19
+      ],
+      "estimator_degenerate": true,
+      "degeneracy_reason": "All 3 rotations selected the same layer, so the rotation estimator is algebraically 0 for ANY data (see module docstring). This cell carries no information about the winner's curse and is excluded from the headline mean.",
+      "permutation_null_mean": 0.03490087554721697,
+      "permutation_null_ci_95": [
+        0.0,
+        0.05253283302063786
+      ],
+      "permutation_null_degenerate_rate": 0.0535,
+      "permutation_p_one_sided": 1.0,
+      "bootstrap_max_bias": 0.00010068792995620207,
+      "bootstrap_max_bias_ci_95": [
+        -0.019595580571190374,
+        0.019595580571190263
+      ],
       "mean_over_all_layers": 0.8307419148462042,
       "worst_layer_auroc": 0.5004169272461956,
       "spread_best_minus_worst": 0.4245361684386074,
@@ -843,87 +1347,182 @@
       "per_rotation": [
         {
           "held_out_seed": 0,
-          "selected_layer": 19,
           "naive_selection_auroc": 0.9390243902439024,
           "held_out_auroc": 0.8968105065666041,
-          "winners_curse": 0.04221388367729828
+          "winners_curse": 0.04221388367729828,
+          "selected_layer": 19
         },
         {
           "held_out_seed": 1,
-          "selected_layer": 19,
           "naive_selection_auroc": 0.9096310193871169,
           "held_out_auroc": 0.9555972482801751,
-          "winners_curse": -0.045966228893058236
+          "winners_curse": -0.045966228893058236,
+          "selected_layer": 19
         },
         {
           "held_out_seed": 2,
-          "selected_layer": 19,
           "naive_selection_auroc": 0.9262038774233896,
           "held_out_auroc": 0.9224515322076298,
-          "winners_curse": 0.0037523452157598447
+          "winners_curse": 0.0037523452157598447,
+          "selected_layer": 19
         }
       ]
     }
   },
-  "summary_all_cells": {
-    "n_cells": 24,
-    "mean": 0.0053709621030505255,
-    "median": 0.0036470710860954476,
-    "min": -3.700743415417188e-17,
+  "summary_non_degenerate": {
+    "n_cells": 17,
+    "n_degenerate_cells_included": 0,
+    "mean": 0.007582534733718388,
+    "median": 0.004687500000000029,
+    "min": 0.0002083333333333289,
     "max": 0.034709193245778626,
     "bca_ci_95": [
-      0.0031599373705336223,
-      0.009954641258709807
+      0.004840954139558556,
+      0.013444306705246514
     ],
-    "wilcoxon_p_vs_zero": 0.0001678704846965284
+    "wilcoxon_p_vs_zero": 1.52587890625e-05,
+    "n_nonzero_for_wilcoxon": 17,
+    "permutation_null_mean_over_group": 0.011796867268835307,
+    "bootstrap_max_bias_mean_over_group": 0.0027731171213013213
+  },
+  "summary_degenerate_excluded": {
+    "n_cells": 7,
+    "n_degenerate_cells_included": 7,
+    "mean": 0.0,
+    "median": 0.0,
+    "min": 0.0,
+    "max": 0.0,
+    "bca_ci_95": [
+      0.0,
+      0.0
+    ],
+    "wilcoxon_p_vs_zero": 1.0,
+    "n_nonzero_for_wilcoxon": 0,
+    "permutation_null_mean_over_group": 0.01794236725334286,
+    "bootstrap_max_bias_mean_over_group": 0.00035820006551711477
+  },
+  "summary_non_saturated_non_degenerate": {
+    "n_cells": 5,
+    "n_degenerate_cells_included": 0,
+    "mean": 0.01565561809464251,
+    "median": 0.016468626224723854,
+    "min": 0.003960808838857632,
+    "max": 0.034709193245778626,
+    "bca_ci_95": [
+      0.007400458619970844,
+      0.02764227642276425
+    ],
+    "wilcoxon_p_vs_zero": 0.0625,
+    "n_nonzero_for_wilcoxon": 5,
+    "permutation_null_mean_over_group": 0.018541275797373365,
+    "bootstrap_max_bias_mean_over_group": 0.005623806545757795
+  },
+  "summary_all_cells": {
+    "n_cells": 24,
+    "n_degenerate_cells_included": 7,
+    "mean": 0.0053709621030505255,
+    "median": 0.0036470710860954476,
+    "min": 0.0,
+    "max": 0.034709193245778626,
+    "bca_ci_95": [
+      0.0031081845332398546,
+      0.010107154520007452
+    ],
+    "wilcoxon_p_vs_zero": 0.00029305252019248926,
+    "n_nonzero_for_wilcoxon": 17,
+    "permutation_null_mean_over_group": 0.013589304764316676,
+    "bootstrap_max_bias_mean_over_group": 0.0020687663133642613
   },
   "summary_ceiling_saturated": {
     "n_cells": 12,
+    "n_degenerate_cells_included": 0,
     "mean": 0.004218750000000006,
     "median": 0.004375000000000037,
     "min": 0.0002083333333333289,
     "max": 0.008749999999999999,
     "bca_ci_95": [
-      0.0028819444444444474,
-      0.005703125000000021
+      0.002882226948204558,
+      0.0057291666666666845
     ],
-    "wilcoxon_p_vs_zero": 0.00048828125
+    "wilcoxon_p_vs_zero": 0.00048828125,
+    "n_nonzero_for_wilcoxon": 12,
+    "permutation_null_mean_over_group": 0.008986697048611115,
+    "bootstrap_max_bias_mean_over_group": 0.0015853298611111242
   },
   "summary_non_saturated": {
     "n_cells": 12,
-    "mean": 0.006523174206101045,
-    "median": 1.850371707708594e-17,
-    "min": -3.700743415417188e-17,
+    "n_degenerate_cells_included": 7,
+    "mean": 0.006523174206101046,
+    "median": 0.0,
+    "min": 0.0,
     "max": 0.034709193245778626,
     "bca_ci_95": [
-      0.002258355916892502,
-      0.015200472517545702
+      0.0021628100896393665,
+      0.015376035756924452
     ],
-    "wilcoxon_p_vs_zero": 0.046875
+    "wilcoxon_p_vs_zero": 0.0625,
+    "n_nonzero_for_wilcoxon": 5,
+    "permutation_null_mean_over_group": 0.018191912480022235,
+    "bootstrap_max_bias_mean_over_group": 0.002552202765617398
   },
   "summary_all_layers_saturated": {
     "n_cells": 6,
+    "n_degenerate_cells_included": 0,
     "mean": 0.00517361111111113,
     "median": 0.005000000000000023,
     "min": 0.0027083333333333126,
     "max": 0.008125000000000049,
     "bca_ci_95": [
-      0.003993055555555556,
+      0.004027777777777784,
       0.006701388888888924
     ],
-    "wilcoxon_p_vs_zero": 0.03125
+    "wilcoxon_p_vs_zero": 0.03125,
+    "n_nonzero_for_wilcoxon": 6,
+    "permutation_null_mean_over_group": 0.012010677083333332,
+    "bootstrap_max_bias_mean_over_group": 0.001831111111111141
   },
   "summary_not_all_layers_saturated": {
     "n_cells": 18,
-    "mean": 0.005436745767030324,
+    "n_degenerate_cells_included": 7,
+    "mean": 0.0054367457670303244,
     "median": 0.0014583333333333206,
-    "min": -3.700743415417188e-17,
+    "min": 0.0,
     "max": 0.034709193245778626,
     "bca_ci_95": [
-      0.002524168556140142,
-      0.011723117257132203
+      0.0025822738625335727,
+      0.011772630550088254
     ],
-    "wilcoxon_p_vs_zero": 0.0020986264441740505
+    "wilcoxon_p_vs_zero": 0.003345618115850882,
+    "n_nonzero_for_wilcoxon": 11,
+    "permutation_null_mean_over_group": 0.014115513991311121,
+    "bootstrap_max_bias_mean_over_group": 0.0021479847141153015
+  },
+  "degeneracy_audit": {
+    "n_cells_total": 24,
+    "n_degenerate": 7,
+    "degenerate_cells": [
+      "llama3.1-8b__fever__linear",
+      "llama3.1-8b__truthfulqa__linear",
+      "mistral-7b__fever__linear",
+      "mistral-7b__truthfulqa__linear",
+      "mistral-7b__truthfulqa__mlp",
+      "qwen2.5-7b__truthfulqa__linear",
+      "qwen2.5-7b__truthfulqa__mlp"
+    ],
+    "zero_snap_threshold": 1e-12,
+    "explanation": "A cell is degenerate when all 3 leave-one-seed-out rotations select the SAME layer. Then naive_r = (S - a_r)/2 and honest_r = a_r, so the rotation mean is (3/2)(abar - abar) = 0 identically, for any data. Such a cell measures nothing and is excluded from the headline. Every degenerate cell here falls in the NON-SATURATED subgroup (7 of its 12 cells), which is why that subgroup's contaminated mean understates the effect among cells the estimator can see.",
+    "permutation_null_mean_over_degenerate_cells": 0.01794236725334286,
+    "permutation_null_interpretation": "The per-layer-shuffle null is what this estimator reports when the layer ranking is noise, i.e. the regime of MAXIMAL winner's curse. Degenerate cells whose null sits well above zero are cells where the exact zero reflects a STABLE argmax defeating the estimator, not an absent selection effect."
+  },
+  "per_model_layer_counts": {
+    "llama3.1-8b": 33,
+    "mistral-7b": 33,
+    "qwen2.5-7b": 29
+  },
+  "method_notes": {
+    "n_permutations": 2000,
+    "n_bootstrap_max_bias": 2000,
+    "permutation_scheme": "Seed labels shuffled INDEPENDENTLY WITHIN EACH LAYER. A global seed relabelling leaves the rotation estimator exactly invariant and would be a no-op null."
   },
   "composition_by_dataset": {
     "fever": {

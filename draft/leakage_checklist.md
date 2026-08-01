@@ -169,15 +169,30 @@ unnecessary, since the audited repository ships per-layer, per-seed
 AUROC arrays for all 24 model/dataset/probe-type combinations tested.
 Selecting the best layer on two of three seeds and evaluating on the
 third held-out seed gives a directly-measured winner's-curse estimate:
-mean $+0.0054$ AUROC across all 24 combinations (BCa 95% CI
-$[+0.0032,+0.0100]$, Wilcoxon $p=0.00017$; max $+0.0347$), small and
-consistent in direction with Mechanism 3's. (This document previously
-reported $+0.0047$/max $+0.0288$ here: those came from an estimator whose
-naive baseline was a max over *all three* seeds including the held-out one,
-which arithmetically forced the estimate to exactly 0.0000 in 7 of 24 cells.
-`main.tex` §4.4 documents the correction; this line had not been updated with
-it. Note also that 12 of the 24 cells are ceiling-saturated — reported
-separately in §4.4 as $+0.0042$ saturated versus $+0.0065$ non-saturated.)
+mean $+0.0076$ AUROC across the **17 of 24 combinations on which the
+estimator is non-degenerate** (BCa 95% CI $[+0.0048,+0.0134]$, Wilcoxon
+$p=1.5\times10^{-5}$; max $+0.0347$), small and consistent in direction with
+Mechanism 3's.
+
+> **Two corrections are folded into that number, and the second matters more
+> than the first.** (1) An earlier estimator took its naive baseline from a
+> max over *all three* seeds including the held-out one. (2) Rebuilding it as
+> a leave-one-seed-out rotation removed that stated cause but left the defect
+> intact: the rotation estimator is *algebraically* zero whenever all three
+> rotations pick the same layer (it reduces to `(3/2)*(abar - a_r)` averaged
+> over `r`, which is identically 0), which is true in 7 of 24 cells. All 7
+> fall in the non-saturated subgroup, so that subgroup's previously-quoted
+> $+0.0065$ was 5 real measurements averaging $+0.0157$ diluted by 7
+> algebraic zeros. The headline above therefore excludes the 7 degenerate
+> cells rather than averaging them in; their permutation null averages
+> $+0.0179$, so those exact zeros are the estimator failing, not the effect
+> being absent. `main.tex` §4.4 and `code/45` document this in full.
+
+Note also that 12 of the 24 cells are ceiling-saturated. The honest
+saturated-versus-non-saturated contrast is $+0.0042$ versus $+0.0157$ (a 3.7x
+difference, comparing against the 5 non-saturated cells the estimator can
+actually see), **not** the $+0.0042$ versus $+0.0065$ an earlier version of
+this line quoted.
 
 ### 4. Selection-based optimism in cross-validated hyperparameter choice (severity: real, but selection-specific component small once measured with a proper random split — Case Study 2)
 **Ask:** Was a hyperparameter (a layer, a regularization strength, a
@@ -268,7 +283,34 @@ seeds):** F1 gaps (leaky-selected threshold vs. honestly-selected
 threshold) ranging from $+0.0212$ (AUROC target $0.985$, MultiHaluDet's
 own reported regime) to $+0.0338$ (AUROC target $0.80$), all significant
 at $p<10^{-31}$; accuracy gaps of comparable magnitude ($+0.0215$ to
-$+0.0457$). **Important caveat, found in this paper's own first attempt
+$+0.0457$).
+
+> **⚠ READ THE RANGE ABOVE WITH ITS TEST-SET SIZE, OR YOU WILL MISAPPLY IT.**
+> Every number in that range was measured at **$n_{\text{test}}=140$**, and
+> this mechanism's severity depends strongly on $n_{\text{test}}$ — more
+> strongly than on anything else measured about it. It is a winner's curse
+> over a *finite-sample* criterion: the leaky threshold is chosen by argmax
+> over a grid scored on the test set, and the noisier that scoring is, the
+> more the argmax overfits it. Holding the operating point and every other
+> setting fixed and varying only the sample size, the F1 gap falls
+> monotonically and by a large factor:
+>
+> | $n_{\text{test}}$ | 140 | 350 | 700 | 2000 |
+> |---|---|---|---|---|
+> | F1 gap | $+0.0212$ | $+0.0111$ | $+0.0067$ | $+0.0034$ |
+> | accuracy gap | $+0.0215$ | $+0.0120$ | $+0.0066$ | $+0.0036$ |
+>
+> That is a **$6.2\times$ shrinkage from $n_{\text{test}}=140$ to $2000$**
+> (`code/46`, `SWEEP=N`; main.tex §4.5). Practical consequence for using this
+> checklist: **do not quote the $+0.021$–$+0.034$ range for a pipeline whose
+> test set is not about $140$ samples.** Scale your expectation down for a
+> larger test set. The mechanism is still real and still worth fixing at any
+> $n_{\text{test}}$ — the fix costs nothing — but its *magnitude* on a
+> few-thousand-sample test set is a few tenths of a point of F1, not a few
+> points. The direction of the dependence also means the reverse is true: on
+> a test set smaller than $140$, expect *more* than $+0.034$.
+
+**Important caveat, found in this paper's own first attempt
 at reporting this result:** an earlier draft's severity numbers were
 themselves computed from a synthetic generator with the exact calibration
 bug this checklist's own lesson-5a warns about (class-mean offset off by

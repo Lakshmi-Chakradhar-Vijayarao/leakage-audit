@@ -267,8 +267,17 @@ size.**
 > mechanism in this paper with a code-verified AUROC-scale estimate falls
 > between roughly 0.000 and +0.034 AUROC. What moves severity is the
 > number of candidates selected among and the operating point — a 48.6x
-> swing from AUROC_0=0.70 to 0.985, larger than any between-mechanism
-> difference measured here. See `main.tex` §5.
+> swing from AUROC_0=0.70 to 0.985 *within this paper's synthetic harness*.
+> **The clause "larger than any between-mechanism difference measured here"
+> that this note previously carried is withdrawn.** `main.tex` §5 now tests
+> it against this paper's own shipped data and it fails: three measurements
+> of the same contrast at achieved operating points within 0.003 AUROC of
+> each other differ by 14.3x and 51.8x from what the relationship predicts,
+> because they differ in harness and in leakage mechanic. The operating point
+> is a strong severity modifier *within* a harness — enough that two severity
+> numbers cannot be compared until it is matched — and is not a law that
+> transports across harnesses or mechanisms. See `main.tex` §5 and
+> `code/58`.
 
 For the record, the original (now-superseded) spectrum framing read --
 

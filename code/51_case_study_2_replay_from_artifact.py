@@ -145,9 +145,30 @@ def main():
           "within-dataset robustness statistics, not population-generalizing "
           "significance tests (see r['independence_caveat']).")
 
-    print("\n" + ("ALL CHECKS PASSED -- every Case Study 2 number in the paper is "
+    print("\n" + ("ALL CHECKS PASSED -- every Case Study 2 number checked above is "
                   "reproducible from the shipped derived artifact alone."
                   if all_ok else "MISMATCH -- see FAIL lines above."))
+    if all_ok:
+        # SCOPE CORRECTION (an independent adversarial review found the previous
+        # wording -- "every Case Study 2 number in the paper" -- to be false).
+        # code/48 runs its regularization-robustness sweep with variant=None,
+        # i.e. it refits probes from the raw hidden states rather than replaying
+        # a stored variant, and those per-C scores are never written into
+        # case_study_2_probe_scores.npz. The 12 numbers that sweep produces in
+        # SS4.2 therefore CANNOT be replayed from the derived artifact and need
+        # the 171 MB hidden-state cache and the full code/48 pipeline.
+        print("\nSCOPE: this replay covers SS4.2's PRIMARY results -- the "
+              "selection-specific component, the general gap, their SDs, the "
+              "t/Wilcoxon statistics, and the convergence audit.")
+        print("It does NOT cover the 12 numbers of SS4.2's "
+              "StandardScaler x C regularization-robustness sweep:")
+        print("  - the 5 Delta_sel values over C in {0.01, 0.1, 1, 10, 100}")
+        print("  - the 5 general-gap values over the same C grid")
+        print("  - the 2 like-for-like unscaled-vs-scaled values at C=1")
+        print("code/48 computes those with variant=None, refitting probes from the "
+              "raw hidden states, and does not persist the resulting scores to "
+              "case_study_2_probe_scores.npz. Reproducing them requires the full "
+              "171 MB hidden-state cache and a code/48 run, not this artifact.")
     return 0 if all_ok else 1
 
 

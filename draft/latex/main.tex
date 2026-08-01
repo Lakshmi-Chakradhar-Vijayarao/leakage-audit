@@ -49,8 +49,9 @@ layer selection, $+0.0011$ to $+0.0036$ for per-fold checkpoint selection on
 the primary synthetic sweep (rising to $+0.0084$ once a downstream
 feature-averaging step that attenuates it is removed, and to $+0.034$ on real
 features once the audited trainer's full optimizer schedule is ported),
-$+0.0054$ (BCa 95\% CI
-$[+0.0032,+0.0100]$, 24 published result files) for test-set-driven
+$+0.0076$ (BCa 95\% CI
+$[+0.0048,+0.0134]$, over the 17 of 24 published result files on which
+the estimator is non-degenerate) for test-set-driven
 best-layer selection, and exactly zero for test-set threshold selection,
 which is threshold-free-metric-invariant by construction while inflating
 F1 and accuracy by $+0.021$ to $+0.034$ ($p<10^{-31}$) at a test-set size of
@@ -59,21 +60,37 @@ since it is a winner's curse over a finite-sample criterion.
 
 Severity instead tracks two continuous, mechanism-independent
 quantities. Holding the mechanism fixed, inflation grows with the number
-of candidates selected among (well fit by $a+b\ln K$, $R^2=0.970$;
-notably \emph{not} by the extreme-value form
-$c\,\sigma_{\text{val}}\sqrt{2\ln K}$, which gives $R^2=-0.399$ when fit
-as stated) and falls sharply with the model's operating point --- by a
-factor of $48.6\times$, from $+0.0093$ at AUROC$_0=0.70$ to $+0.0002$ at
-$0.985$. That single relationship moves severity more than any
-difference we measure between mechanisms, and explains why several
-estimates here come out near zero: they were measured on tasks already
-running near the ceiling. Fitting both axes at once on a purpose-built
+of candidates selected among (well fit by $a+b\ln K$, $R^2=0.970$, within a
+fixed operating point) and falls sharply with the model's operating point ---
+by a factor of $48.6\times$, from $+0.0093$ at AUROC$_0=0.70$ to $+0.0002$ at
+$0.985$. \textbf{That decline is a property of the synthetic harness that
+produced it, not a transportable severity law, and we test this rather than
+assume it:} three measurements of the same contrast at achieved operating
+points within $0.003$ AUROC of each other differ by $14\times$ and $52\times$
+from what it predicts, because they differ in harness and in leakage mechanic.
+What survives is the weaker, methodologically load-bearing claim --- the
+operating point is a strong severity modifier \emph{within} a harness, so two
+severity numbers are not comparable until it is matched --- which still
+explains why several estimates here come out near zero: they were measured on
+tasks already running near the ceiling. We also withdraw a
+falsification: an earlier version reported the extreme-value form
+$c\,\sigma_{\text{val}}\sqrt{2\ln K}$ as falsified at $R^2=-0.399$, but the
+$\sigma$ available in this harness is a training trajectory's dispersion
+rather than the sampling-noise SD that derivation requires, so the test
+cannot distinguish a wrong theory from a wrong measurement, and we now report
+it as untestable here. Fitting both axes at once on a purpose-built
 $K\times$AUROC$_0$ factorial qualifies the first of the two: $\ln K$ alone
-explains only $R^2=0.114$ across that grid, the $R^2=0.970$ logarithmic law
-holds \emph{within} a fixed operating point rather than in general, and the
-surface is described well only by a multiplicative empirical fit,
-$\text{gap}\propto K^{0.30}e^{-3.12\,\Phi^{-1}(\text{AUROC}_0)}$
-($R^2=0.94$) --- an empirical fit, explicitly not a bound.
+explains only $R^2=0.038$ across that grid, so the $R^2=0.970$ logarithmic law
+holds \emph{within} a fixed operating point rather than in general, while the
+surface as a whole is well described by a \emph{separable} multiplicative
+empirical fit, $\text{gap}\propto
+K^{0.17}e^{-2.97\,\Phi^{-1}(\text{AUROC}_0)}$ ($R^2=0.976$) --- an empirical
+fit, explicitly not a bound. An earlier version of this grid also reported a
+significant interaction between the two axes; we withdraw it. That result came
+entirely from a $K=3$ column in which too few epochs elapse for the leaky and
+control arms to diverge at all, leaving them bitwise identical in
+$81$--$100\%$ of folds, and it does not survive on a grid whose every cell is
+gated on a measured degeneracy check ($p=0.027\rightarrow0.193$).
 
 While deriving these estimates we twice found our own measurement
 instrument committing the very pattern this paper audits for --- first a
@@ -127,9 +144,18 @@ continuous quantities: the number of candidates selected among, and the
 operating point the pipeline runs at. Holding the leakage mechanism
 fixed and varying only the task's calibrated difficulty moves the
 inflation by a factor of $48.6\times$ --- from $+0.0093$ at AUROC$_0=0.70$
-to $+0.0002$ at $0.985$ --- which is larger than any difference we
-measure \emph{between} mechanisms. That relationship, previously buried
-in an appendix, is promoted here to a headline finding (§5).
+to $+0.0002$ at $0.985$. That relationship, previously buried
+in an appendix, is promoted here to a headline finding (§5) --- but promoted
+with a limit an earlier version of this paper asserted its way past. We
+previously said the relationship moves severity ``more than any difference we
+measure between mechanisms.'' §5 now tests that against our own shipped data
+and it does not hold: at achieved operating points within $0.003$ AUROC of
+each other, two real-feature harnesses exceed what the relationship predicts
+by $14\times$ and $52\times$. The operating point is a strong severity
+modifier \emph{within} a harness --- enough to make matching it a
+precondition for comparing any two severity numbers, which is how this paper
+uses it --- and it is not a law that transports across harnesses or
+mechanisms.
 
 \textbf{Contributions:}
 \begin{enumerate}
@@ -140,11 +166,17 @@ in an appendix, is promoted here to a headline finding (§5).
 \item \textbf{The severity relationship:} evidence that inflation in this
    setting is governed by candidate count ($\text{gap}=a+b\ln K$,
    $R^2=0.970$ at a fixed operating point) and, far more strongly, by
-   operating point (a $48.6\times$ decline from AUROC$_0=0.70$ to $0.985$),
-   rather than by which of the five mechanisms is responsible (§5) --- plus
-   a $K\times$AUROC$_0$ factorial that fits both axes jointly, shows the two
-   interact multiplicatively rather than additively, and thereby limits the
-   $K$-law to within-operating-point scope.
+   operating point (a $48.6\times$ decline from AUROC$_0=0.70$ to $0.985$
+   \emph{within the harness that measures it}), rather than by which of the
+   five mechanisms is responsible (§5) --- plus a $K\times$AUROC$_0$
+   factorial that fits both axes jointly with a separable multiplicative
+   surface ($R^2=0.976$) and thereby limits the $K$-law to
+   within-operating-point scope. §5 also bounds both claims: the
+   operating-point relationship does not transport to this paper's own
+   real-feature harnesses at a matched operating point (they exceed its
+   prediction by $14$--$52\times$), and a previously-reported interaction
+   between the two axes is withdrawn as an artifact of a degenerate corner of
+   the grid.
 \item A quantified CV-based layer-selection optimism bias in one of our
    own pipelines (GUARDIAN), including a full 32-layer decomposition and
    a randomization-based correction showing the original 18.8-point
@@ -155,8 +187,9 @@ in an appendix, is promoted here to a headline finding (§5).
    population-generalizing one, as §4.2 states) once
    correctly isolated --- plus a shipped derived artifact
    (\texttt{code/48}, \texttt{code/51}) that lets a reader recompute
-   every one of those numbers without the original 171\,MB hidden-state
-   cache.
+   §4.2's primary numbers without the original 171\,MB hidden-state
+   cache (the regularization-robustness sweep is the stated exception;
+   §4.2).
 \item A controlled reconstruction of Mechanism 3 (per-fold checkpoint
    selection) calibrated via a closed-form Fisher-ratio/AUROC identity,
    with an explicit alternative-confound control whose own limited power
@@ -164,7 +197,11 @@ in an appendix, is promoted here to a headline finding (§5).
    audited trainer's actual LR-scheduler and early-stopping coupling.
 \item A directly-measured, CI-bounded winner's-curse estimate for
    Mechanism 4 from 24 published per-layer/per-seed result files, with
-   its ceiling-saturated and non-saturated subsets reported separately.
+   its ceiling-saturated and non-saturated subsets reported separately ---
+   and with the $7$ cells on which the leave-one-seed-out estimator is
+   \emph{algebraically} degenerate identified as such, excluded from the
+   headline, and characterized against a permutation null rather than
+   averaged in as zeros (§4.4).
 \item A quantification of Mechanism 5 showing it leaves AUROC exactly
    unaffected by construction while materially inflating every
    threshold-dependent metric the same pipeline reports alongside it.
@@ -370,9 +407,18 @@ four numbers on the same footing.
   ($4.0$\,MB) derived artifact --- per-layer, per-sample
   cross-validation fold assignments and probe scores for all 32 layers,
   for the sequential split, the reversed split, and all 50 randomized
-  reps --- and \texttt{code/51} recomputes every number this paper
-  reports for Case Study 2 from that artifact alone and asserts
-  agreement with the committed JSON.
+  reps --- and \texttt{code/51} recomputes Case Study 2's \emph{primary}
+  numbers from that artifact alone and asserts agreement with the committed
+  JSON. \emph{Scope, corrected after a review found the previous ``every
+  number'' claim false:} the $12$ numbers of §4.2's
+  \texttt{StandardScaler}$\times C$ regularization-robustness sweep (five
+  $\Delta_{\text{sel}}$ values, five general-gap values, and the two
+  like-for-like unscaled-versus-scaled values at $C=1$) are \emph{not}
+  replayable from the artifact. \texttt{code/48} computes that sweep by
+  refitting probes from the raw hidden states and never writes the resulting
+  scores into the shipped \texttt{.npz}, so reproducing those twelve numbers
+  needs the full cache and a \texttt{code/48} run. \texttt{code/51} now
+  prints this scope boundary rather than asserting past it.
 \item \textbf{Case Study 1 (HaRP) --- \emph{not} independently
   re-verifiable from this artifact.} Its $+0.19$ figure is reported from
   our own prior work; the training scripts and logs that produced it are
@@ -663,6 +709,23 @@ seed as LEAKY -- isolating fold reuse from data budget), and \textbf{PLACEBO}
 (checkpoint chosen on permuted labels -- zero \emph{selection}-signal, but real
 training signal, hence AUROC 0.73-0.74, not 0.5).
 
+\textbf{A second, smaller asymmetry inside CLEAN\_MATCHED, disclosed at a
+later review's request.} CLEAN\_MATCHED's epoch count is \emph{selected} by a
+model trained on only $85\%$ of the fold's training data --- the $15\%$
+carve-out it selects against is taken out of that data (\texttt{tr2\_idx}
+versus \texttt{es\_idx} in \texttt{code/47}) --- but the retrain that produces
+the reported model then uses $100\%$ of it (\texttt{tr\_idx}). LEAKY's epoch
+count is selected by a model trained on the full $100\%$. So the two arms are
+matched on the retrain's \emph{data} budget, which is what this control was
+built for, but not on the data budget of the run the epoch count was chosen
+from. This is an \emph{epoch-selection}-budget mismatch layered on top of, and
+distinct from, the data-budget confound the control removes. Its direction is
+not determined a priori: a model trained on less data typically peaks later,
+which would push CLEAN\_MATCHED's chosen epoch up, but it is also a noisier
+selection signal. We disclose it rather than correct it, because removing it
+would require selecting on a carve-out drawn from outside the fold, which
+changes what the control is a control for.
+
 \begin{table}[h]
 \centering
 \small
@@ -688,13 +751,20 @@ perm.\ $p=0.091$ -- concordant with the Wilcoxon verdicts above.
 \textbf{This table changed under a randomization fix, and the change is
 instructive rather than cosmetic.} A further independent review found that
 \texttt{code/02d} --- the harness behind this table, and this paper's
-primary severity harness --- drove the synthetic data draw, the outer
-train/test split and the inner cross-validation fold assignment from one
-shared \texttt{seed} variable. Across the $100$ replicates those three
-sources of variation were therefore perfectly confounded: no replicate
-shares a dataset with a different split, or a split with a different fold
-assignment. This is exactly the confound \texttt{code/47}'s explicitly
-decoupled \texttt{data\_seed}/\texttt{split\_seed}/\texttt{fold\_seed\_base}/
+primary severity harness --- passed \emph{the replicate index $i$ itself} to
+every randomization point in the replicate: as the generator seed for the
+synthetic data draw, as the \texttt{random\_state} of the outer
+\texttt{train\_test\_split}, and as the \texttt{random\_state} of the inner
+\texttt{StratifiedKFold}. \emph{(A later review asked us to state this
+precisely rather than loosely, and we have: the defect was one integer
+aliased across three independent randomization points --- \texttt{seeds\_for(i)}
+returned \texttt{(i, i, i, i)} --- not three separately-maintained seed
+streams that had somehow become correlated. There was never more than one
+stream.)} Across the $100$ replicates those sources of variation were
+therefore perfectly confounded: no replicate shares a dataset with a
+different split, or a split with a different fold assignment. This is
+exactly the confound \texttt{code/47}'s explicitly decoupled
+\texttt{data\_seed}/\texttt{split\_seed}/\texttt{fold\_seed\_base}/
 \texttt{init\_seed\_base} scheme was written to fix, and it had never been
 retrofitted to \texttt{code/02d}. It is now (\texttt{seeds\_for()}; the
 previous behaviour is reproducible bit-for-bit via \texttt{--coupled-seed},
@@ -709,9 +779,17 @@ from $p=0.015$ to $p=0.171$ and capacity $16$ goes the other way, from
 $p=0.309$ to $p=0.019$, so the two individually-significant cells are a
 different two than before. As an internal check that this is the fix rather
 than a new bug, the decoupled capacity-128 cell ($+0.0036$, $p=0.0012$) now
-reproduces \texttt{code/47}'s independently-written default cell
-($+0.0036$, $p=0.0012$), which is the identical configuration and had used
-decoupled seeds all along; under the coupled scheme the two differed. That
+reproduces \texttt{code/47}'s default cell ($+0.0036$, $p=0.0012$), which is
+the identical configuration and had used decoupled seeds all along; under the
+coupled scheme the two differed. \emph{We previously called \texttt{code/47}'s
+cell ``independently-written,'' and a later review correctly objected: that is
+not true and we withdraw it. \texttt{code/47}'s own docstring describes its
+generative process and LEAKY/CLEAN/CLEAN\_MATCHED/PLACEBO logic as ``an exact
+port of \texttt{code/02d}.'' The two agreeing is therefore a \emph{determinism
+check} --- confirming the retrofit reproduces the scheme \texttt{code/47}
+already used, and that neither drifted --- and not independent confirmation of
+the result by a second implementation. No such independent implementation
+exists in this paper.} That
 the significance pattern is this movable across a change which leaves the
 effect sizes essentially fixed is itself the point --- it is the same
 instability the anisotropic sweep below shows, and the reason this paper
@@ -1316,7 +1394,7 @@ rather than accepting a partially-improved number at face value --
 including, in the end, tracing a bug in the correction script itself;
 Appendix A documents that process in full.
 
-\subsection{Case Study 4 (severity $\Delta_{\text{wc}}=+0.0054$ AUROC, CI $[+0.0032,+0.0100]$): Test-set-driven best-layer selection — quantized-LLM paper}
+\subsection{Case Study 4 (severity $\Delta_{\text{wc}}=+0.0076$ AUROC, CI $[+0.0048,+0.0134]$, over the 17 of 24 cells whose estimator is non-degenerate): Test-set-driven best-layer selection — quantized-LLM paper}
 
 [See \texttt{draft/case\_study\_quantized\_llm\_paper.md} for full detail, including
 literal code excerpts.]
@@ -1328,18 +1406,25 @@ Quantized LLMs'' (arXiv 2606.02628; repo
 (\texttt{src/detection/probes.py::train\_probe}) uses a clean single 70/10/20
 train/val/test split, genuinely free of Case Studies 1-3's exact
 patterns. But \texttt{src/detection/saplma.py::saplma\_probe\_per\_layer} selects a
-\texttt{best\_layer} by the argmax, over $33$ layers, of each layer's \textbf{test-set}
-AUROC, then reports that same test-set number as the headline result,
-with no correction for having tried $33$ hypotheses against the one test
-set. This is the classical ``winner's curse'' of multiple-hypothesis
-selection using the exact metric later reported.
+\texttt{best\_layer} by the argmax, over every probed layer, of each layer's
+\textbf{test-set} AUROC, then reports that same test-set number as the
+headline result, with no correction for having tried that many hypotheses
+against the one test set. The number of probed layers is
+model-dependent and not constant across the 24 cells, as an earlier version
+of this section incorrectly implied: it is $33$ for the eight
+\texttt{llama3.1-8b} cells and the eight \texttt{mistral-7b} cells, and $29$
+for the eight \texttt{qwen2.5-7b} cells. \texttt{code/45} now asserts these
+counts against the shipped files so the figure cannot drift. This is the
+classical ``winner's curse'' of multiple-hypothesis selection using the exact
+metric later reported.
 
 We initially believed re-quantifying this mechanism's severity would
 require their exact quantized checkpoint and dataset re-run from
 scratch; a fresh review found this unnecessary. Their repo ships
 per-layer, per-seed AUROC arrays for all 24 model/dataset/probe-type
-combinations tested (\texttt{code/external/HallucinationPatternDetection/results/probes/*.json},
-33 layers, 3 seeds each). For each combination
+combinations tested (\texttt{code/external/HallucinationPatternDetection/results/probes/*.json};
+$33$ probed layers for \texttt{llama3.1-8b} and \texttt{mistral-7b}, $29$ for
+\texttt{qwen2.5-7b}; 3 seeds each). For each combination
 (\texttt{code/45\_case\_study\_4\_winners\_curse.py}), each of the 3 seeds is
 held out in turn; the best layer is selected using \emph{only} the other
 two seeds, the naive baseline is the selection-set mean at that selected
@@ -1347,26 +1432,95 @@ layer, and the honest estimate is the held-out seed's AUROC at that same
 layer. Their difference, averaged over the three rotations, is the
 winner's-curse estimate.
 
-\textbf{Correction (a later independent review).} An earlier version of
+\textbf{Correction 1 (a later independent review).} An earlier version of
 this script took the naive baseline from the repo's own reported
 \texttt{best\_auroc}, which is a max over \emph{all three} seeds --
 including the seed then used as ``held-out.'' Whenever the leave-one-out
 argmax happened to coincide with the full-sample argmax (7 of 24 cells),
 the two sides of the subtraction were arithmetically forced to be equal
 and the estimate was pinned at exactly $0.0000$ regardless of the true
-effect. Under the corrected, genuinely leave-one-seed-out protocol the
-estimate is mean $\Delta_{\text{wc}}=+0.0054$ AUROC across all 24 combinations (BCa 95\% CI
-$[+0.0032,+0.0100]$, Wilcoxon $p=0.00017$; max $+0.0347$), up from the
-$+0.0047$ (max $+0.0288$) the flawed estimator reported. This section
-previously carried no CI or significance test at all, unlike every other
-severity estimate in this paper; that is fixed here. \textbf{Power, stated
-rather than left implicit:} the $24$ per-cell estimates have SD $0.0079$, so
-this design's minimum detectable effect at $\alpha=0.05$, $80\%$ power is
-$+0.0045$ --- below the observed $+0.0054$, but only just, and the
-non-saturated half ($n=12$, SD $0.0110$, MDE $+0.0089$) is \emph{under}powered
-for its own observed $+0.0065$. The pooled estimate is adequately powered;
-the subgroup split below is descriptive, and we do not lean on the
-non-saturated cell's individual $p=0.047$.
+effect.
+
+\textbf{Correction 2, and the more important one: Correction 1 did not
+work.} A second, independent review found that rebuilding the estimator as a
+leave-one-seed-out rotation removed the \emph{stated cause} of that
+degeneracy while leaving the degeneracy itself exactly intact, in the same
+$7$ of $24$ cells. The rotation estimator is \emph{algebraically} pinned to
+zero whenever all three rotations select the same layer. Writing $a_0,a_1,a_2$
+for the three seeds' AUROC at that common layer $L$, $S=\sum_r a_r$ and
+$\bar a=S/3$: rotation $r$ selects on the other two seeds, so
+$\text{naive}_r=(S-a_r)/2$ and $\text{honest}_r=a_r$, giving
+$\text{wc}_r=\tfrac{3}{2}(\bar a - a_r)$, whose mean over $r$ is
+$\tfrac{3}{2}(\bar a-\bar a)=0$ \emph{identically, for any data}. The
+per-rotation values are $1.5\times$ the held-out seed's deviation from the
+seed mean --- pure noise that sums to zero by construction. In those cells
+the estimator is not measuring a small effect; it is measuring nothing. Two
+of the seven carried float residues of $\pm3.7\times10^{-17}$, which
+\texttt{scipy}'s Wilcoxon was ranking as real signed observations rather than
+dropping as the exact zeros they are.
+
+This matters because \textbf{all seven degenerate cells fall in the
+non-saturated subgroup} ($7$ of its $12$), which is the subgroup §5 leans on.
+Its previously-reported $+0.0065$ was five genuine measurements averaging
+$+0.0157$ diluted by seven algebraic zeros, and its Wilcoxon $p$ moves from
+$0.047$ to $0.0625$ once the residues are counted as zeros.
+
+\textbf{What we did instead of patching the same structure a third time.}
+\texttt{code/45} now (i) \emph{detects and declares} degeneracy per cell,
+recording the selected layer in each rotation and snapping $|{\cdot}|<10^{-12}$
+to exact zero; (ii) reports the headline over the $17$ non-degenerate cells
+only, with the $7$ degenerate ones disclosed rather than averaged in; and
+(iii) characterizes the estimator \emph{including} its degeneracy with a
+permutation null. Note that a \emph{global} seed relabelling leaves this
+estimator exactly invariant --- it already averages over all three choices of
+held-out seed --- so the shuffle is applied independently \emph{within each
+layer}, destroying the layer$\times$seed structure that makes an argmax stable
+while preserving each layer's marginal values. That null is the regime of
+\emph{maximal} winner's curse (a noise-driven argmax), so it answers the
+question the degenerate cells cannot: what this estimator would have reported
+there had the layer ranking been noise. A structurally different second
+estimator --- the bootstrap bias of a max-of-means, which cannot telescope
+because its two sides use different seed multisets --- is reported as a
+sign-and-magnitude cross-check.
+
+\textbf{The corrected numbers.} Over the $17$ non-degenerate cells,
+$\Delta_{\text{wc}}=+0.0076$ AUROC (BCa 95\% CI $[+0.0048,+0.0134]$, Wilcoxon
+$p=1.5\times10^{-5}$; max $+0.0347$). The $7$ degenerate cells are excluded and
+are exactly $0.0000$ by construction; their permutation null averages
+$+0.0179$, i.e.\ \emph{above} the non-degenerate cells' observed mean --- so
+those exact zeros reflect a stable argmax defeating the estimator, not an
+absent selection effect. The contaminated all-24-cell mean is $+0.0054$ (CI
+$[+0.0031,+0.0101]$, $p=0.00029$), which we retain only for continuity with
+the previous revision and label as contaminated wherever it appears. The
+bootstrap max-bias cross-check agrees in sign everywhere and averages
+$+0.0027$ over the non-degenerate cells, smaller than the rotation estimate as
+expected at three seeds.
+
+\textbf{Excluding the degenerate cells is itself a selection, and we state
+which way it cuts rather than let a reader find it.} A cell is degenerate
+exactly when its argmax is stable across all three rotations, and a stable
+argmax is evidence that the layer ranking there is driven by real structure
+rather than by noise --- which is the regime in which a winner's curse is
+\emph{genuinely smaller}. So the $17$ surviving cells are plausibly enriched
+for cells with a larger true effect, and $+0.0076$ should be read as
+\textbf{the severity among cells where this estimator has resolving power, not
+as an unbiased average over all $24$}. The unbiased-over-24 quantity is not
+recoverable from three seeds by any estimator of this shape: the honest
+bracket is that the true all-cell mean lies somewhere between the
+contaminated $+0.0054$ (which assumes the degenerate cells are exactly zero,
+and they are not) and $+0.0076$ (which assumes they resemble the cells the
+estimator can see, and they probably do not). We report both, label which
+assumption each makes, and do not split the difference. The bootstrap
+max-bias cross-check, which is computable on every cell including the
+degenerate ones, gives $+0.0005$ on the degenerate $7$ against $+0.0027$ on
+the other $17$ --- consistent with the degenerate cells having a real but
+smaller effect, which is the reading above.
+
+\textbf{Power, stated rather than left implicit:} the $24$ per-cell estimates
+have SD $0.0079$, so the pooled design's minimum detectable effect at
+$\alpha=0.05$, $80\%$ power is $+0.0045$. The non-degenerate non-saturated
+subgroup is now $n=5$ and is plainly underpowered on its own; we report it
+descriptively and do not lean on its $p=0.0625$.
 
 \textbf{Ceiling composition of the 24 cells.} These cells are not
 comparable to each other, and reporting only their pooled mean hides
@@ -1374,16 +1528,26 @@ that. In $12$ of $24$ the \emph{selected} layer already sits at AUROC
 $\geq0.975$ (all six \texttt{halueval\_qa} cells and all six
 \texttt{synthetic} cells), leaving almost no headroom for a selection
 effect to be visible; the remaining $12$ (\texttt{fever},
-\texttt{truthfulqa}) are genuinely non-saturated. Reported separately:
-ceiling-saturated $+0.0042$ (CI $[+0.0029,+0.0057]$); non-saturated
-$+0.0065$ (CI $[+0.0023,+0.0152]$, $p=0.047$). By dataset:
+\texttt{truthfulqa}) are genuinely non-saturated. Reported separately, and
+with the degeneracy split shown rather than buried: ceiling-saturated
+$+0.0042$ (CI $[+0.0029,+0.0057]$, $12$ cells, \emph{none} degenerate);
+non-saturated $+0.0065$ (CI $[+0.0022,+0.0154]$, $p=0.0625$) across all $12$
+of its cells, but $+0.0157$ (CI $[+0.0074,+0.0276]$, $p=0.0625$) across the
+$5$ the estimator can actually see. \textbf{The honest reading of the
+saturated-versus-non-saturated contrast is therefore the second pair, not the
+first:} $+0.0042$ versus $+0.0157$, a $3.7\times$ difference, not the
+$+0.0042$ versus $+0.0065$ the contaminated numbers suggested. By dataset:
 \texttt{fever} $+0.0124$, \texttt{halueval\_qa} $+0.0052$,
-\texttt{synthetic} $+0.0033$, \texttt{truthfulqa} $+0.0007$. Under a
+\texttt{synthetic} $+0.0033$, \texttt{truthfulqa} $+0.0007$ (the last is
+$0.0000$ in four of its six cells for the degeneracy reason above, and should
+not be read as a dataset effect). Under a
 stricter saturation reading (every layer, not just the selected one,
 above $0.975$ -- true for the six \texttt{halueval\_qa} cells) the split
 is $+0.0052$ (6 cells) versus $+0.0054$ (18 cells). The mechanism's
 severity is small on every slicing, and larger where there is room for
-it to show, exactly as the operating-point relationship in §5 predicts.
+it to show, consistent with the operating-point relationship in §5 ---
+though §5 now also reports the limits of how far that relationship
+transports.
 
 \subsection{Mechanism 5 (found while auditing Case Study 3's own repository): Test-set-driven operating-point selection — MultiHaluDet}
 
@@ -1562,8 +1726,9 @@ synthetic sweep and $+0.0000$ to $+0.0099$ on the anisotropic sweep, and
 $\Delta_{\text{real}}=+0.0077$ to $+0.0093$ on the real-feature harness;
 extending it to model the audited trainer's full
 LR-scheduler-plus-early-stopping coupling raises the latter (Appendix A,
-issues 12 and 14). Mechanism 4's is $\Delta_{\text{wc}}=+0.0054$ across 24
-published cells ($+0.0065$ on the non-saturated half). Mechanism 5's effect on
+issues 12 and 14). Mechanism 4's is $\Delta_{\text{wc}}=+0.0076$ across the 17
+of 24 published cells whose estimator is non-degenerate ($+0.0157$ on the
+non-saturated, non-degenerate five; §4.4). Mechanism 5's effect on
 AUROC is exactly zero by construction, while its effect on the
 threshold-dependent metrics the same pipeline reports is $+0.021$ to
 $+0.034$ in F1 at $n_{\text{test}}=140$ (and about a third of that at
@@ -1583,20 +1748,40 @@ itself fixed:
 \begin{itemize}
 \item \textbf{Candidate count.} Sweeping $K\in\{1,\ldots,225\}$ moves the
   gap monotonically from $+0.0000$ to $+0.0052$, well described by
-  $\text{gap}=a+b\ln K$ ($R^2=0.970$). Note this is an empirical
-  logarithmic regularity, \emph{not} a confirmation of the
-  $\sigma_{\text{val}}\sqrt{2\ln K}$ extreme-value form, which is
-  falsified on this data once fit as stated (Appendix A). Note also that
-  this sweep holds AUROC$_0$ at $0.80$, and the joint fit below shows the
-  law does not survive being asked to hold across operating points.
-\item \textbf{Operating point.} This is the largest effect anywhere in
-  this paper. Holding the mechanism, $K$, and $n_{\text{val}}$ fixed and
-  varying only the calibrated difficulty of the task, the gap falls from
-  $+0.0093$ at AUROC$_0=0.70$ to $+0.0037$/$+0.0011$/$+0.0007$ at
+  $\text{gap}=a+b\ln K$ ($R^2=0.970$). This is an empirical
+  logarithmic regularity and \emph{not} a confirmation of the
+  $\sigma_{\text{val}}\sqrt{2\ln K}$ extreme-value form --- but neither is it
+  a refutation of one, and an earlier version of this paper claimed the
+  latter. The $\sigma$ this harness measures is \texttt{np.std} over a
+  \emph{single training trajectory's} per-epoch validation AUROCs, whereas the
+  extreme-value derivation's $\sigma$ is the sampling-noise SD of $K$
+  exchangeable estimates around a common mean. A learning curve is neither
+  exchangeable nor centred on a common mean, so that fit tests the wrong
+  quantity and cannot separate ``the theory is wrong'' from ``this is the
+  wrong $\sigma$'' (Appendix A). We report the extreme-value form as
+  \textbf{untestable in this harness as instrumented}, not as falsified.
+  Note also that this sweep holds AUROC$_0$ at $0.80$ \emph{nominally}, and
+  the joint fit below shows the law does not survive being asked to hold
+  across operating points. \emph{A disclosure about the sweep's own operating
+  point:} the nominal target is fixed, but the \emph{achieved} LEAKY mean is
+  not --- it runs from $0.6269$ at $K=1$ to $0.7574$ at $K=225$ --- so the
+  full-range fit is partly confounded with the operating-point relationship
+  below. Restricted to $K\geq10$, where the achieved operating point spans
+  only $0.7565$--$0.7616$, the law is essentially unchanged ($b=0.00107$,
+  $R^2=0.955$, versus $b=0.00104$, $R^2=0.970$ over the full range). It
+  survives the restriction, which is why we disclose the confound rather than
+  qualify the result.
+\item \textbf{Operating point.} This is the largest effect measured
+  \emph{inside this harness}. Holding the mechanism, $K$, and $n_{\text{val}}$
+  fixed and varying only the calibrated difficulty of the task, the gap falls
+  from $+0.0093$ at AUROC$_0=0.70$ to $+0.0036$/$+0.0011$/$+0.0007$ at
   $0.80$/$0.90$/$0.95$ and to $+0.0002$ at $0.985$ --- a
   \textbf{$48.6\times$ decline}, one and a half orders of magnitude,
   driven by nothing but where on the difficulty curve the pipeline
-  operates.
+  operates. \textbf{This decline does not transport outside the harness that
+  produced it, and the paragraph below is the test of that} --- a test an
+  earlier version of this paper omitted while nonetheless promoting the
+  $48.6\times$ figure as though it were general.
 \item \textbf{Selection-set size --- and a correction to how this sweep was
   labelled.} An earlier version of this paper reported an ``$n_{\text{val}}$
   sweep'' here that was nothing of the kind: it varied
@@ -1633,6 +1818,65 @@ itself fixed:
   winner's-curse account.''
 \end{itemize}
 
+\textbf{Does the operating-point relationship transport? No --- and this
+paper's own shipped data already said so, by a factor of $14$ to $52$, before
+we thought to check.} A later independent review observed that we promote the
+$48.6\times$ decline to the abstract, the contributions list and the
+Conclusion, at one point as moving severity ``more than any difference we
+measure between mechanisms,'' while never performing the one test our own
+JSONs make available. Three measurements of the \emph{same}
+LEAKY-minus-CLEAN\_MATCHED contrast sit at achieved operating points within
+$0.0030$ AUROC of one another, and their severities differ by more than an
+order of magnitude (\texttt{code/58},
+\texttt{results/operating\_point\_transport\_check.json}):
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llcc}
+\toprule
+Harness & Leakage mechanic & Achieved AUROC & Gap \\
+\midrule
+Synthetic Sweep C (\texttt{code/47}) & checkpoint argmax only & $0.9433$ & $+0.00065$ \\
+Real features (\texttt{code/43}, cap.\ 128) & checkpoint argmax only & $0.9403$ & $+0.0093$ \\
+Fidelity extension (\texttt{code/49}, cap.\ 128) & argmax $+$ LR sched.\ $+$ ES & $0.9424$ & $+0.0338$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Taking Sweep C's cell as ``what the relationship predicts at $\approx0.94$,''
+the real-feature checkpoint-only harness comes in at $\mathbf{14.3\times}$
+that prediction and the fidelity extension at $\mathbf{51.8\times}$. Against a
+probit-space log-linear interpolation of Sweep C evaluated at each harness's
+exact achieved operating point --- so the comparison cannot be dismissed as an
+artifact of rounding to the nearest grid cell --- the ratios are
+$15.1\times$ and $56.9\times$. Appendix A already noted that two of these
+operating points match closely ($0.9424$ versus $0.9403$); it simply never
+took the next step of asking what the operating-point relationship
+\emph{predicted} there.
+
+\textbf{What we therefore claim, and what we withdraw.} We withdraw the
+general reading. The $48.6\times$ decline is a property of the synthetic
+harness that produced it --- its isotropic generative process, its single
+fixed leakage mechanic --- and is \emph{not} a severity law that transports
+across harnesses or across mechanisms at a matched operating point. The
+sentence ``that single relationship moves severity more than any difference we
+measure between mechanisms'' is withdrawn: the table above is precisely a
+difference between mechanisms and harnesses, at a matched operating point,
+that is larger than the operating-point relationship predicts by $14$--$52\times$.
+What survives, and what we do claim, is weaker and more useful: \textbf{the
+operating point is a strong severity modifier \emph{within} a harness, and two
+severity numbers measured at different operating points are not comparable
+until it is matched.} That is enough to support this paper's actual
+methodological use of the relationship --- explaining why ceiling-saturated
+cells show near-zero severity, and forbidding the direct
+synthetic-versus-real magnitude comparison we already decline to make (§4.3)
+--- and it is not enough to predict any pipeline's severity from its operating
+point alone. Note also that the three rows differ in mechanic as well as
+harness, so this comparison does not separate the two; that is itself the
+point, since the withdrawn claim was that the operating point dominates
+mechanism differences.
+
 \textbf{Do the two combine into one function? An empirical joint fit --- and
 a qualification of the $K$-law it forces.} An independent review observed
 that this paper reports two strong one-at-a-time regularities and never
@@ -1647,25 +1891,79 @@ $\text{AUROC}_0=0.80$ and Sweep C varies $\text{AUROC}_0$ at a fixed $K=45$,
 so together they form a \emph{cross} through the plane, not a grid --- no
 cell has both coordinates off the reference, and no cross can exhibit an
 interaction. \texttt{code/57} runs the missing cells: a full
-$K\in\{3,15,45,135\}\times\text{AUROC}_0\in\{0.70,0.80,0.90,0.95,0.985\}$
+$K\in\{15,45,135,405\}\times\text{AUROC}_0\in\{0.70,0.80,0.90,0.95,0.985\}$
 factorial in the same harness, $n=100$ seeds per cell, with $n_{\text{val}}$
 held fixed at $112$ throughout (so this surface spans two of the review's
 three arguments, not three --- Sweep D above shows $n_{\text{val}}$ is not
 an independent third axis in this harness). The $K=45$ column reproduces
 Sweep C exactly, to $0$ in all five cells.
 
+\textbf{A degenerate corner of the first version of this grid, and why $K=3$
+is no longer in it.} The grid originally ran $K\in\{3,15,45,135\}$, and on it
+the interaction term below was significant ($F(1,16)=5.92$, $p=0.027$), which
+an earlier version of this paper promoted to the abstract as ``the two axes
+interact multiplicatively rather than additively.'' A later independent
+review showed that result came \emph{entirely} from the $K=3$ column, and
+that the $K=3$ column is degenerate. At three epochs there are too few
+candidates for the two selection rules to diverge: LEAKY argmaxes validation
+AUROC over three epochs on the reused fold, CLEAN\_MATCHED argmaxes over the
+same three on a disjoint carve-out, both almost always land on the last
+epoch, and CLEAN\_MATCHED's retrain then reproduces LEAKY's optimizer
+trajectory step for step --- leaving the two models \emph{bitwise identical}
+in $81$--$100\%$ of folds, so the ``gap'' there is $0.00000$ by construction
+rather than by measurement. (Two of the old grid's twenty cells,
+$K{=}3$ at $\text{AUROC}_0=0.95$ and $0.985$, had gap exactly $0.00000$: the
+signature.) Refitting the old grid without the $K=3$ column moves the
+interaction test from $p=0.027$ to $p=0.378$, while dropping any \emph{other}
+$K$ column leaves it significant ($p=0.043$, $0.041$, $0.044$). The
+interaction was a property of the degenerate corner, not of the surface.
+Two things follow. $K=3$ is replaced by $K=405$, so the axis keeps four
+points and in fact spans a wider range than before. And every cell now
+carries a \textbf{degeneracy record} --- the fraction of folds in which the
+two arms' \texttt{state\_dict()} tensors are bitwise identical, the largest
+parameter difference anywhere in the cell, and how often each arm's argmax
+lands on the last epoch --- with the fit \emph{gated} on it and refusing to
+run if any surviving cell exceeds $50\%$. The old $K=3$ column is re-run under
+the same instrumentation and shipped as evidence for its own removal, not as a
+fitted cell.
+
+\textbf{The gate is not a clean bill of health for the whole corrected grid,
+and we say where it is closest to binding.} Degeneracy is a matter of degree,
+not a binary, and it decays with $K$ rather than switching off. Across the
+corrected grid the bitwise-identical fraction is $1$--$5\%$ for
+$K\in\{45,135,405\}$ but $24$--$42\%$ for $K=15$, worst at
+$(K{=}15,\text{AUROC}_0{=}0.90)$. $K=15$ therefore passes the gate but is the
+column carrying the least contrast, and we do not want that to be a fact a
+reader has to discover. Every conclusion below is accordingly refit five ways
+--- on all $20$ cells and with each $K$ column deleted in turn --- and we
+report the range rather than the single number
+(\texttt{drop\_one\_K\_column\_sensitivity} in the result JSON). The same
+deletion test is what exposed the old grid's headline, so applying it to the
+new grid's conclusions is the minimum consistency this correction requires of
+itself.
+
+\emph{One further disclosure while we are on this grid's consistency.} The
+$(K{=}45,\text{AUROC}_0{=}0.80)$ configuration has two legitimate values in
+this paper, because it is run at two sample sizes: Sweep A uses $n=200$ seeds
+and gives $+0.004155$, while Sweeps B/C/D and this grid all use $n=100$ and
+give $+0.003649$. They differ only by Monte Carlo error over seeds $100$--$199$
+(seeds $0$--$99$ are shared, so the two are not independent). The
+internal-consistency check above therefore applies among the $n=100$ runs;
+we state the $n=200$ value rather than let a reader find two numbers for one
+cell and infer a drift.
+
 \begin{table}[h]
 \centering
 \small
 \begin{tabular}{lccccc}
 \toprule
-AUROC$_0$ & $K=3$ & $K=15$ & $K=45$ & $K=135$ & span across $K$ \\
+AUROC$_0$ & $K=15$ & $K=45$ & $K=135$ & $K=405$ & span across $K$ \\
 \midrule
-0.70  & $+0.00177$ & $+0.00604$ & $+0.00932$ & $+0.00922$ & $5.3\times$ \\
-0.80  & $+0.00071$ & $+0.00117$ & $+0.00365$ & $+0.00366$ & $5.1\times$ \\
-0.90  & $+0.00011$ & $+0.00015$ & $+0.00109$ & $+0.00096$ & $10.3\times$ \\
-0.95  & $+0.00000$ & $+0.00015$ & $+0.00065$ & $+0.00046$ & --- \\
-0.985 & $+0.00000$ & $+0.00012$ & $+0.00019$ & $+0.00016$ & --- \\
+0.70  & $+0.00604$ & $+0.00932$ & $+0.00922$ & $+0.01100$ & $1.8\times$ \\
+0.80  & $+0.00117$ & $+0.00365$ & $+0.00366$ & $+0.00496$ & $4.2\times$ \\
+0.90  & $+0.00015$ & $+0.00109$ & $+0.00096$ & $+0.00105$ & $7.1\times$ \\
+0.95  & $+0.00015$ & $+0.00065$ & $+0.00046$ & $+0.00057$ & $4.3\times$ \\
+0.985 & $+0.00012$ & $+0.00019$ & $+0.00016$ & $+0.00016$ & $1.6\times$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1675,51 +1973,101 @@ coordinate in which this harness's own binormal calibration is linear, so a
 linear term in it is the parsimonious choice rather than a fitted one ---
 gives, reporting leave-one-cell-out predictive $R^2$ alongside in-sample
 $R^2$ because $20$ cells against $4$ parameters invites overfitting:
-$\text{gap}=a+b\ln K$ alone, $R^2=0.114$ (LOO $-0.072$); $a+cz_0$ alone,
-$R^2=0.499$ (LOO $0.352$); the additive $a+b\ln K+cz_0$, $R^2=0.614$ (LOO
-$0.438$); with an interaction term, $R^2=0.718$ (LOO $0.553$), and the
-interaction is significant ($F(1,16)=5.92$, $p=0.027$); and a multiplicative
-form $\text{gap}=\exp(a+b\ln K+cz_0)$, i.e.\ $\text{gap}\propto
-K^{0.30}e^{-3.12 z_0}$, $R^2=\mathbf{0.940}$ (LOO $0.642$). \textbf{So a
-single joint model does describe this surface well, but only a
-multiplicative one:} additivity in $\ln K$ and $z_0$ is rejected, because
-$K$'s effect depends on where on the difficulty curve the pipeline sits.
+$\text{gap}=a+b\ln K$ alone, $R^2=0.038$ (LOO $-0.192$); $a+cz_0$ alone,
+$R^2=0.650$ (LOO $0.555$); the additive $a+b\ln K+cz_0$, $R^2=0.688$ (LOO
+$0.547$); with an interaction term added, $R^2=0.720$ (LOO $0.512$) --- and
+\textbf{the interaction is not significant} ($F(1,16)=1.85$, $p=0.193$),
+with the leave-one-cell-out $R^2$ \emph{falling} when it is added, which is
+what an overfit term looks like; and a multiplicative form
+$\text{gap}=\exp(a+b\ln K+cz_0)$, i.e.\ $\text{gap}\propto
+K^{0.17}e^{-2.97 z_0}$, $R^2=\mathbf{0.976}$ (LOO $\mathbf{0.948}$).
+
+\textbf{What this says, stated as the corrected grid actually supports it.} A
+single joint model does describe this surface well, and it is the
+multiplicative one: severity factors, to a good approximation, into a
+candidate-count term and an operating-point term multiplied together,
+$\text{gap}\approx A\cdot K^{b}e^{cz_0}$. Note carefully that this form is
+\emph{separable} --- it contains no interaction term --- and that its
+excellence relative to the additive model ($R^2$ $0.976$ versus $0.688$; LOO
+$0.948$ versus $0.547$) is a statement about the \emph{scale} on which the
+two axes combine, not evidence that they interact. \textbf{We therefore
+withdraw the previous version's claim that ``the two axes interact
+multiplicatively rather than additively.''} On the corrected grid there is no
+significant interaction to report, and the multiplicative fit does not need
+one.
+
+\textbf{This conclusion survives the test that killed its predecessor.}
+Refitting with each $K$ column deleted in turn, the interaction term is
+non-significant every time ($p=0.18$, $0.22$, $0.38$, $0.64$), so its
+retraction is not itself a one-column artifact; and the multiplicative fit
+stays strong throughout ($R^2=0.967$--$0.994$). Its operating-point
+coefficient is stable ($c=-2.80$ to $-3.17$); its candidate-count exponent is
+the least stable quantity in the fit ($b=0.09$ to $0.21$, lowest when the
+$K=15$ column is removed), which is consistent with $K$ being the weaker axis
+and with $K=15$ being the column where the harness has least contrast. We
+quote $b$ as a range rather than a point wherever it matters.
 
 \textbf{This forces a qualification of one of this paper's own headline
 numbers, and we make it rather than leave the two statements side by side.}
 The $\text{gap}=a+b\ln K$ law with $R^2=0.970$ reported above is measured
 along a single row of this grid, at $\text{AUROC}_0=0.80$. Across the grid
-as a whole, $\ln K$ \emph{alone} explains almost none of the variance
-($R^2=0.114$, and it fails to beat predicting the mean out-of-sample). The
+as a whole, $\ln K$ \emph{alone} explains essentially none of the variance
+($R^2=0.038$, and at LOO $-0.192$ it is worse than predicting the mean). The
 $K$-law is therefore real \emph{within} an operating point and not a
-description of severity in general: the table shows why, with a $5$--$10\times$
-span across $K$ where there is headroom and essentially no movement at all
-by $\text{AUROC}_0=0.985$, where every cell sits between $+0.00000$ and
-$+0.00019$ regardless of how many candidates were tried. Read together with
-the $48.6\times$ operating-point decline, the practical reading is that
-candidate count is a second-order modifier of a first-order operating-point
-effect, not a co-equal axis.
+description of severity in general: the table shows why, with a
+$4$--$7\times$ span across $K$ where there is headroom and essentially no
+movement at all by $\text{AUROC}_0=0.985$, where every cell sits between
+$+0.00012$ and $+0.00019$ regardless of whether $15$ or $405$ candidates were
+tried. This qualification is \emph{stronger} on the corrected grid than on
+the degenerate one it replaces ($R^2=0.038$ here against $0.114$ there), so
+unlike the interaction claim it does not depend on the cells that were
+removed. Read together with the operating-point decline, the practical
+reading is that candidate count is a second-order modifier of a first-order
+operating-point effect, not a co-equal axis.
 
 \textbf{What this fit does not license.} It is a surface fit inside one
 synthetic harness with one mechanism held fixed, at one fixed
-$n_{\text{val}}$; its best leave-one-cell-out $R^2$ is $0.64$, so even
-within its own grid it predicts individual cells only moderately well; and
-it is an average, not an upper bound, so it cannot be used to certify that
-any particular pipeline's inflation is below anything. Predicting the five
-Sweep A cells at $K\in\{5,10,25,75,225\}$ that are not in the grid gives
-$R^2=0.853$ (additive), $0.795$ (interaction) and $0.591$ (multiplicative)
---- which tests generalization across $K$, and not across data, since those
-cells reuse the same seed streams. We report the fit because the review was
-right that the attempt was missing, and we name a formally-derived bound as
-future work rather than claim this is one.
+$n_{\text{val}}$; and it is an average, not an upper bound, so it cannot be
+used to certify that any particular pipeline's inflation is below anything.
+It also does not transport across harnesses: the three-way comparison above
+shows two real-feature harnesses exceeding this surface's own operating-point
+relationship by $14$--$52\times$ at a matched operating point. We report the
+fit because the review was right that the attempt was missing, and we name a
+formally-derived bound as future work rather than claim this is one.
+
+\textbf{The out-of-sample check is weaker than the previous version of this
+paper presented it as, and we now say why rather than quote its $R^2$.} The
+intended check predicts the five Sweep A cells at $K\in\{5,10,25,75,225\}$,
+which are not in the grid. Two things undercut it, both found by
+instrumenting rather than by argument. First, \emph{two of those five
+held-out cells are themselves degenerate}: at $K=5$ the LEAKY and
+CLEAN\_MATCHED arms are bitwise identical in $90\%$ of folds and at $K=10$
+in $65\%$, for exactly the reason $K=3$ was dropped, so they are not valid
+targets. Second, Sweep A runs $200$ seeds while this grid runs $100$, and at
+these effect sizes that matters more than the models do --- the same
+$(K{=}225,\text{AUROC}_0{=}0.80)$ configuration gives $+0.00522$ at $n=200$
+and $+0.00393$ at $n=100$, a $33\%$ difference, so a large part of any
+prediction error here is Monte Carlo noise between two runs of the same cell
+rather than model error. For the record the numbers are $R^2=0.279$
+(additive), $0.795$ (interaction) and $0.634$ (multiplicative) over all five,
+and $0.365$, $0.567$ and $-0.249$ over the three non-degenerate ones. We do
+not read anything into the ordering: the interaction model scoring highest
+out-of-sample while being non-significant in-sample is exactly the pattern
+this seed-count mismatch would produce by chance, and treating it as support
+for the interaction would repeat, in a subtler form, the error this section
+already corrects. The honest summary is that this harness does not currently
+support an out-of-sample test of the joint surface, and building one would
+mean re-running Sweep A at matched seed counts on non-degenerate $K$ values.
 
 \textbf{Why this matters practically.} The operating-point relationship
 explains, without appeal to mechanism identity, why several severity
 estimates in this paper come out near zero: they were measured on tasks
 already running at AUROC $\geq0.98$, where there is almost no headroom
 for selection to inflate anything. That includes the 12 ceiling-saturated
-cells of Case Study 4 ($+0.0042$ versus $+0.0065$ on the non-saturated
-half), MultiHaluDet's own $0.985$ regime, and this paper's own
+cells of Case Study 4 ($+0.0042$, versus $+0.0157$ on the non-saturated cells
+whose estimator is non-degenerate --- a $3.7\times$ difference; the
+$+0.0065$ this comparison previously used was diluted by seven algebraic
+zeros, §4.4), MultiHaluDet's own $0.985$ regime, and this paper's own
 real-feature harness before it was recalibrated. A reader auditing a
 pipeline should therefore ask \emph{how many candidates were tried} and
 \emph{where on the difficulty curve the reported number sits}, not
@@ -1734,9 +2082,20 @@ across all five mechanisms at common $(K, n_{\text{val}},
 explains any \emph{residual} variance once these three are controlled. We do
 not claim it explains none. That experiment is the obvious next step and is
 not run here. The joint grid narrows the gap between what is measured and
-what would be needed --- it establishes that the two quantities interact,
-which a mechanism-level comparison would have to hold constant --- but it
-does not close it, and it varies $n_{\text{val}}$ not at all.
+what would be needed --- it establishes the \emph{scale} on which the two
+quantities combine, which a mechanism-level comparison would have to hold
+constant --- but it does not close it, and it varies $n_{\text{val}}$ not at
+all. \textbf{And the transport comparison above sharpens what that missing
+experiment has to be.} Two of the three harnesses compared there differ in
+mechanic as well as in harness, and they differ from the synthetic surface's
+prediction by more than an order of magnitude at a matched operating point.
+That is not evidence that mechanism identity matters --- harness and mechanic
+are confounded in exactly those two rows --- but it does mean the
+one-quantity-at-a-time result can no longer be read as showing that
+mechanism identity is unimportant \emph{in general}, only that it is
+unimportant relative to $K$ and the operating point \emph{within} a single
+harness. Disentangling the two is now the highest-value experiment this line
+of work has open.
 
 \section{A Checklist for This Literature}
 
@@ -1928,7 +2287,8 @@ our audit scripts, the resulting JSON logs, and --- for Case Study 2,
 whose original 171\,MB hidden-state cache is too large to ship --- a
 $4.0$\,MB derived artifact of per-layer probe scores and fold
 assignments plus a replay script (\texttt{code/51}) that recomputes and
-asserts every reported number from it. \textbf{Case Study 1 is the
+asserts every \emph{primary} reported number from it, and states which
+numbers (§4.2's regularization sweep) it cannot. \textbf{Case Study 1 is the
 exception and we state it plainly: no script, log, or data file
 supporting its $+0.19$ figure is included here, and that number should
 not be treated as verified by this artifact} (§4). The regex
@@ -1993,18 +2353,27 @@ purpose-built factorial grid rather than read off the existing
 one-at-a-time sweeps --- but an empirical surface fit inside a single
 harness is not a bound: it guarantees nothing off its own grid, nothing for
 any other mechanism, and nothing for any other generative process, and we
-never call it $\phi$. Two obstacles to the derivation are specific rather
-than generic, and either would have to be explained rather than assumed
+never call it $\phi$. \emph{One} obstacle to the derivation is specific
+rather than generic, and would have to be explained rather than assumed
 away: this harness's isolated $n_{\text{val}}$ dependence runs
 \emph{opposite} to the $1/\sqrt{n_{\text{sel}}}$ direction such a derivation
-would predict (§5, Sweep D), and the extreme-value functional form the
-derivation would most naturally rest on is falsified here once fit as
-stated (Appendix A). A theoretically-justified upper bound consistent with
-both facts is future work we name rather than claim.
-\emph{(3) The extreme-value-theory account of $K$-scaling is falsified
-in this harness} once fit as stated (Appendix A); we report an empirical
-logarithmic regularity instead and do not have a mechanistic
-explanation for it. \emph{(4) The alternative-confound control for
+would predict (§5, Sweep D). \emph{A second obstacle previously listed here
+has been withdrawn:} we had also cited the extreme-value functional form as
+falsified in this harness, but that test used a misspecified $\sigma$
+(Appendix A) and is uninformative in either direction, so it is not an
+obstacle to anything --- it is a measurement gap, and closing it needs only a
+harness instrumented to produce $\sigma$ across independent, exchangeable
+candidate evaluations. A theoretically-justified upper bound consistent with
+the surviving fact is future work we name rather than claim.
+\emph{(3) The extreme-value-theory account of $K$-scaling is neither
+confirmed nor refuted by this paper.} The one test we ran used a $\sigma$
+measured as the dispersion of a single training trajectory rather than the
+sampling-noise SD the derivation requires, so it is uninformative
+(Appendix A); we withdraw the previous version's ``falsified'' language. We
+report an empirical logarithmic regularity instead and do not have a
+mechanistic explanation for it. Testing extreme-value theory properly here
+would need a harness that evaluates $K$ independently-seeded candidates at a
+fixed point in training, which we do not run. \emph{(4) The alternative-confound control for
 Mechanism 3 retains only $\sim$26--37\% of honest selection's
 placebo-relative benefit} and therefore has limited power (§4.3).
 \emph{(4a) The fixed-$d$ eigenspectrum experiment (§4.3) separates covariance
@@ -2074,8 +2443,9 @@ lands between roughly $0.000$ and $0.034$ AUROC: Mechanism 2's
 selection-specific component $+0.0255$ (SD $0.0186$) under
 $50$ randomized splits; Mechanism 3's checkpoint-selection severity $+0.0011$
 to $+0.0036$ on the isotropic synthetic sweep, individually significant at 2 of
-4 tested capacities and at 1 of 4 after Holm-Bonferroni; Mechanism 4's $+0.0054$ (BCa 95\% CI
-$[+0.0032,+0.0100]$) across 24 published result files; Mechanism 5's
+4 tested capacities and at 1 of 4 after Holm-Bonferroni; Mechanism 4's $+0.0076$ (BCa 95\% CI
+$[+0.0048,+0.0134]$) across the 17 of 24 published result files on which its
+estimator is non-degenerate; Mechanism 5's
 effect on AUROC exactly zero by construction. Case Study 1's much larger
 $+0.19$ figure is reported from prior work and is \emph{not}
 re-verifiable from this artifact, so we exclude it from that comparison
@@ -2087,22 +2457,36 @@ only the number of candidates selected among moves the gap
 monotonically, well fit by $a+b\ln K$ ($R^2=0.970$); varying only the
 operating point moves it by $48.6\times$, from $+0.0093$ at
 AUROC$_0=0.70$ to $+0.0002$ at $0.985$ (§5). Both effects are larger
-than any difference we measure between mechanisms --- but a
-$K\times$AUROC$_0$ factorial run to fit the two jointly shows they are not
-co-equal: across that grid $\ln K$ alone explains $R^2=0.114$, the two
-axes interact ($p=0.027$), and only a multiplicative empirical fit
-describes the surface ($R^2=0.94$). The $K$-law is a within-operating-point
+than any difference we measure between mechanisms \emph{inside that
+harness} --- though §5 shows the operating-point relationship does not
+transport outside it, exceeding by $14$--$52\times$ at a matched operating
+point in this paper's own real-feature harnesses, so it is a within-harness
+severity modifier and not a general law. A
+$K\times$AUROC$_0$ factorial run to fit the two jointly shows the axes are not
+co-equal: across that grid $\ln K$ alone explains $R^2=0.038$, and a
+separable multiplicative empirical fit describes the surface well
+($R^2=0.976$). The $K$-law is a within-operating-point
 regularity, and candidate count is a second-order modifier of a
-first-order operating-point effect. We report a
-correction here as well: an earlier draft described the $K$-scaling as
-confirming the extreme-value-theory prediction
-$c\,\sigma_{\text{val}}\sqrt{2\ln K}$ at $R^2=0.756$. That fit held
-$\sigma_{\text{val}}$ fixed at its cross-cell mean. Refit as the theory
-states it, with each cell's own measured $\sigma_{\text{val}}$ --- which
-varies $2.66\times$ across the sweep and moves \emph{opposite} to the gap
---- the EVT form gives $R^2=-0.399$, worse than predicting the mean. The
-$K$-scaling is real; the extreme-value functional form for it is not
-supported by this data (Appendix A).
+first-order operating-point effect. An earlier version of this work reported
+that the two axes \emph{interact}; that is withdrawn, having come entirely
+from a degenerate $K=3$ column in which the leaky and control arms are
+bitwise identical in most folds and no contrast exists to measure. We report a
+correction here as well, in two stages. An earlier draft described the
+$K$-scaling as confirming the extreme-value-theory prediction
+$c\,\sigma_{\text{val}}\sqrt{2\ln K}$ at $R^2=0.756$; that fit held
+$\sigma_{\text{val}}$ fixed at its cross-cell mean, and refit with each cell's
+own measured $\sigma_{\text{val}}$ it gives $R^2=-0.399$, which a later draft
+reported as a falsification. \textbf{We withdraw the falsification too.} The
+$\sigma$ this harness measures is the dispersion of a \emph{single training
+trajectory's} per-epoch validation AUROCs, not the sampling-noise SD of $K$
+exchangeable estimates that the derivation requires; both anomalies cited as
+evidence against the theory (that $\sigma$ falls $2.66\times$ as $K$ rises, and
+that it moves opposite to the gap) follow mechanically from that
+misspecification, since longer trajectories are flatter. The test cannot
+separate a wrong theory from a wrong measurement, so we report the
+extreme-value form as \emph{untestable in this harness as instrumented}
+(Appendix A). The $K$-scaling itself is real and unaffected: the empirical
+$a+b\ln K$ law never references $\sigma$.
 
 Mechanism 5 remains a clear case that a pipeline can be simultaneously
 clean on one reported metric and leaking on another: it leaves AUROC
@@ -2573,8 +2957,9 @@ Mahalanobis $J$ all fixed, and varying only the within-class eigenvalue
 profile. Results and reading are in §4.3.
 
 \textbf{An eleventh check: does severity scale the way extreme-value theory
-predicts? (It does scale with $K$ --- but not in the functional form the
-theory specifies.)} The reasoning behind Mechanism 3 is a winner's-curse
+predicts? (It does scale with $K$ --- but whether it does so in the
+functional form the theory specifies is a question this harness turns out
+not to be instrumented to answer.)} The reasoning behind Mechanism 3 is a winner's-curse
 argument: selecting the best of $K$ noisy validation estimates inflates
 the reported score by $\text{gap}\approx c\cdot\sigma_{\text{val}}
 \sqrt{2\ln K}$, shrinking with validation-set size $n_{\text{val}}$.
@@ -2611,44 +2996,84 @@ Refit correctly, with each cell's own measured $\sigma_K$
 (\texttt{code/50\_evt\_scaling\_refit.py},
 \texttt{results/evt\_scaling\_refit.json}), the EVT form gives
 $c=0.0355$, $R^2=\mathbf{-0.399}$ --- worse than predicting the mean of
-the gaps. \textbf{The extreme-value functional form, tested as stated,
-does not fit this data.} Two-parameter alternatives fit far better on
+the gaps. Two-parameter alternatives fit far better on
 the same nine cells: $a+b\ln K$ with $a=-0.00012$, $b=0.00104$ gives
 $R^2=\mathbf{0.970}$, and $a\cdot K^{b}$ with $a=0.00083$, $b=0.378$
-gives $R^2=0.866$. We report this as a correction of the previous
-draft's ``the $K$-scaling prediction is now confirmed with a materially
+gives $R^2=0.866$.
+
+\textbf{Correction 3, which retracts Correction 2's verdict: this is not a
+falsification, because $\sigma$ is the wrong quantity.} A third independent
+review found that neither the constant-$\sigma$ fit nor the per-cell-$\sigma$
+refit tests extreme-value theory at all. In \texttt{code/47},
+\texttt{mean\_val\_auc\_std} is \texttt{np.std(val\_aucs)} where
+\texttt{val\_aucs} holds one validation AUROC \emph{per epoch of a single
+training trajectory}. The extreme-value derivation's $\sigma$ is the
+sampling-noise SD of $K$ \emph{exchangeable} estimates scattered around a
+\emph{common} mean. Successive epochs of one optimizer run are neither: they
+are a learning curve, and their dispersion is dominated by the systematic
+climb from initialization to convergence.
+
+Both anomalies Correction 2 cited as evidence against the theory follow
+mechanically from that misspecification, with no need for the theory to be
+wrong. $\sigma$ falls $2.66\times$ as $K$ rises because a longer trajectory
+spends proportionally more of itself converged and flat, so the SD of the
+whole curve shrinks --- a fact about learning curves, whereas genuine
+selection noise should be roughly flat in $K$. And
+$\mathrm{corr}(\sigma,\text{gap})=-0.84$ because the gap rises with $K$ (more
+candidates) while this $\sigma$ falls with $K$ (longer, flatter curves); two
+quantities driven oppositely by the same variable anticorrelate regardless of
+whether the theory holds.
+
+\textbf{The verdict is therefore downgraded from ``falsified'' to
+``untestable in this harness as instrumented.''} $R^2=-0.399$ cannot
+distinguish ``extreme value theory is wrong here'' from ``$\sigma$ is the
+wrong quantity to test it with,'' and we no longer assert the former. A real
+test needs $\sigma$ estimated across independent, exchangeable candidate
+evaluations at a fixed point in training --- $K$ independently-seeded models,
+or repeated resampled validation splits at a fixed epoch --- which this
+harness does not produce. That is a measurement gap rather than a theoretical
+obstacle, and Limitations (2a) no longer lists it as an obstacle to deriving
+a formal bound. \textbf{What is unaffected:} the empirical law
+$\text{gap}=a+b\ln K$ at $R^2=0.970$ never references $\sigma$, and stands
+exactly as reported, as does every use this paper makes of it. We report all
+of this as a correction of the previous
 tighter fit,'' which was an artifact of the constant-$\sigma$
 substitution, not a finding.
 
-\textbf{A third, independent way of seeing the same failure, which does not
-depend on any fitted coefficient: the dynamic range is wrong.} Across
-$K=3\to225$ the measured gap grows by a factor of $6.10\times$
-($+0.00086\to+0.00522$). The $\sqrt{2\ln K}$ factor grows by only
-$3.29/1.48=2.22\times$ over that same range. So even in the flattering
-constant-$\sigma$ version --- where the fitted $c$ is free to absorb any
-overall scale --- the functional form cannot reproduce how much the gap
-actually moves; it is off by nearly a factor of three in \emph{span}, not
-merely in fit quality. Under the theory's own per-cell $\sigma$ the mismatch
-is worse still, because $\sigma_{\text{val}}$ falls $2.66\times$ over the same
-range and so pushes the prediction in the opposite direction. This is why we
-describe the extreme-value form as falsified rather than as imprecisely
-calibrated.
+\textbf{A dynamic-range observation, reported as suggestive rather than
+decisive.} Across $K=3\to225$ the measured gap grows by a factor of
+$6.10\times$ ($+0.00086\to+0.00522$), while the $\sqrt{2\ln K}$ factor grows by
+only $3.29/1.48=2.22\times$. If the true sampling-noise $\sigma$ were
+approximately constant across the sweep --- which it arguably should be, since
+$n_{\text{val}}$ is held at $112$ throughout --- then even with the fitted $c$
+free to absorb any overall scale, the functional form would be off by nearly a
+factor of three in \emph{span}, not merely in fit quality. \emph{We previously
+presented this as a third independent confirmation of falsification. It is
+not, for two reasons we now state.} First, its premise is exactly the quantity
+this harness fails to measure: we cannot verify that the true $\sigma$ is
+constant, because the only $\sigma$ available is the trajectory dispersion
+above. Second, the span comparison is itself confounded by the operating
+point, which moves from $0.6872$ to $0.7574$ across those same cells and which
+§5 shows is a strong severity modifier. So the dynamic-range mismatch is
+consistent with the extreme-value form being wrong here, and equally
+consistent with the span being inflated by the operating-point drift. It is
+listed as an observation, not as evidence.
 
 The scientifically interesting content survives, and is arguably more
-informative than the confirmation would have been: severity does rise
+informative than a clean confirmation would have been: severity does rise
 with the number of candidates selected among, smoothly and
 monotonically, and a two-parameter logarithmic law describes it very
-well ($R^2=0.97$) --- but \emph{not} through the specific
+well ($R^2=0.97$). Whether it does so \emph{through} the
 $\sigma_{\text{val}}\sqrt{2\ln K}$ channel the winner's-curse heuristic
-posits, since $\sigma_{\text{val}}$ itself falls as $K$ rises in this
-harness (more candidate checkpoints means more training epochs and a
-more converged, less variable validation signal). Whatever mechanism
-converts extra candidates into extra optimism here, it is not simply
-``more draws from a fixed-variance noise distribution.'' We flag this as
+posits is a question this harness cannot answer, for the instrumentation
+reason above --- we neither confirm nor exclude it. What we can say is that
+the empirical law holds within a fixed operating point and that we have no
+mechanistic explanation for it. We flag this as
 an open question rather than papering over it with a fit that only works
-when a varying quantity is held fixed by hand.
+when a varying quantity is held fixed by hand, and rather than claiming a
+falsification the measurement does not support.
 
-\textbf{Correction 3 (a further independent review): Sweep B was
+\textbf{Correction 4 (a further independent review): Sweep B was
 mislabelled, and the isolated sweep it should have been reverses the
 reading.} This appendix and \texttt{code/47} both described Sweep B as an
 ``$n_{\text{val}}$ sweep (via \texttt{N\_SAMPLES})''. It is not one. Varying
@@ -2689,8 +3114,11 @@ $1/\sqrt{n_{\text{val}}}$ prediction. Larger selection sets give larger gaps.
 It is not that the selection signal fails to get noisier as $n_{\text{val}}$
 shrinks: the measured $\sigma_{\text{val}}$ rises exactly as the theory
 requires, from $0.0331$ at $n_{\text{val}}=280$ to $0.0375$ at $56$. The gap
-simply does not follow it, the same failure of the EVT channel that
-Correction 2 documents for the $K$ sweep. What the gap does track is the
+simply does not follow it. \emph{(Note that this sweep's $\sigma$ carries the
+same trajectory-dispersion misspecification Correction 3 identifies, so its
+agreement with the theory's direction is as uninformative as the $K$ sweep's
+disagreement was; what carries weight here is the gap's own direction, which
+does not depend on $\sigma$ at all.)} What the gap does track is the
 operating point, which rises monotonically down this column
 ($0.7474\to0.7599$) because the per-fold training set necessarily grows as
 $n_{\text{val}}$ shrinks --- a residual coupling inherent to cross-validation,
@@ -2714,16 +3142,25 @@ with the mechanism vanishing at high AUROC specifically. This
 operating-point relationship is the strongest and cleanest of the three
 sweeps --- a $48.6\times$ decline in point estimate across the tested
 range --- and is promoted to a headline finding (abstract, §1, §5,
-Conclusion) on that basis.
+Conclusion) on that basis, \emph{with the scope limit §5 establishes}: it is
+a relationship measured inside this harness, it does not transport to the
+real-feature harnesses at a matched operating point (they exceed it by
+$14.3\times$ and $51.8\times$; \texttt{code/58}), and it licenses only the
+requirement that operating points be matched before severities are compared
+--- not prediction of severity from operating point alone.
 
 Taken together: severity rises monotonically with $K$ and falls sharply
-with the operating point, but the specific extreme-value \emph{functional
-form} is falsified by this data once fit as stated, and the isolated
+with the operating point within this harness; the isolated
 $n_{\text{val}}$ dependence, once measured without the sample-size confound,
-is cleanly monotone in the direction opposite to the theory's. We therefore
+is cleanly monotone in the direction opposite to the theory's; and the
+specific extreme-value \emph{functional form} is \textbf{untestable here as
+instrumented} rather than falsified, because the only $\sigma$ this harness
+produces is a training trajectory's dispersion and not the sampling-noise SD
+the derivation requires (Correction 3). We therefore
 describe the $K$- and operating-point relationships as empirical
-regularities measured in this harness, and explicitly \emph{not} as a
-confirmation of the extreme-value-theory account. Full per-cell results:
+regularities measured in this harness, explicitly \emph{not} as a
+confirmation of the extreme-value-theory account, and equally explicitly not
+as a refutation of it. Full per-cell results:
 \texttt{results/selection\_multiplicity\_sweep.json}; refits:
 \texttt{results/evt\_scaling\_refit.json}.
 
@@ -2754,6 +3191,11 @@ Research (A Report from the NeurIPS 2019 Reproducibility Program).
 
 Varma, S., \& Simon, R. (2006). Bias in Error Estimation When Using
 Cross-Validation for Model Selection. \emph{BMC Bioinformatics}, 7(1), 91.
+
+Simpson, A. J., \& Fitter, M. J. (1973). What is the Best Index of
+Detectability? \emph{Psychological Bulletin}, 80(6), 481-488. [Source of
+the binormal identity $\text{AUROC}=\Phi(\sqrt{J/2})$ used to calibrate
+every synthetic harness in this paper.]
 
 Shi, W., et al. (2024). Detecting Pretraining Data from Large Language
 Models. \emph{ICLR 2024}. arXiv 2310.16789.

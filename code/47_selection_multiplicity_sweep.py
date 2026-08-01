@@ -165,8 +165,26 @@ def extract_features(model, X):
         return model.features(torch.tensor(X, dtype=torch.float32)).numpy()
 
 
+def state_dicts_identical(m1, m2):
+    """Bitwise equality of two models' parameters.
+
+    DEGENERACY DIAGNOSTIC (added after an independent adversarial review). The
+    LEAKY and CLEAN_MATCHED arms differ only in WHICH epoch each one's
+    selection rule stops at: LEAKY argmaxes validation AUROC on the same fold
+    it later reports features on, CLEAN_MATCHED argmaxes on a disjoint 15%
+    carve-out and then retrains for that many epochs on the full fold. When the
+    epoch budget K is small enough that both argmaxes land on the last epoch,
+    CLEAN_MATCHED's retrain reproduces LEAKY's trajectory step for step and the
+    two models come out BITWISE IDENTICAL -- so the measured gap is exactly
+    0.00000 by construction, not by measurement. Any cell with a high identical
+    fraction is telling you the harness has no contrast to measure there, and
+    must not be fed to a model fit as if it were a real observation."""
+    s1, s2 = m1.state_dict(), m2.state_dict()
+    return all(torch.equal(s1[k], s2[k]) for k in s1)
+
+
 def run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, epochs, n_samples,
-                 target_auroc, n_inner_folds=N_INNER_FOLDS):
+                 target_auroc, n_inner_folds=N_INNER_FOLDS, degeneracy_check=False):
     X, y = make_synthetic_data(data_seed, n_samples, target_auroc)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, stratify=y, random_state=split_seed)
     scaler = StandardScaler()
@@ -180,10 +198,11 @@ def run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, 
     oof = {k: np.zeros((n_tr, feat_dim_out)) for k in conditions}
     test_feat = {k: np.zeros((len(y_test), feat_dim_out)) for k in conditions}
     val_stds = []
+    degen_identical, degen_maxdiff, leaky_last, clean_last = [], [], [], []
 
     for fold, (tr_idx, val_idx) in enumerate(skf.split(X_train, y_train)):
         init_seed = init_seed_base * 100 + fold
-        model_leaky, _, val_std = train_to_best_checkpoint(X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_train[val_idx], hidden, epochs, init_seed)
+        model_leaky, leaky_best_epoch, val_std = train_to_best_checkpoint(X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_train[val_idx], hidden, epochs, init_seed)
         val_stds.append(val_std)
         oof["leaky"][val_idx] = extract_features(model_leaky, X_train[val_idx])
         test_feat["leaky"] += extract_features(model_leaky, X_test)
@@ -197,6 +216,13 @@ def run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, 
         oof["clean_matched"][val_idx] = extract_features(model_clean_matched, X_train[val_idx])
         test_feat["clean_matched"] += extract_features(model_clean_matched, X_test)
 
+        if degeneracy_check:
+            degen_identical.append(float(state_dicts_identical(model_leaky, model_clean_matched)))
+            sl, sc = model_leaky.state_dict(), model_clean_matched.state_dict()
+            degen_maxdiff.append(float(max((sl[k] - sc[k]).abs().max().item() for k in sl)))
+            leaky_last.append(float(leaky_best_epoch == epochs))
+            clean_last.append(float(best_epoch == epochs))
+
         y_val_permuted = rng.permutation(y_train[val_idx])
         model_placebo, _, _ = train_to_best_checkpoint(X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_val_permuted, hidden, epochs, init_seed)
         oof["placebo"][val_idx] = extract_features(model_placebo, X_train[val_idx])
@@ -208,32 +234,62 @@ def run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, 
         clf = LogisticRegression(max_iter=2000).fit(oof[k], y_train)
         aucs[k] = roc_auc_score(y_test, clf.predict_proba(test_feat[k])[:, 1])
     aucs["_val_auc_std"] = float(np.mean(val_stds))
+    if degeneracy_check:
+        aucs["_degen_identical_frac"] = float(np.mean(degen_identical))
+        aucs["_degen_max_param_diff"] = float(np.max(degen_maxdiff))
+        aucs["_leaky_argmax_is_last_frac"] = float(np.mean(leaky_last))
+        aucs["_clean_argmax_is_last_frac"] = float(np.mean(clean_last))
     return aucs
 
 
-def run_sweep_cell(n_seeds, hidden, epochs, n_samples, target_auroc, n_inner_folds=N_INNER_FOLDS):
+def run_sweep_cell(n_seeds, hidden, epochs, n_samples, target_auroc, n_inner_folds=N_INNER_FOLDS,
+                   degeneracy_check=False, boot_seed=None):
+    """One (K, AUROC_0, ...) cell.
+
+    `boot_seed`, when given, seeds this cell's BCa bootstrap independently
+    instead of drawing from the module-level RNG_GLOBAL. This exists so that
+    cells can be computed in any order (e.g. in parallel) and still reproduce
+    bit for bit; RNG_GLOBAL is consumed sequentially and therefore makes CIs
+    depend on cell ORDER. gap_mean, the Wilcoxon p and every arm mean are fully
+    deterministic given the data/split/fold/init seeds and are unaffected
+    either way -- only the resampled CI endpoints depend on this."""
     all_aucs = {k: [] for k in ["leaky", "clean", "clean_matched", "placebo"]}
     val_stds = []
+    degen = {k: [] for k in ["_degen_identical_frac", "_degen_max_param_diff",
+                             "_leaky_argmax_is_last_frac", "_clean_argmax_is_last_frac"]}
     for seed in range(n_seeds):
         data_seed = seed
         split_seed = seed + 100000
         fold_seed_base = seed + 200000
         init_seed_base = seed + 300000
         aucs = run_one_seed(data_seed, split_seed, fold_seed_base, init_seed_base, hidden, epochs, n_samples,
-                            target_auroc, n_inner_folds=n_inner_folds)
+                            target_auroc, n_inner_folds=n_inner_folds, degeneracy_check=degeneracy_check)
         for k in all_aucs:
             all_aucs[k].append(aucs[k])
         val_stds.append(aucs["_val_auc_std"])
+        if degeneracy_check:
+            for k in degen:
+                degen[k].append(aucs[k])
     arrs = {k: np.array(v) for k, v in all_aucs.items()}
     gap = arrs["leaky"] - arrs["clean_matched"]
     _, p = wilcoxon(arrs["leaky"], arrs["clean_matched"]) if not np.allclose(gap, 0) else (None, 1.0)
-    res = bootstrap((gap,), np.mean, confidence_level=0.95, n_resamples=5000, method="BCa", random_state=RNG_GLOBAL)
-    return {
+    rng_boot = RNG_GLOBAL if boot_seed is None else np.random.default_rng(boot_seed)
+    res = bootstrap((gap,), np.mean, confidence_level=0.95, n_resamples=5000, method="BCa", random_state=rng_boot)
+    out = {
         "gap_mean": float(gap.mean()), "gap_bca_ci_95": [float(res.confidence_interval.low), float(res.confidence_interval.high)],
         "wilcoxon_p": float(p), "mean_val_auc_std": float(np.mean(val_stds)),
         "leaky_mean": float(arrs["leaky"].mean()), "clean_matched_mean": float(arrs["clean_matched"].mean()),
         "placebo_mean": float(arrs["placebo"].mean()),
     }
+    if degeneracy_check:
+        out["degeneracy"] = {
+            "identical_state_dict_frac": float(np.mean(degen["_degen_identical_frac"])),
+            "max_param_abs_diff": float(np.max(degen["_degen_max_param_diff"])),
+            "leaky_argmax_is_last_epoch_frac": float(np.mean(degen["_leaky_argmax_is_last_frac"])),
+            "clean_argmax_is_last_epoch_frac": float(np.mean(degen["_clean_argmax_is_last_frac"])),
+            "seeds_with_exactly_zero_gap_frac": float(np.mean(np.abs(gap) == 0.0)),
+        }
+    return out
 
 
 def run_sweep_D(out, n_seeds, t0):

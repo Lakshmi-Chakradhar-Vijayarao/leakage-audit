@@ -7,6 +7,7 @@ history has been a number surviving in prose after the run behind it was
 corrected. Run this before every commit that touches main.tex.
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -34,17 +35,38 @@ def check(label, value, fmt="{:+.4f}", must_appear=True):
         failures.append(f"{label} ({s}) not found in main.tex")
 
 
+def _quoted_spans(text):
+    """Character spans of LaTeX ``...'' quotations."""
+    spans, i = [], text.find("``")
+    while i != -1:
+        j = text.find("''", i + 2)
+        if j == -1:
+            break
+        spans.append((i, j + 2))
+        i = text.find("``", j + 2)
+    return spans
+
+
+_QUOTED = _quoted_spans(TEX)
+
+
 def check_absent(label, s):
-    """Fail if `s` appears in main.tex as an assertion. Occurrences immediately
-    preceded by a LaTeX open-quote (``) are allowed: those are this paper
-    quoting its own retracted wording in order to correct it, which is the
-    behaviour we want, not the behaviour we are guarding against."""
+    """Fail if `s` appears in main.tex as an assertion.
+
+    Occurrences INSIDE a LaTeX ``...'' quotation are allowed: those are this
+    paper quoting its own retracted wording in order to correct it, which is
+    the behaviour we want, not the behaviour we are guarding against. (This
+    previously only exempted strings whose opening `` was immediately
+    adjacent, which failed as soon as a retraction quoted a phrase from the
+    middle of the retracted sentence -- e.g. ``the two axes interact
+    multiplicatively rather than additively''.)"""
     global checks
     checks += 1
     asserted = 0
     i = TEX.find(s)
     while i != -1:
-        if TEX[max(0, i - 2):i] != "``":
+        inside_quote = any(a <= i and i + len(s) <= b for a, b in _QUOTED)
+        if not inside_quote:
             asserted += 1
         i = TEX.find(s, i + 1)
     ok = asserted == 0
@@ -100,12 +122,18 @@ print(f"  {'OK  ' if _ok else 'FAIL'}  the superseded coupled-seed run ships for
 if not _ok:
     failures.append("coupled-seed legacy JSON missing; SS4.3's before/after comparison is unverifiable")
 checks += 1
-# code/47's independently-written default cell must reproduce code/02d's cap-128 cell.
+# code/47's default cell must reproduce code/02d's cap-128 cell. This is a
+# DETERMINISM check, not independent confirmation: code/47's docstring states
+# its harness is "an exact port of code/02d", so the two share an
+# implementation. It catches drift between them; it does not corroborate the
+# result via a second implementation. (An adversarial review found the previous
+# comment here, and the matching sentence in SS4.3, calling code/47's cell
+# "independently-written". Both are withdrawn.)
 _c47 = load("selection_multiplicity_sweep.json")["sweep_C_operating_point"]["0.8"]["gap_mean"]
 _c02d = d["128"]["leaky_minus_clean_matched"]["gap_mean"]
 _ok = abs(_c47 - _c02d) < 5e-5
 print(f"  {'OK  ' if _ok else 'FAIL'}  code/47 default cell reproduces code/02d cap-128 "
-      f"({_c47:+.5f} vs {_c02d:+.5f})")
+      f"(determinism check, shared implementation) ({_c47:+.5f} vs {_c02d:+.5f})")
 if not _ok:
     failures.append("code/47 and code/02d no longer agree on the shared configuration")
 
@@ -159,11 +187,84 @@ for cap in ["128", "384"]:
 
 print("\n== Mechanism 4 (code/45) ==")
 d = load("case_study_4_winners_curse.json")
-check("all-cells mean", d["summary_all_cells"]["mean"])
+# HEADLINE is the non-degenerate subset. The rotation estimator is
+# algebraically 0 whenever all 3 rotations pick the same layer, so those cells
+# measure nothing and must not be averaged in.
+_nd = d["summary_non_degenerate"]
+check("non-degenerate headline mean", _nd["mean"])
+check("non-degenerate CI low", _nd["bca_ci_95"][0])
+check("non-degenerate CI high", _nd["bca_ci_95"][1])
+check("non-degenerate n_cells", _nd["n_cells"], "{:d}")
+check("all-cells mean (contaminated, retained for continuity)", d["summary_all_cells"]["mean"])
 check("all-cells CI low", d["summary_all_cells"]["bca_ci_95"][0])
 check("all-cells CI high", d["summary_all_cells"]["bca_ci_95"][1])
-check("non-saturated mean", d["summary_non_saturated"]["mean"])
+check("non-saturated mean (contaminated)", d["summary_non_saturated"]["mean"])
+check("non-saturated non-degenerate mean", d["summary_non_saturated_non_degenerate"]["mean"])
 check("ceiling-saturated mean", d["summary_ceiling_saturated"]["mean"])
+_da = d["degeneracy_audit"]
+check("number of degenerate cells", _da["n_degenerate"], "{:d}")
+check("degenerate cells' permutation-null mean",
+      _da["permutation_null_mean_over_degenerate_cells"])
+checks += 1
+# Every degenerate cell must be EXACTLY zero, not a float residue: scipy's
+# Wilcoxon drops exact zeros but ranks +-3.7e-17 as real observations, which
+# is what moved the non-saturated subgroup's p from 0.047 to 0.0625.
+_ok = all(v["winners_curse_estimate"] == 0.0 for v in d["per_cell"].values()
+          if v["estimator_degenerate"])
+print(f"  {'OK  ' if _ok else 'FAIL'}  degenerate cells are snapped to EXACT zero "
+      f"(no float residue reaching the Wilcoxon)")
+if not _ok:
+    failures.append("code/45 is letting float residues through as signed observations again")
+checks += 1
+# The degeneracy must be DETECTED structurally, not inferred from the value.
+_ok = all(("estimator_degenerate" in v and "selected_layers_across_rotations" in v)
+          for v in d["per_cell"].values())
+print(f"  {'OK  ' if _ok else 'FAIL'}  every cell records its per-rotation selected layers "
+      f"and a degeneracy flag")
+if not _ok:
+    failures.append("code/45 no longer records the degeneracy diagnostic per cell")
+checks += 1
+# code/45's permutation null and bootstrap must be REPRODUCIBLE. An earlier
+# version seeded them from Python's builtin hash() of the cell name, which is
+# salted per interpreter process (PYTHONHASHSEED), so the shipped numbers could
+# not be re-derived from the shipped code -- the exact failure mode this paper
+# is about. It must use a stable hash.
+_c45 = (ROOT / "code" / "45_case_study_4_winners_curse.py").read_text()
+_ok = "zlib.crc32" in _c45 and "default_rng(abs(hash(" not in _c45
+print(f"  {'OK  ' if _ok else 'FAIL'}  code/45 seeds its permutation null from a STABLE hash "
+      f"(not Python's salted hash())")
+if not _ok:
+    failures.append("code/45's permutation null is seeded from a per-process-salted hash; "
+                    "its reported null and bootstrap values are not reproducible")
+checks += 1
+# Per-model probed-layer counts: the paper said a flat "33 layers" for all 24
+# cells; qwen2.5-7b probes 29.
+_lc = d["per_model_layer_counts"]
+_ok = _lc == {"llama3.1-8b": 33, "mistral-7b": 33, "qwen2.5-7b": 29} and "29" in TEX
+print(f"  {'OK  ' if _ok else 'FAIL'}  per-model probed-layer counts shipped and stated: {_lc}")
+if not _ok:
+    failures.append("per-model layer counts missing from the JSON or from main.tex")
+
+print("\n== Operating-point transport check (code/58) ==")
+d = load("operating_point_transport_check.json")
+_obs = d["matched_operating_point_comparison"]["observations"]
+checks += 1
+_ok = d["verdict"] == "HARNESS_SPECIFIC_NOT_A_TRANSPORTABLE_LAW"
+print(f"  {'OK  ' if _ok else 'FAIL'}  verdict: {d['verdict']}")
+if not _ok:
+    failures.append("code/58's verdict changed; SS5's transport paragraph depends on it")
+for o in _obs[1:]:
+    check(f"ratio vs matched Sweep C cell ({o['harness'][:28]})",
+          o["ratio_vs_sweep_C_matched_cell"], "{:.1f}")
+    check(f"achieved operating point ({o['harness'][:28]})",
+          o["achieved_operating_point"], "{:.4f}")
+checks += 1
+# The whole point is that these are matched on operating point.
+_ok = d["matched_operating_point_comparison"]["operating_point_spread"] < 0.005
+print(f"  {'OK  ' if _ok else 'FAIL'}  the three harnesses are matched on operating point to "
+      f"{d['matched_operating_point_comparison']['operating_point_spread']:.4f} AUROC")
+if not _ok:
+    failures.append("code/58's three harnesses are no longer operating-point matched")
 
 print("\n== Severity relationship: operating point (code/47 Sweep C) ==")
 d = load("selection_multiplicity_sweep.json")["sweep_C_operating_point"]
@@ -173,9 +274,39 @@ ratio = d["0.7"]["gap_mean"] / d["0.985"]["gap_mean"]
 check("operating-point decline factor", ratio, "{:.1f}")
 
 print("\n== Severity relationship: K scaling refit (code/50) ==")
-d = load("evt_scaling_refit.json")["fits"]
+_evt = load("evt_scaling_refit.json")
+d = _evt["fits"]
 check("EVT per-cell-sigma R^2", d["evt_per_cell_sigma"]["r_squared"], "{:.3f}")
 check("log two-parameter R^2", d["log_two_parameter"]["r_squared"], "{:.3f}")
+checks += 1
+# The EVT test is UNTESTABLE here, not falsified: sigma is a single training
+# trajectory's per-epoch dispersion, not the sampling-noise SD EVT requires.
+_ok = (d["evt_per_cell_sigma"].get("verdict") == "UNTESTABLE_IN_THIS_HARNESS_AS_INSTRUMENTED"
+       and _evt["sigma_misspecification"]["verdict"] ==
+       "UNTESTABLE_IN_THIS_HARNESS_AS_INSTRUMENTED")
+print(f"  {'OK  ' if _ok else 'FAIL'}  the EVT fit ships labelled UNTESTABLE, not falsified")
+if not _ok:
+    failures.append("code/50 no longer records the sigma misspecification; SS5, Limitations "
+                    "(2a)/(3) and Appendix A all depend on the downgraded verdict")
+# M4: the K law must survive restriction to the flat-operating-point range.
+_r = d["log_two_parameter_K_ge_10"]
+check("K-law restricted to K>=10: b", _r["params"]["b"], "{:.5f}")
+check("K-law restricted to K>=10: R^2", _r["r_squared"], "{:.3f}")
+checks += 1
+_full_b = d["log_two_parameter"]["params"]["b"]
+_ok = abs(_r["params"]["b"] - _full_b) / abs(_full_b) < 0.10
+print(f"  {'OK  ' if _ok else 'FAIL'}  K law survives restricting to the flat-operating-point "
+      f"range (b {_full_b:.5f} -> {_r['params']['b']:.5f})")
+if not _ok:
+    failures.append("the K law no longer survives the K>=10 restriction; SS5 says it does")
+checks += 1
+# ...and Sweep A's achieved operating-point drift must be disclosed, not just its target.
+_lo, _hi = _evt["achieved_operating_point_full_range"]
+_ok = f"{_lo:.4f}" in TEX and f"{_hi:.4f}" in TEX or f"{_lo:.4f}" in TEX
+print(f"  {'OK  ' if _ok else 'FAIL'}  Sweep A's achieved operating-point drift is disclosed "
+      f"({_lo:.4f} to {_hi:.4f})")
+if not _ok:
+    failures.append("Sweep A's achieved operating-point drift is not disclosed in main.tex")
 
 print("\n== Adaptive-selection control power (code/22) ==")
 import numpy as np
@@ -315,6 +446,44 @@ try:
     print(f"  {'OK  ' if _ok else 'FAIL'}  the joint fit ships labelled as an empirical fit, not a bound")
     if not _ok:
         failures.append("code/57's framing no longer disclaims being a bound")
+    # ── the degeneracy gate: K=3 produced the old interaction on its own ──
+    checks += 1
+    _g = d["degeneracy_gate"]
+    _ok = _g["passed"] and not _g["cells_exceeding"]
+    print(f"  {'OK  ' if _ok else 'FAIL'}  degeneracy gate passed; worst fitted cell has "
+          f"{_g['max_identical_frac_in_grid']:.2f} bitwise-identical LEAKY/CLEAN_MATCHED folds")
+    if not _ok:
+        failures.append(f"code/57's grid contains degenerate cells: {_g['cells_exceeding']}")
+    checks += 1
+    # K=3 must NOT be in the fitted grid, and its degeneracy must ship as evidence.
+    _ok = (3 not in d["grid"]["K_values"] and _g["dropped_K3_column_identical_frac"]
+           and min(_g["dropped_K3_column_identical_frac"].values()) > 0.5)
+    print(f"  {'OK  ' if _ok else 'FAIL'}  K=3 is excluded from the fit and its degeneracy "
+          f"ships as evidence "
+          f"({min(_g['dropped_K3_column_identical_frac'].values()):.2f}-"
+          f"{max(_g['dropped_K3_column_identical_frac'].values()):.2f} identical)")
+    if not _ok:
+        failures.append("code/57 refit K=3 or stopped shipping the evidence for dropping it")
+    checks += 1
+    # Every fitted cell must carry its own degeneracy record.
+    _ok = all("degeneracy" in c for c in d["cells"].values())
+    print(f"  {'OK  ' if _ok else 'FAIL'}  every fitted cell carries a per-cell degeneracy record")
+    if not _ok:
+        failures.append("code/57 cells no longer carry per-cell degeneracy records")
+    checks += 1
+    # The old, degenerate grid's F-test must ship for the record, and must NOT
+    # be the number the paper reports.
+    _old = d.get("interaction_f_test_on_old_degenerate_grid")
+    _ok = _old is not None and abs(_old["p"] - 0.027) < 0.002
+    print(f"  {'OK  ' if _ok else 'FAIL'}  the superseded degenerate-grid F-test ships for the "
+          f"record (p={_old['p']:.4f} if present)" if _old else "  FAIL  missing")
+    if not _ok:
+        failures.append("code/57 no longer ships the old degenerate-grid F-test for comparison")
+    # NOTE: F(1,16)=5.92 still APPEARS in SS5, but only inside the paragraph that
+    # retracts it. It is deliberately not check_absent'd -- the retraction has to
+    # be able to quote the number it is retracting. What is guarded instead is
+    # the CLAIM the number was used to support (see the check_absent block below
+    # for "interact multiplicatively rather than additively").
 except FileNotFoundError:
     checks += 1
     print("  FAIL  joint_severity_surface.json missing (SS5 reports the joint fit)")
@@ -346,6 +515,89 @@ check_absent("stale coupled-seed isotropic range in prose",
              "$+0.0009$ to $+0.0034$ AUROC on the synthetic sweep")
 check_absent("pooled-family claim that nothing survives",
              "would leave nothing significant at")
+# ── retractions from the fourth adversarial review ──────────────────────────
+check_absent("operating point asserted to dominate mechanism differences",
+             "That single relationship moves severity more than any")
+check_absent("operating-point decline asserted as larger than any mechanism difference",
+             "which is larger than any difference we\nmeasure \\emph{between} mechanisms")
+check_absent("EVT asserted as falsified (downgraded to untestable)",
+             "is falsified by this data once fit as stated")
+check_absent("EVT falsification asserted in Limitations",
+             "derivation would most naturally rest on is falsified here once fit as")
+check_absent("EVT functional form asserted not to fit",
+             "The extreme-value functional form, tested as stated,")
+check_absent("interaction asserted as a finding in the contributions list",
+             "interact multiplicatively rather than additively")
+check_absent("code/47's cell called independently written",
+             "independently-written default cell")
+check_absent("flat 33-layer count for all 24 Case Study 4 cells",
+             "argmax, over $33$ layers")
+check_absent("Case Study 4's contaminated mean used as the headline CI",
+             "$[+0.0032,+0.0100]$")
+check_absent("stale non-saturated-vs-saturated contrast",
+             "$+0.0042$ versus $+0.0065$ on the non-saturated")
+check_absent("replay script claiming every Case Study 2 number",
+             "every Case Study 2 number in the paper is")
+
+print("\n== Reverse guard: every AUROC-shaped literal in main.tex traces to a JSON ==")
+# WHY THIS EXISTS. Every check above runs in ONE direction: it takes a number
+# from a result JSON and asserts it appears in main.tex. That cannot catch a
+# number that is in main.tex and in NO json -- e.g. a stale value, or the same
+# cell rounded two different ways in two paragraphs. An adversarial review
+# found exactly that: the (K=45, AUROC_0=0.80) cell (0.003649) was rendered
+# "+0.0037" in one place and "+0.0036"/"+0.00365" elsewhere. This guard closes
+# the loop for the class of literal that bug lived in: 4-and-5-decimal
+# AUROC/gap-shaped numbers.
+import glob as _glob
+
+_json_floats = set()
+
+
+def _collect(o):
+    if isinstance(o, dict):
+        for v in o.values():
+            _collect(v)
+    elif isinstance(o, list):
+        for v in o:
+            _collect(v)
+    elif isinstance(o, (int, float)) and not isinstance(o, bool):
+        _json_floats.add(abs(float(o)))
+
+
+for _f in _glob.glob(str(R / "*.json")):
+    _collect(json.load(open(_f)))
+_reprs = {f"{v:.{p}f}" for v in _json_floats for p in (4, 5)}
+
+# Numbers that legitimately do NOT come from any shipped JSON. Each is here for
+# a stated reason, not to silence the check.
+ALLOWED_NON_JSON_LITERALS = {
+    # Case Study 1 (HaRP): reported from prior work, explicitly NOT
+    # re-verifiable from this artifact, and excluded from every comparison (SS4.1).
+    "0.1906", "0.9620", "0.7583",
+    # Numbers this paper quotes in order to RETRACT or supersede them. The
+    # runs behind them are superseded and their JSONs no longer ship.
+    "0.0498",   # pre-fidelity-port control-vs-placebo gap (Appendix A)
+    "0.00064",  # Wilcoxon p under the superseded label-conditional calibration
+    "0.9176",   # operating point of the superseded fidelity-extension run
+    "0.00198", "0.00154",  # per-seed MDEs under the superseded label-conditional
+                           # calibration, quoted in Appendix A's power check
+    # Analytic, not measured: the Bayes-optimal AUROC the calibration bug
+    # actually realized for a cell labelled 0.985 (Appendix A, issue 11).
+    "0.99994",
+}
+
+_lits = set(re.findall(r"(?<![\d.])[+-]?0\.\d{4,5}(?![\d])", TEX))
+_untraced = sorted(L for L in _lits
+                   if L.lstrip("+-") not in _reprs
+                   and L.lstrip("+-") not in ALLOWED_NON_JSON_LITERALS)
+checks += 1
+_ok = not _untraced
+print(f"  {'OK  ' if _ok else 'FAIL'}  {len(_lits)} AUROC-shaped literals in main.tex; "
+      f"{len(_untraced)} trace to no shipped JSON and are not allowlisted")
+for L in _untraced:
+    print(f"        untraceable: {L}")
+if not _ok:
+    failures.append(f"main.tex contains AUROC-shaped literals with no JSON source: {_untraced}")
 
 print(f"\n{checks} checks run, {len(failures)} failures")
 for f in failures:
