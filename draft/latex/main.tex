@@ -225,7 +225,8 @@ and fixes the definition of leakage we use; §3 states how the case studies were
 selected and graded for verifiability; §4 presents the five mechanisms and
 their measured severities; §5 is the paper's central result, what actually
 governs those severities and the limits of that finding; §6 gives the checklist
-and a negative automation result; §7 discusses limitations. Four appendices
+and a negative automation result, with §6.1 stating when that checklist applies
+and when it does not; §7 discusses limitations and §8 broader impact. Four appendices
 hold the supporting derivations: A, the fourteen-step correction history and
 robustness checks behind §4.3; B, extended detail for Case Studies 2 and 4 and
 Mechanism 5; C, the severity surface; D, the checklist benchmarking and the
@@ -1354,6 +1355,61 @@ to the five mechanisms above:
    test set then used to report the metric at that threshold?
 \end{enumerate}
 
+\subsection{When this checklist applies, and when it does not}
+\label{sec:checklist-scope}
+
+A checklist is only useful if a reader can tell in one pass whether it is
+addressed to them. The two tables below state that directly. Every
+entry is grounded in a finding above --- the candidate-count and
+operating-point relationship (§5), the five mechanisms (§4), and the
+transport failure (§5.4) --- rather than in a general view of good practice.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}p{0.33\linewidth}p{0.61\linewidth}@{}}
+\toprule
+Use this checklist when & The specific result behind it \\
+\midrule
+You report AUROC (or any metric) from a pipeline that selects a checkpoint, layer, threshold or hyperparameter using a statistic computed on --- or reused from --- the data you then report on. & Q1--Q5 name which of the five mechanisms you have and where in the code to look. Three of the five are verified against pinned commits of published third-party code (§4), so this is a documented failure mode, not a hypothetical one. \\
+\addlinespace
+A validation-fold decision is coupled to something downstream: early stopping, LR scheduling on a reused fold, best-epoch or best-layer selection. & Q2 and Q4. §4.3 shows the \emph{continuity} of the coupling matters: porting a scheduler and epoch-by-epoch early stopping onto a checkpoint-selection harness raises the measured gap by $3.6\times$ over a single end-of-training argmax, on the same features at a matched calibration. \\
+\addlinespace
+Your headline threshold-dependent numbers (F1, accuracy, MCC, Cohen's $\kappa$, or an ECE derived from thresholded predictions) come from a threshold chosen on the evaluation labels. & Q5, which nothing upstream will catch: AUROC is unaffected by construction, so an AUROC-only audit clears the pipeline while F1 and accuracy are still inflated ($+0.021$ to $+0.034$ at $n_{\text{test}}=140$, §4.5). \\
+\addlinespace
+You want to know, before publishing a severity estimate, whether it is confounded with the operating point or with how many candidates were tried. & §5 names the two quantities to report alongside it. Within one harness the gap grows as $a+b\ln K$ ($R^2=0.970$ at a fixed operating point) and falls $48.6\times$ from AUROC$_0=0.70$ to $0.985$; two severity numbers at different operating points are not comparable until it is matched. \\
+\addlinespace
+Your task is far from ceiling, or your test set is small. & This is where every effect we measure is largest, and where the checklist earns most: $+0.0093$ at AUROC$_0=0.70$ against $+0.0002$ at $0.985$, and Mechanism 5's F1 gap $+0.0212$ at $n_{\text{test}}=140$ against $+0.0034$ at $2000$. \\
+\bottomrule
+\end{tabular}
+\caption{When to reach for this checklist. The right-hand column cites the
+specific result behind each row; no row is a general recommendation
+independent of what this paper measured.}
+\label{tab:checklist-scope}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}p{0.33\linewidth}p{0.61\linewidth}@{}}
+\toprule
+It does not directly apply, or needs adapting, when & The reason \\
+\midrule
+Your pipeline has no data-dependent selection step at all --- fixed layer, fixed threshold, fixed hyperparameters, all committed before any evaluation data was seen. & None of the five mechanisms can fire and the checklist returns five no's. It is a selection-leakage instrument, not a general evaluation-quality review, and clearing it says nothing about the other ways an evaluation can be wrong. \\
+\addlinespace
+Every reported number comes from a held-out set touched exactly once, with no proxy metric reused for selection. & Q1--Q5 are satisfied by construction. What the checklist does \emph{not} check is whether that set is a genuine random partition: Case Study 2's original $18.8$-point gap turned out to be an artifact of a fixed sequential \texttt{H[:400]}/\texttt{H[400:]} slice whose halves are separable at AUROC $0.734$--$0.776$ (§4.2). \\
+\addlinespace
+Your task runs near ceiling (reported AUROC of about $0.98$ or higher). & Still worth asking, but expect small answers and read them carefully: Case Study 4's ceiling-saturated cells give $+0.0042$ against $+0.0157$ on the non-saturated ones. A near-zero severity estimate in this regime is weak evidence that a pipeline is clean. \\
+\addlinespace
+You want a severity \emph{number} for your own pipeline, not a yes/no. & The checklist does not supply one, and §5's surface should not be used as a calculator: §5.4 finds three measurements at achieved operating points within $0.003$ AUROC of each other exceeding its prediction by $14\times$ and $52\times$. Measure it in your own harness against a matched control. \\
+\addlinespace
+You want this run automatically over a corpus. & Not available from this paper. §6.2's regex scanner returned $0$ true positives over $7$ repositories and missed both known bugs, for two causes we diagnose specifically. This is a manual code-reading protocol. \\
+\bottomrule
+\end{tabular}
+\caption{When this checklist adds little, or needs adaptation before it does.}
+\label{tab:checklist-scope-neg}
+\end{table}
+
 \subsection{We tried to automate this checklist; the attempt itself is informative}
 
 We built a regex-based scanner for the original four patterns (Mechanism 5 was
@@ -1539,6 +1595,40 @@ severity estimate, while now trustworthy, is reported at its own
 comparable. Whether the synthetic estimate transfers to real hidden states at
 the \emph{same} operating point --- on this dataset, non-English datasets, or
 larger ones --- remains untested rather than confirmed or excluded.
+
+\section{Broader Impact and Ethical Considerations}
+\label{sec:impact}
+
+This paper adds no detection capability; its subject is the trustworthiness of
+reported detector performance, so the foreseeable harm pathway runs through
+misplaced confidence rather than through misuse. A detector whose reported
+AUROC or F1 is inflated by any of the five mechanisms here will, at a fixed
+threshold, pass more hallucinations and flag more correct outputs than its
+published numbers promise --- and a practitioner who carries such a number into
+a higher-stakes setting, such as clinical or legal document generation or
+automated monitoring of a model's factual claims, imports that gap into
+decisions where the cost of a missed hallucination and the cost of a false flag
+are not symmetric. \textbf{The taxonomy and checklist here are a partial
+mitigation and explicitly not a guarantee, and this paper's own evidence is why
+we say so:} two of our own measurement instruments were found committing the
+exact pattern we audit for (§4.3, Appendix A issues 8 and 13), four separate rounds
+of adversarial review were each needed to remove a different confound from a
+single case study (Appendix A), and Mechanism 5 was found only after the
+checklist and its scanner had already been written and did not cover it (§4.5,
+§6). Working through §6 raises the chance a leak is caught; it does not
+establish that a pipeline is clean, and nothing measured here would support
+reporting that it does. The severity numbers cut in the opposite direction and
+should be read with the same care: the code-verified AUROC-scale estimates land
+between roughly $0.000$ and $0.034$, which is neither a licence to ignore these
+mechanisms --- they are cheap to fix and they corrupt method comparisons --- nor
+a measurement of what they cost in any deployed system. Those figures come from
+specific synthetic harnesses and two audited third-party pipelines, at operating
+points and test-set sizes we chose or inherited; §5.4 shows the operating-point
+relationship governing them does not transport even to this paper's own
+real-feature harnesses ($14$--$52\times$ at a matched operating point), and
+Mechanism 5's F1 gap falls $6.2\times$ between $n_{\text{test}}=140$ and
+$2000$. Severity in a system that is not one of these has to be measured there
+rather than read off this paper.
 
 \section{Conclusion}
 

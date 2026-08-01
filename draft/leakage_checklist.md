@@ -14,6 +14,32 @@ actionable contribution: a set of concrete questions a researcher (or
 reviewer) can ask of any hidden-state hallucination-detection pipeline to
 identify which, if any, of these five mechanisms it is vulnerable to.
 
+## When this checklist applies, and when it does not
+
+Read this table before working through the five questions. Every entry is
+grounded in a specific finding in the paper — the candidate-count and
+operating-point relationship (main.tex §5), the five mechanisms (§4), and the
+transport failure (§5.4) — rather than in a general view of good practice.
+
+### Use it
+
+| Your situation | What this checklist gives you, and on what evidence |
+|---|---|
+| You report AUROC (or any metric) from a pipeline that selects a checkpoint, layer, threshold or hyperparameter using a statistic computed on — or reused from — the data you then report on. | Q1–Q5 name which of the five mechanisms you have and where in the code to look. Three of the five are verified against pinned commits of published third-party code (§4), so this is a documented failure mode, not a hypothetical one. |
+| A validation-fold decision is coupled to something downstream: early stopping, LR scheduling on a reused fold, best-epoch or best-layer selection. | Q2 and Q4. §4.3 shows the *continuity* of the coupling matters: porting a scheduler and epoch-by-epoch early stopping onto a checkpoint-selection harness raises the measured gap by **3.6x** over a single end-of-training argmax, on the same features at a matched calibration. |
+| Your headline threshold-dependent numbers (F1, accuracy, MCC, Cohen's kappa, or an ECE derived from thresholded predictions) come from a threshold chosen on the evaluation labels. | Q5, which nothing upstream will catch: AUROC is unaffected by construction, so an AUROC-only audit clears the pipeline while F1 and accuracy are still inflated (+0.021 to +0.034 at n_test = 140; §4.5). |
+| You want to know, before publishing a severity estimate, whether it is confounded with the operating point or with how many candidates were tried. | §5 names the two quantities to report alongside it. Within one harness the gap grows as `a + b ln K` (R^2 = 0.970 at a fixed operating point) and falls **48.6x** from AUROC_0 = 0.70 to 0.985; two severity numbers measured at different operating points are not comparable until it is matched. |
+
+### Does not directly apply, or needs adaptation
+
+| Your situation | Why the checklist adds little here |
+|---|---|
+| Your pipeline has no data-dependent selection step at all — fixed layer, fixed threshold, fixed hyperparameters, all committed before any evaluation data was seen. | None of the five mechanisms can fire and the checklist returns five no's. It is a selection-leakage instrument, not a general evaluation-quality review; clearing it says nothing about the other ways an evaluation can be wrong. |
+| Every reported number comes from a held-out set touched exactly once, with no proxy metric reused for selection. | Q1–Q5 are satisfied by construction. What the checklist does *not* check is whether that set is a genuine random partition: Case Study 2's original 18.8-point gap turned out to be an artifact of a fixed sequential `H[:400]`/`H[400:]` slice whose two halves are separable at AUROC 0.734–0.776 (§4.2). |
+| Your task runs near ceiling (reported AUROC >= ~0.98). | Still worth asking, but expect small answers and read them carefully. The same mechanism gives +0.0002 at AUROC_0 = 0.985 against +0.0093 at 0.70, and Case Study 4's ceiling-saturated cells give +0.0042 against +0.0157 on the non-saturated ones. A near-zero severity estimate here is weak evidence that a pipeline is clean. The converse is where this checklist earns most: far from ceiling, and at small n_test, is where every effect we measure is largest. |
+| You want a severity *number* for your own pipeline, not a yes/no. | The checklist does not supply one, and §5's surface should not be used as a calculator: §5.4 finds three measurements at achieved operating points within 0.003 AUROC of each other exceeding its prediction by 14x and 52x. Measure it in your own harness against a matched control. |
+| You want this run automatically over a corpus. | Not available from this paper. §6's regex scanner returned 0 true positives over 7 repositories and missed both known bugs, for two causes the paper diagnoses specifically. This is a manual code-reading protocol. |
+
 ## The five mechanisms, as questions to ask of a pipeline
 
 ### 1. Full-dataset fit-then-score leakage (severity: SEVERE — Case Study 1)
@@ -144,9 +170,9 @@ BCE/focal/asymmetric/contrastive objective, class rebalancing, label
 smoothing, mixup, cutmix and its 6-layer transformer are all *not* ported.
 This measures fidelity of the validation-signal coupling and the optimizer
 schedule only. The scheduler-bearing
-control itself still beats PLACEBO
-decisively, confirming it is a strongly informative, non-degenerate honest
-baseline. **Lesson: when a real
+control itself still beats PLACEBO by +0.0211 (p=3.6e-7) under the ported
+training loop, so it is a strongly informative, non-degenerate honest
+baseline rather than a straw one. **Lesson: when a real
 pipeline reacts to validation feedback continuously (a scheduler, early
 stopping), a "clean" control that reacts to it not at all is a different,
 easy-to-underestimate confound in its own right -- match the mechanism's
