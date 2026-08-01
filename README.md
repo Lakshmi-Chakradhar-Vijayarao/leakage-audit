@@ -4,19 +4,43 @@ Code, results, and paper source for "Selection-Induced Optimism in
 Hidden-State Hallucination Detection: A Code-Verified Taxonomy, and Why
 Severity Tracks Candidate Count and Operating Point Rather Than Mechanism."
 
+## What the paper finds
+
+Choosing a checkpoint, layer, threshold, or hyperparameter using the same data
+later used to report performance inflates the reported metric. The paper shows
+this *selection-induced optimism* is real and code-verified in hidden-state
+hallucination-detection pipelines (five structurally distinct mechanisms across
+two published pipelines and our own, three verified against pinned third-party
+source); that it is **small** — every code-verified AUROC-scale estimate lands
+in a band of roughly 0.000 to 0.034 AUROC once measured against matched
+controls; and that its size is governed not by *which* mechanism is responsible
+but by two continuous quantities, the number of candidates selected among (K)
+and the operating point the pipeline runs at.
+
+What the paper explicitly does **not** claim: a formally-derived bound (the
+joint K x operating-point fit is an empirical surface, not a bound); that the
+operating-point relationship transports outside the harness that measured it
+(it does not — `code/58` finds two real-feature harnesses exceeding its
+prediction by 14x and 52x at a matched operating point); a matched head-to-head
+across all five mechanisms at common (K, AUROC_0), which is not run here; any
+field-wide prevalence or deployment-impact estimate; or that Case Study 1's
++0.19 figure is verified by this artifact.
+
 ## Reproducibility status, up front
 
 | Case study | Reproducible from this repo? |
 |---|---|
 | 3 (MultiHaluDet) | Yes — pinned third-party commit vendored, all scripts and result JSONs included |
 | 4 (quantized-LLM paper) | Yes — pinned commit vendored; `code/45` recomputes the severity estimate from shipped per-layer result files |
-| 2 (GUARDIAN) | Yes, from a derived artifact — the original 171 MB hidden-state cache is too large to ship, so `code/48` emits `results/case_study_2_probe_scores.npz` (~1 MB: per-layer, per-sample CV fold assignments and probe scores) and `code/51` recomputes and asserts every reported number from it |
+| 2 (GUARDIAN) | Yes, from a derived artifact — the original 171 MB hidden-state cache is too large to ship, so `code/48` emits `results/case_study_2_probe_scores.npz` (4.0 MB: per-layer, per-sample CV fold assignments and probe scores) and `code/51` recomputes and asserts every **primary** reported number from it. Scope boundary, printed by `code/51` itself: the 12 numbers of the paper's §4.2 `StandardScaler`×`C` regularization-robustness sweep are *not* replayable from the artifact and need the full cache. |
 | 1 (HaRP) | **No.** No script, log, or data file supporting its `+0.19` figure is included. The paper states this explicitly, excludes the number from its abstract severity range, and excludes it from every cross-mechanism comparison. |
 
 ## What's included
 
-- `draft/` — the paper source: `paper_draft.md` (canonical, markdown mirror
-  of the submission), plus supporting write-ups referenced from the paper:
+- `draft/` — the paper source. `latex/main.tex` is canonical;
+  `paper_draft.md` is a markdown mirror generated mechanically from it by
+  `code/52` (do not edit by hand). Plus supporting write-ups referenced from
+  the paper:
   `worked_examples.md` (Case Studies 1-2, this paper's own pipelines),
   `case_study_multihaludet.md` and `case_study_quantized_llm_paper.md`
   (Case Studies 3-4, full code excerpts from the external targets), and
@@ -38,9 +62,12 @@ Severity Tracks Candidate Count and Operating Point Rather Than Mechanism."
   selection-optimism gap (`48`), a fidelity extension modeling Case
   Study 3's actual LR-scheduler/early-stopping training loop rather than
   just its checkpoint selection (`49`), an honest re-fit of the K-scaling
-  law that shows the extreme-value functional form does *not* fit once
-  each cell's own measured sigma is used (`50`), a replay script that
-  re-derives every Case Study 2 number from the small shipped derived
+  law that replaces a constant sigma with each cell's own measured sigma and
+  records the resulting verdict as *untestable in this harness as
+  instrumented* rather than as a falsification, since the only sigma this
+  harness produces is a single training trajectory's dispersion and not the
+  sampling-noise SD the derivation requires (`50`), a replay script that
+  re-derives Case Study 2's primary numbers from the small shipped derived
   artifact with no access to the 171 MB raw cache (`51`), and the
   LaTeX-to-markdown sync script that makes `draft/paper_draft.md` a
   mechanical function of `draft/latex/main.tex` so the two cannot drift
@@ -50,9 +77,12 @@ Severity Tracks Candidate Count and Operating Point Rather Than Mechanism."
   separating the fidelity extension's two most recent corrections (`54`), a
   control testing whether cross-model feature averaging is what makes the
   measured severity small (`55`), a fixed-dimension eigenspectrum sweep
-  separating covariance shape from dimensionality (`56`), and a factorial
+  separating covariance shape from dimensionality (`56`), a factorial
   K x operating-point grid fitting a single *empirical* joint severity
-  surface — explicitly not a bound — across both axes at once (`57`).
+  surface — explicitly not a bound — across both axes at once (`57`), and a
+  transport check that asks what that surface's operating-point relationship
+  *predicts* at the operating points this paper's own real-feature harnesses
+  actually achieve, and finds them exceeding it by 14x and 52x (`58`).
 - `code/external/` — the seven third-party repositories this paper audits
   or scans: `MultiHaluDet` and `HallucinationPatternDetection` (Case
   Studies 3-4, vendored at the pinned commits cited in the paper), plus

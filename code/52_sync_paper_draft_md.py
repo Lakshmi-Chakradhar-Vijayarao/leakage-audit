@@ -78,6 +78,7 @@ def main():
 
     section_n = 0
     subsection_n = 0
+    subsubsection_n = 0
     in_abstract = False
     in_itemize = False
     in_enumerate = False
@@ -162,8 +163,22 @@ def main():
 
         m = re.match(r"\\subsection\{(.+)\}\s*$", s)
         if m:
-            flush(); subsection_n += 1
+            flush(); subsection_n += 1; subsubsection_n = 0
             out.append(f"### {section_n}.{subsection_n} " + convert_inline(m.group(1)))
+            out.append(""); continue
+
+        # Unnumbered subsection (\subsection*{...}) -- used inside the appendix.
+        m = re.match(r"\\subsection\*\{(.+)\}\s*$", s)
+        if m:
+            flush()
+            out.append("### " + convert_inline(m.group(1)))
+            out.append(""); continue
+
+        m = re.match(r"\\subsubsection\{(.+)\}\s*$", s)
+        if m:
+            flush(); subsubsection_n += 1
+            out.append(f"#### {section_n}.{subsection_n}.{subsubsection_n} "
+                       + convert_inline(m.group(1)))
             out.append(""); continue
 
         if s.startswith(r"\begin{itemize}"):
