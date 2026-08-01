@@ -58,6 +58,7 @@ def convert_inline(s):
     s = re.sub(r"\\ref\{[^}]*\}", "", s)
     s = re.sub(r"\\cite[a-z]*\{[^}]*\}", "", s)
     s = s.replace("\\ ", " ")
+    s = re.sub(r"\\(?:medskip|noindent|smallskip|bigskip)\b\s*", "", s)
     return s
 
 
@@ -79,6 +80,12 @@ def main():
     section_n = 0
     subsection_n = 0
     subsubsection_n = 0
+    # After \appendix, LaTeX letters the sections (A, B, C, ...) rather than
+    # numbering them. The markdown mirror has to follow, or its headings stop
+    # matching the cross-references the prose uses ("Appendix B.3").
+    in_appendix = False
+    appendix_n = 0
+    sec_label = ""
     in_abstract = False
     in_itemize = False
     in_enumerate = False
@@ -105,6 +112,8 @@ def main():
             continue
         if s.startswith(r"\maketitle"):
             continue
+        if s.startswith(r"\appendix"):
+            flush(); in_appendix = True; continue
 
         if s.startswith(r"\begin{abstract}"):
             flush(); in_abstract = True
@@ -154,17 +163,22 @@ def main():
         if m:
             flush()
             name = convert_inline(m.group(1))
-            if name.startswith("Appendix") or name.startswith("References"):
+            if in_appendix:
+                sec_label = chr(ord("A") + appendix_n)
+                appendix_n += 1; subsection_n = 0; subsubsection_n = 0
+                out.append(f"## Appendix {sec_label}. {name}")
+            elif name.startswith("References"):
                 out.append("## " + name)
             else:
                 section_n += 1; subsection_n = 0
-                out.append(f"## {section_n}. {name}")
+                sec_label = str(section_n)
+                out.append(f"## {sec_label}. {name}")
             out.append(""); continue
 
         m = re.match(r"\\subsection\{(.+)\}\s*$", s)
         if m:
             flush(); subsection_n += 1; subsubsection_n = 0
-            out.append(f"### {section_n}.{subsection_n} " + convert_inline(m.group(1)))
+            out.append(f"### {sec_label}.{subsection_n} " + convert_inline(m.group(1)))
             out.append(""); continue
 
         # Unnumbered subsection (\subsection*{...}) -- used inside the appendix.
@@ -177,7 +191,7 @@ def main():
         m = re.match(r"\\subsubsection\{(.+)\}\s*$", s)
         if m:
             flush(); subsubsection_n += 1
-            out.append(f"#### {section_n}.{subsection_n}.{subsubsection_n} "
+            out.append(f"#### {sec_label}.{subsection_n}.{subsubsection_n} "
                        + convert_inline(m.group(1)))
             out.append(""); continue
 
