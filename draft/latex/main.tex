@@ -19,7 +19,7 @@ Operating Point Rather Than Mechanism}
 % Authors must not appear in the submitted version -- tmlr.sty hides this
 % automatically as long as neither [accepted] nor [preprint] is active.
 \author{\name Anonymous Author \email anonymous@example.com \\
-      \addr Anonymous Institution}
+      \addr Independent Researcher}
 
 \begin{document}
 
@@ -92,7 +92,7 @@ fully label-free calibration that reaches chance exactly at zero separation.
 synthetic harness that produced it, not a transportable severity law, and we
 test this rather than assume it: two further measurements of the same contrast,
 at achieved operating points within $0.003$ AUROC of the synthetic cell, come
-in $14\times$ and $52\times$ above what it predicts. Those two harnesses differ
+in $14\times$ and $38\times$ above what it predicts. Those two harnesses differ
 from the synthetic one in leakage mechanic \emph{and} in harness, which our
 design does not separate, so we report the transport failure without
 attributing it. Both ratios are also divided by a synthetic cell of $+0.00065$
@@ -170,7 +170,7 @@ finding (§5) --- but with a limit an earlier version asserted its way past. We
 previously said it moves severity ``more than any difference we measure between
 mechanisms''; §5.4 now tests that against our own shipped data and it does not
 hold, two real-feature harnesses at achieved operating points within $0.003$
-AUROC of each other exceeding its prediction by $14\times$ and $52\times$. The
+AUROC of each other exceeding its prediction by $14\times$ and $38\times$. The
 operating point is a strong severity modifier \emph{within} a harness --- enough
 to make matching it a precondition for comparing any two severity numbers,
 which is how this paper uses it --- and not a law that transports across
@@ -1261,7 +1261,7 @@ AUROC):
   \texttt{code/57} already ships for the joint grid (bitwise-identical fraction
   $\leq0.50$), read at runtime rather than re-chosen here; on this sweep no cell
   is near it, retained cells sitting at $\leq0.36$ and excluded ones at
-  $\geq0.65$. This is an empirical logarithmic
+  $\geq0.645$. This is an empirical logarithmic
   regularity and \emph{not} a confirmation of the
   $\sigma_{\text{val}}\sqrt{2\ln K}$ extreme-value form --- but neither is it a
     refutation of one, and an earlier version of this paper claimed the latter:
@@ -1612,7 +1612,7 @@ Every reported number comes from a held-out set touched exactly once, with no pr
 \addlinespace
 Your task runs near ceiling (reported AUROC of about $0.98$ or higher). & Still worth asking, but expect small answers and read them carefully: Case Study 4's ceiling-saturated cells give $+0.0042$ against $+0.0157$ on the non-saturated ones. A near-zero severity estimate in this regime is weak evidence that a pipeline is clean. \\
 \addlinespace
-You want a severity \emph{number} for your own pipeline, not a yes/no. & The checklist does not supply one, and §5's surface should not be used as a calculator: §5.4 finds three measurements at achieved operating points within $0.003$ AUROC of each other exceeding its prediction by $14\times$ and $52\times$. Measure it in your own harness against a matched control. \\
+You want a severity \emph{number} for your own pipeline, not a yes/no. & The checklist does not supply one, and §5's surface should not be used as a calculator: §5.4 finds three measurements at achieved operating points within $0.003$ AUROC of each other exceeding its prediction by $14\times$ and $38\times$. Measure it in your own harness against a matched control. \\
 \addlinespace
 You want this run automatically over a corpus. & Not available from this paper. §6.2's regex scanner returned $0$ true positives over $7$ repositories and missed both known bugs, for two causes we diagnose specifically. This is a manual code-reading protocol. \\
 \bottomrule
@@ -3030,7 +3030,7 @@ in the fit & --- & no & no & no & yes & yes & yes & yes & yes & yes \\
 \end{center}
 
 \noindent No cell sits near the threshold: the retained cells are at $0.36$ and
-below, the excluded ones at $0.65$ and above, so the partition does not depend
+below, the excluded ones at $0.645$ and above, so the partition does not depend
 on the exact cutoff. Refitting on the six non-degenerate cells gives
 $a=-0.00042$, $b=0.00110$, $R^2=\mathbf{0.939}$, against the contaminated
 nine-cell fit's $a=-0.00012$, $b=0.00104$, $R^2=0.970$. \textbf{What survives:}
@@ -3284,7 +3284,7 @@ actually is on this data, and the comparison against the sequential split's
 apparent $+0.188$ is what the analysis is for.
 
 
-\medskip\noindent\textbf{The full 32-layer decomposition.} \textbf{Full 32-layer decomposition.} GUARDIAN's raw cache contains the
+\medskip\noindent\textbf{The full 32-layer decomposition.} GUARDIAN's raw cache contains the
 complete (700, 32, 4096) Mistral-7B representations at full dimensionality, not
 just L11 (an earlier version of this section disclosed this as unavailable;
 that was incorrect). \texttt{code/48} repeats the identical CV-vs-held-out
