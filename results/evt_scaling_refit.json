@@ -11,6 +11,36 @@
     135,
     225
   ],
+  "degeneracy_gate": {
+    "threshold_identical_state_dict_frac": 0.5,
+    "threshold_source": "read at runtime from code/57's DEGENERACY_MAX_IDENTICAL_FRAC, which has shipped since the joint-surface correction; not chosen in this script",
+    "identical_state_dict_frac_per_cell": {
+      "1": 1.0,
+      "3": 0.973,
+      "5": 0.9,
+      "10": 0.645,
+      "15": 0.355,
+      "25": 0.06,
+      "45": 0.031,
+      "75": 0.026000000000000002,
+      "135": 0.024000000000000004,
+      "225": 0.02
+    },
+    "K_retained": [
+      15,
+      25,
+      45,
+      75,
+      135,
+      225
+    ],
+    "K_excluded": [
+      3,
+      5,
+      10
+    ],
+    "note": "A cell's identical_state_dict_frac is the fraction of (seed, fold) pairs in which the LEAKY and CLEAN_MATCHED models are BITWISE identical -- i.e. the harness has no contrast to measure there. At small K both selection rules argmax onto the last epoch and CLEAN_MATCHED's retrain reproduces LEAKY's trajectory step for step. Such a cell's near-zero gap is a construction artifact and must not anchor a scaling fit. This gate was applied to code/57's joint grid in an earlier round but not to Sweep A until now."
+  },
   "gaps": [
     0.000856122448979591,
     0.0018816326530612193,
@@ -40,7 +70,7 @@
     "what_EVT_requires": "the sampling-noise SD of K exchangeable candidate estimates around a common mean",
     "consequence": "fit (a) is a test of the wrong quantity; its R^2 is not evidence for or against extreme value theory",
     "verdict": "UNTESTABLE_IN_THIS_HARNESS_AS_INSTRUMENTED",
-    "unaffected": "the empirical log law gap = a + b ln K (R^2 = 0.970) never references sigma and stands as reported"
+    "unaffected": "the empirical log law gap = a + b ln K never references sigma and is untouched by THIS retraction; it is separately corrected by the degeneracy gate, see fits.log_two_parameter_non_degenerate"
   },
   "achieved_operating_point_per_cell": {
     "1": 0.6268938775510204,
@@ -82,7 +112,74 @@
         "a": -0.00012083534794659141,
         "b": 0.0010357814616037957
       },
-      "r_squared": 0.9698561410988517
+      "r_squared": 0.9698561410988517,
+      "n_cells_fit": 9,
+      "K_values_fit": [
+        3,
+        5,
+        10,
+        15,
+        25,
+        45,
+        75,
+        135,
+        225
+      ],
+      "status": "CONTAMINATED -- includes cells in which the LEAKY and CLEAN_MATCHED arms are bitwise identical in most (seed, fold) pairs, so their near-zero gap is a construction artifact. Retained for the record; superseded by log_two_parameter_non_degenerate, which is what the paper quotes.",
+      "gap_range_fit": [
+        0.000856122448979591,
+        0.005221428571428567
+      ],
+      "dynamic_range_max_over_min": 6.098927294398094,
+      "degenerate_cells_included": [
+        3,
+        5,
+        10
+      ]
+    },
+    "log_two_parameter_non_degenerate": {
+      "form": "gap = a + b * ln K, non-degenerate cells only",
+      "params": {
+        "a": -0.00041606478863735123,
+        "b": 0.0011013798577461428
+      },
+      "r_squared": 0.9386138043281315,
+      "n_cells_fit": 6,
+      "K_values_fit": [
+        15,
+        25,
+        45,
+        75,
+        135,
+        225
+      ],
+      "K_values_excluded_as_degenerate": [
+        3,
+        5,
+        10
+      ],
+      "degeneracy_threshold_identical_state_dict_frac": 0.5,
+      "threshold_source": "read from code/57's DEGENERACY_MAX_IDENTICAL_FRAC, not chosen here",
+      "identical_state_dict_frac_per_cell": {
+        "1": 1.0,
+        "3": 0.973,
+        "5": 0.9,
+        "10": 0.645,
+        "15": 0.355,
+        "25": 0.06,
+        "45": 0.031,
+        "75": 0.026000000000000002,
+        "135": 0.024000000000000004,
+        "225": 0.02
+      },
+      "identical_frac_retained_max": 0.355,
+      "identical_frac_excluded_min": 0.645,
+      "gap_range_fit": [
+        0.002262244897959178,
+        0.005221428571428567
+      ],
+      "dynamic_range_max_over_min": 2.3080739738385243,
+      "status": "REPORTED -- this is the fit the paper quotes for the K law."
     },
     "power_law_two_parameter": {
       "form": "gap = a * K^b",

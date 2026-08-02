@@ -156,6 +156,24 @@ degenerate cells' null averages **+0.0179**, above the non-degenerate cells'
 observed +0.0076. Their exact zeros therefore reflect a stable argmax
 defeating the estimator, not an absent selection effect.
 
+**The same null cuts the other way too, and an earlier revision reported only
+the favourable half.** Run on all 24 cells, **0 of the 24 reach p < 0.05**
+against their own null (minimum p = 0.277, median p = 1.000), and the
+non-degenerate cells' own null mean of **+0.0118** likewise sits *above* their
+observed **+0.0076**. This does not disturb the degeneracy result — that is an
+exact algebraic identity and depends on no null — nor the reading of the seven
+exact zeros as artifacts. It does disturb any claim that +0.0076 is
+statistically established: against this null it is not. The null is a hard
+reference by design (shuffling within layers destroys the structure that makes
+an argmax stable, putting the estimator in its maximal-winner's-curse regime),
+so a real but modest effect on a stable argmax is expected to fall below it —
+which is exactly what makes it diagnostic for the degenerate cells and a poor
+significance test for the rest. With 3 seeds per cell no sharper null is
+available from the shipped arrays. +0.0076 is therefore reported as a point
+estimate with a BCa interval, resting on the uniform positivity across all 17
+non-degenerate cells rather than on a p-value against this null. All 24
+per-cell values and p-values are tabulated in `main.tex` Appendix B.6.
+
 A structurally different second estimator — the bootstrap bias of a
 max-of-means, which cannot telescope because its two sides use different seed
 multisets — agrees in sign everywhere and averages +0.0027 over the

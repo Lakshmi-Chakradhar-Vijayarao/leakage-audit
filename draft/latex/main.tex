@@ -28,13 +28,14 @@ Operating Point Rather Than Mechanism}
 
 \begin{abstract}
 
-Choosing a checkpoint, layer, threshold, or hyperparameter using the same
-data --- or a statistic derived from it --- later used to report performance
-inflates the reported metric. We show that this \emph{selection-induced
-optimism} is real and code-verified in hidden-state
-hallucination-detection pipelines; that it is \textbf{small}, every
-code-verified AUROC-scale estimate landing in a band of roughly $0.000$ to
-$0.034$ AUROC once measured against matched controls; and that its size is
+Choosing a checkpoint, layer, threshold, or hyperparameter on the same data
+--- or a statistic derived from it --- that is later used to report
+performance biases the reported metric, and in every case we measure the bias
+is optimistic. We show that this \emph{selection-induced optimism} is real and
+code-verified in hidden-state hallucination-detection pipelines; that it is
+\textbf{small}, every code-verified AUROC-scale estimate landing between
+$+0.0011$ and $+0.0255$ AUROC once measured against matched controls (with
+one mechanism exactly zero on AUROC by construction); and that its size is
 governed not by \emph{which} mechanism is responsible but by two continuous
 quantities --- how many candidates were selected among ($K$), and the
 operating point the pipeline runs at. \textbf{Contrary to an earlier framing
@@ -53,9 +54,11 @@ guardrail --- their severities are: $+0.0255$ (SD $0.0186$, $50$ randomized
 splits) for CV-based layer selection; $+0.0011$ to $+0.0036$ for per-fold
 checkpoint selection on the primary synthetic sweep, rising to $+0.0084$ once
 a downstream feature-averaging step that attenuates it is removed, and to
-$+0.034$ on real features once the audited trainer's full optimizer schedule
-is ported; $+0.0076$ (BCa 95\% CI $[+0.0048,+0.0134]$, over the 17 of 24
-published result files on which the estimator is non-degenerate) for
+$+0.0250$ on real features once the audited trainer's full optimizer schedule
+is ported and its control is budget-matched; $+0.0076$ (BCa 95\% CI
+$[+0.0048,+0.0134]$, over the 17 of 24
+published result files on which the estimator is non-degenerate, and not
+significant against a per-layer-shuffle permutation null in any of the 24) for
 test-set-driven best-layer selection; and exactly zero for test-set threshold
 selection, which is threshold-free-metric-invariant by construction while
 inflating F1 and accuracy by $+0.021$ to $+0.034$ ($p<10^{-31}$) at a
@@ -64,15 +67,21 @@ $n_{\text{test}}=2000$, since it is a winner's curse over a finite-sample
 criterion.
 
 Holding the mechanism fixed, inflation grows with the number of candidates
-selected among (well fit by $a+b\ln K$, $R^2=0.970$, within a fixed operating
+selected among (well fit by $a+b\ln K$, $R^2=0.939$, within a fixed operating
 point) and falls sharply with the operating point --- by a factor of
-$48.6\times$, from $+0.0093$ at AUROC$_0=0.70$ to $+0.0002$ at $0.985$.
+$48.6\times$, from $+0.0093$ at AUROC$_0=0.70$ to $+0.0002$ at $0.985$, though
+that ratio's denominator is itself not significantly different from zero
+($p=0.219$), so the decline is better read as ``to the floor'' than as a
+calibrated $48.6$.
 Fitting both axes at once on a purpose-built $K\times$AUROC$_0$ factorial
 qualifies the first: $\ln K$ alone explains only $R^2=0.038$ across that
 grid, so the logarithmic law holds \emph{within} a fixed operating point
 rather than in general, while the surface as a whole is well described by a
 \emph{separable} multiplicative empirical fit, $\text{gap}\propto
-K^{0.17}e^{-2.97\,\Phi^{-1}(\text{AUROC}_0)}$ ($R^2=0.976$). While deriving
+K^{b}e^{-2.97\,\Phi^{-1}(\text{AUROC}_0)}$ ($R^2=0.976$), whose candidate-count
+exponent is the least stable coefficient in the fit and is quoted as the range
+$b=0.09$ to $0.21$ it spans under single-column deletion rather than as a
+point. While deriving
 these estimates we twice found our own measurement instrument committing the
 very pattern this paper audits for --- first a full-dataset calibration
 transform evaluated across the split it was fit on, then a residual
@@ -81,10 +90,15 @@ fully label-free calibration that reaches chance exactly at zero separation.
 
 \textbf{What we do not claim.} The $48.6\times$ decline is a property of the
 synthetic harness that produced it, not a transportable severity law, and we
-test this rather than assume it: three measurements of the same contrast at
-achieved operating points within $0.003$ AUROC of each other differ by
-$14\times$ and $52\times$ from what it predicts, because they differ in
-harness and in leakage mechanic. What survives is the weaker,
+test this rather than assume it: two further measurements of the same contrast,
+at achieved operating points within $0.003$ AUROC of the synthetic cell, come
+in $14\times$ and $52\times$ above what it predicts. Those two harnesses differ
+from the synthetic one in leakage mechanic \emph{and} in harness, which our
+design does not separate, so we report the transport failure without
+attributing it. Both ratios are also divided by a synthetic cell of $+0.00065$
+whose own gap is not distinguishable from zero, so their magnitudes should be
+read as ``far outside prediction,'' not as calibrated multiples. What survives
+is the weaker,
 methodologically load-bearing claim --- the operating point is a strong
 severity modifier \emph{within} a harness, so two severity numbers are not
 comparable until it is matched --- which still explains why several estimates
@@ -142,10 +156,13 @@ guardrail --- then produced the result this paper is organized around, and it
 is not the one an earlier version of this work reported. That version argued
 severity ``differs sharply by mechanism, not by pipeline.'' We no longer
 believe that. Every mechanism here with a code-verified AUROC-scale severity
-estimate produces inflation in a narrow band of roughly $0.000$ to $0.034$
-AUROC. What severity \emph{does} track, strongly and mechanism-independently,
-is two continuous quantities: the number of candidates selected among, and the
-operating point the pipeline runs at. Holding the mechanism fixed and varying
+estimate produces inflation between $+0.0011$ and $+0.0255$ AUROC, with a
+fifth mechanism exactly zero on AUROC by construction. What severity
+\emph{does} track, strongly and across every mechanism we could vary it
+within, is two continuous quantities: the number of candidates selected among,
+and the operating point the pipeline runs at. (We ran no matched head-to-head
+across all five mechanisms at a common $(K,\text{AUROC}_0)$, so this is not a
+claim that mechanism identity explains no residual variance.) Holding the mechanism fixed and varying
 only the task's calibrated difficulty moves the inflation by a factor of
 $48.6\times$ --- from $+0.0093$ at AUROC$_0=0.70$ to $+0.0002$ at $0.985$. That
 relationship, previously buried in an appendix, is promoted here to a headline
@@ -167,7 +184,7 @@ harnesses or mechanisms.
    methodology sections.
 \item \textbf{The severity relationship:} evidence that inflation in this
    setting is governed by candidate count ($\text{gap}=a+b\ln K$,
-   $R^2=0.970$ at a fixed operating point) and, far more strongly, by
+   $R^2=0.939$ at a fixed operating point) and, far more strongly, by
    operating point (a $48.6\times$ decline from AUROC$_0=0.70$ to $0.985$
    \emph{within the harness that measures it}), rather than by which of the
    five mechanisms is responsible (§5) --- plus a $K\times$AUROC$_0$
@@ -176,7 +193,7 @@ harnesses or mechanisms.
    within-operating-point scope. §5 bounds both claims: the operating-point
    relationship does not transport to this paper's own real-feature harnesses
    at a matched operating point (they exceed its prediction by
-   $14$--$52\times$), and a previously-reported interaction between the two
+   $14$--$38\times$), and a previously-reported interaction between the two
    axes is withdrawn as an artifact of a degenerate corner of the grid.
 \item A quantified CV-based layer-selection optimism bias in one of our
    own pipelines (GUARDIAN), including a full 32-layer decomposition and
@@ -227,7 +244,7 @@ their measured severities; §5 is the paper's central result, what actually
 governs those severities and the limits of that finding; §6 gives the checklist
 and a negative automation result, with §6.1 stating when that checklist applies
 and when it does not; §7 discusses limitations and §8 broader impact. Four appendices
-hold the supporting derivations: A, the fourteen-step correction history and
+hold the supporting derivations: A, the sixteen-step correction history and
 robustness checks behind §4.3; B, extended detail for Case Studies 2 and 4 and
 Mechanism 5; C, the severity surface; D, the checklist benchmarking and the
 scanner. Every headline number is stated in the main text and none of the
@@ -241,10 +258,16 @@ the estimation process.} This is sharpened from the looser
 ``evaluation-target information influencing a reported metric'' an earlier
 version of this paper used, because two properties are load-bearing and this
 paper's own results violate the looser reading. First, the change is
-\emph{signed}: it may be inflationary or deflationary, and in a given finite
-realization either sign can appear --- the anisotropic sweep's capacity-384
-CLEAN\_MATCHED-minus-PLACEBO cell (§4.3) is negative, which a definition that
-presumes inflation cannot accommodate. Second, the change is
+\emph{signed}. The definition is about a change in an \emph{expectation}, and
+we do not claim to have observed a leak whose expected effect is deflationary:
+every mechanism measured here comes out positive in expectation. What we do
+observe is that finite realizations of these contrasts take either sign --- the
+anisotropic sweep's capacity-384 CLEAN\_MATCHED-minus-PLACEBO cell (§4.3) is
+negative --- and, more to the point, that nothing in the mechanism guarantees
+the sign a priori: which of two selection procedures wins on a given draw is an
+empirical question. A definition that builds ``inflates'' in makes that
+question unaskable and would license reading any negative measurement as
+measurement error. Second, the change is
 \emph{metric-relative}: leakage is a property of a (mechanism, metric) pair,
 not of a pipeline, so the same leak can move one reported metric while
 leaving another provably invariant --- Mechanism 5 (§4.5) selects a decision
@@ -256,11 +279,24 @@ is therefore reported as a signed change in a named metric.
 Leakage in this general sense is well documented in data mining (Kaufman et
 al. 2012) and in model-selection statistics: cross-validation-based
 hyperparameter or feature selection is optimistic unless nested inside the
-outer evaluation loop (Varma \& Simon 2006). Case Studies 2 and 4 are direct
-instances of this general phenomenon in hidden-state probing; Case Studies 1
-and 3 are more specific to the two-stage
+outer evaluation loop (Varma \& Simon 2006). \textbf{The canonical treatment of
+Mechanism 2 is Cawley \& Talbot (2010)}, who establish that over-fitting the
+model-selection criterion itself induces a selection bias in the reported
+performance estimate, that the bias grows with the number of candidates
+compared, and that unbiased evaluation requires the selection to be nested
+inside the outer resampling loop. That is precisely Mechanism 2's failure mode,
+and this paper claims no novelty for the mechanism itself: \textbf{Mechanism 2
+is a specific instance of a known failure mode.} What is added here is narrower
+and is stated as such --- the selected object is a \emph{layer index of a frozen
+pretrained network}, and in this literature that index is reported not only as a
+performance figure but as a substantive claim about \emph{where} in the network
+the signal is decodable. The selection bias therefore contaminates a
+localization claim, not only a number; Case Study 2 measures this directly, and
+finds the argmax layer itself moves with the selection rule (L11 under
+train-split CV, L19 under all-data AUROC). Case Studies 2 and 4 are otherwise
+direct instances of the general phenomenon in hidden-state probing; Case Studies
+1 and 3 are more specific to the two-stage
 feature-extraction-then-classification structure common in this literature.
-To our knowledge, no prior work names this as a distinct pattern here.
 
 \textbf{Existing leakage taxonomies and checklists.} The closest prior art is
 Kapoor \& Narayanan (2023), who survey leakage across 17 scientific fields and
@@ -272,15 +308,18 @@ the reported metric; Mechanism 1 is an instance of L1.2, generalized from a
 preprocessing statistic to an entire fitted feature-extraction model; Mechanism
 3 is a narrower-bandwidth variant of the same pattern; and all three REFORMS
 leakage questions are subsumed by the taxonomy here. Mechanism 2 (CV-based
-layer/hyperparameter selection optimism, i.e.\ Varma \& Simon's problem) maps
-cleanly onto neither instrument, because both treat train/test separation and
-feature legitimacy as the leakage surface rather than iterative model selection
-against a validation signal --- which is consistent with this paper's claim
-that hidden-state probing's two-stage structure surfaces at least one leakage
-pattern general cross-field taxonomies do not yet enumerate by name. The
+layer/hyperparameter selection optimism --- Varma \& Simon's problem, treated
+canonically by Cawley \& Talbot 2010) maps cleanly onto neither instrument,
+because both treat train/test separation and feature legitimacy as the leakage
+surface rather than iterative model selection against a validation signal. The
+claim we draw from this is only about the \emph{taxonomies}, not about the
+mechanism: a well-established model-selection failure mode is absent from the
+two leakage checklists this literature is most likely to reach for. It is not a
+claim that the failure mode is new; the model-selection literature has described
+it for fifteen years. The
 NeurIPS ML Reproducibility Checklist (Pineau et al.\ 2021) is
 reporting-practice-oriented rather than leakage-specific and would not, on its
-own, have caught any of the fourteen issues Appendix A documents in this
+own, have caught any of the sixteen issues Appendix A documents in this
 paper's own instrument: the two kinds of checklist are complementary, not
 interchangeable, and a paper can satisfy the former while still committing the
 latter. Appendix D.1 gives the item-by-item comparison, including a mapping an
@@ -382,7 +421,14 @@ identifying which it is.
   gap}. Mean AUROC of LEAKY minus CLEAN\_MATCHED over $n=100$ seeds, in a
   harness whose Bayes-optimal operating point is fixed by construction via the
   binormal identity (AUROC$_0=0.80$ unless stated), with both arms budget- and
-  seed-matched and the operating point identical in every cell compared. Used
+  seed-matched and the \emph{target} operating point identical in every cell
+  compared. The \emph{achieved} operating point is not identical --- it varies
+  across capacities (LEAKY $0.7478$--$0.7633$ in the primary table) and, at the
+  same target, across generative processes (the anisotropic sweep lands at
+  $0.672$--$0.681$ where the isotropic one lands at $0.753$--$0.765$). Since
+  §5's central finding is that the achieved operating point governs severity,
+  that residual matters and is the reason §4.3 declines the
+  synthetic-versus-real magnitude comparison. Used
   in §4.3 and in every cell of §5's sweeps.
 \item $\Delta_{\text{real}}$ --- the \textbf{real-feature gap}. The same
   LEAKY-minus-CLEAN\_MATCHED difference, measured on real
@@ -407,9 +453,11 @@ identifying which it is.
 \end{itemize}
 
 All four are differences of AUROC values, so they share \emph{units} but not a
-\emph{reference}. When this paper says severities ``cluster'' in a band of
-roughly $0.000$ to $0.034$ (§5, Conclusion), that describes the numerical range
-these quantities occupy, explicitly \emph{not} a claim that they are
+\emph{reference}. When this paper says severities ``cluster'' between
+$+0.0011$ and $+0.0255$ (§5, Conclusion), that describes the numerical range
+the \emph{measured} quantities occupy --- Mechanism 5's exact zero on AUROC is
+an algebraic property of a threshold-free metric, not a measurement, and is
+reported as such rather than counted as the low end of an empirical spread --- explicitly \emph{not} a claim that they are
 interchangeable measurements of one underlying scale: Mechanism 5's F1 and
 accuracy gaps are on a different metric entirely and are never placed in that
 band, and because §5 shows the gap falls by $48.6\times$ across the
@@ -452,6 +500,18 @@ only that fold's training indices, scoring only the held-out indices.
 GUARDIAN selects its detection layer -- L11 of 32, on Mistral-7B -- by
 argmax of a 5-fold cross-validated AUROC across all layers, then reports
 that same CV number as the model's performance.
+
+This is the failure mode Cawley \& Talbot (2010) analyze: over-fitting the
+model-selection criterion, then reporting the criterion's own value as
+performance. We claim no novelty for the mechanism, and their account already
+predicts both the sign of the bias and its growth with the number of candidates
+compared --- 32 here. Two things are added, and only these two. First, the
+selected object is a layer index of a frozen pretrained network, which this
+literature reports as a scientific finding about \emph{where} hallucination is
+decodable; the bias therefore contaminates a localization claim as well as a
+performance number, and we show the argmax layer itself is unstable under a
+change of selection rule (below). Second, we quantify the bias in situ on a
+published pipeline at its own operating point, rather than in the abstract.
 
 \textbf{Quantified effect.} CV-selection AUROC at L11: 0.804. True held-out
 AUROC at L11 (trained on the first 400 samples, tested on a separate,
@@ -500,12 +560,18 @@ stable property of the selection procedure. Recomputing under randomized
 stratified $400/300$ splits, each rep evaluated at its own selected layer,
 gives $\Delta_{\text{sel}}=+0.0255$ (SD $0.0186$; one-sample $t=9.71$;
 Wilcoxon $p=7.7\times10^{-12}$) --- small but, for the first time, correctly
-measured and distinguishable from zero, about $7\times$ smaller than the
-sequential split's apparent $+0.188$. The \emph{general} CV-vs-held-out gap
+measured and distinguishable from zero. The retracted $+0.188$ was
+$7\times$ larger, but the two are not the same estimand and we do not treat
+that ratio as meaningful: $+0.188$ is a raw CV-vs-held-out gap and
+$\Delta_{\text{sel}}$ is the selection-specific component of one, so the
+comparison shows how much of the original headline was \emph{not} selection
+optimism, not that selection optimism shrank sevenfold. The \emph{general} CV-vs-held-out gap
 averaged across all 32 layers, by contrast, is $+0.192$ under the sequential
 split but only $-0.0023$ (SD $0.0541$, $t=-0.30$, $p=0.76$) under the same
 randomized splits --- indistinguishable from zero. Appendix B.2 gives the
-per-rep selected layers, which span 14 distinct layers from L5 to L23.
+per-rep selected-layer distribution and the per-rep quantiles of
+$\Delta_{\text{sel}}$; the layers span 14 distinct values from L5 to L23, and
+GUARDIAN's own L11 is selected in only 2 of the 50 reps.
 
 \textbf{What that $p$-value does and does not mean.} All $50$ reps resample
 splits of the \emph{same} $700$ samples, so the SD is split-to-split
@@ -535,14 +601,15 @@ population-difference confound -- under a proper random partition there is
 no general CV-vs-held-out optimism in this setup at all. What survives is
 narrower but genuine: a small ($+0.0255$), consistently positive,
 specifically selection-attributable penalty from CV-based argmax-over-layers
-selection, about $7\times$ smaller than GUARDIAN's original headline number and
-now isolated from the artifact that previously made the two impossible to tell
-apart (\texttt{results/case\_study\_2\_layer\_decomposition.json}).
+selection, now isolated from the population-difference artifact that
+previously made it impossible to tell apart from GUARDIAN's original
+$+0.188$ headline (a raw gap, not a selection-specific one; §4.2 explains why
+we do not report their ratio) (\texttt{results/case\_study\_2\_layer\_decomposition.json}).
 
 \subsection{Case Study 3: per-fold checkpoint-selection leakage (MultiHaluDet) --- $\Delta_{\text{synth}}=+0.0011$ to $+0.0036$ AUROC on the primary synthetic sweep}
 
 [See \texttt{draft/case\_study\_multihaludet.md} for full code excerpts. Appendix A
-documents the fourteen-step correction history and the additional
+documents the sixteen-step correction history and the additional
 robustness checks behind this section's numbers; §4.3 states the result
 directly and nothing in Appendix A is required to verify it.]
 
@@ -631,16 +698,30 @@ significance labels (Appendix A.2).
 \subsubsection{Alternative explanations, tested directly}
 
 \textbf{Is it ``having adaptive checkpoint selection at all,'' rather than fold
-reuse?} A fifth condition with the full training budget and the identical
-\emph{ongoing} adaptive selection LEAKY uses, but selecting against a disjoint
-carve-out (\texttt{code/22}), does not approach LEAKY: at capacity 128 LEAKY
-beats it by $+0.0198$ ($p<0.0001$), \emph{larger} than the original
-LEAKY$-$CLEAN\_MATCHED gap rather than smaller, and the pattern holds at 384
-($+0.0143$, $p<0.0001$). The alternative is directionally unsupported --- but
-this control retains only $37.3\%$ and $25.7\%$ of honest selection's
-placebo-relative benefit at those two capacities, and selects against a
-carve-out $1.67\times$ smaller than LEAKY's fold, so we do not treat it as
-having ruled the alternative out (Appendix A.3).
+reuse?} A fifth condition, CLEAN\_MATCHED\_ADAPTIVE, runs the identical
+\emph{ongoing} adaptive checkpoint selection LEAKY uses but drives it from a
+carve-out disjoint from the reused fold, and --- crucially --- \emph{disjoint
+from its own training set} (\texttt{code/22}; it trains on the complement
+\texttt{tr2\_idx}, mirroring \texttt{code/43}'s construction). An earlier
+version of this control trained on the full \texttt{tr\_idx} while selecting on
+a subset of it, so its ``held-out'' selection signal was in-sample; that version
+simply ran to the end of the epoch budget (mean kept checkpoint $39.4$ of $45$,
+against $20.8$--$21.4$ for the honest arms) and could not test the alternative
+at all. Its numbers are retracted and reported only as evidence of the defect
+(Appendix A.3).
+
+Rebuilt correctly, the control is strong: it recovers $94.2\%$ of honest
+checkpoint selection's placebo-relative benefit at capacity 128 and $79.9\%$ at
+384, so it does hold the adaptive-selection mechanism essentially fixed. LEAKY
+still beats it, at both capacities and more decisively than it beats the blind
+CLEAN\_MATCHED control: $+0.0049$ ($p=0.0008$) at 128 and $+0.0059$ ($p=0.0012$)
+at 384, against $+0.0034$ and $+0.0027$ respectively. \textbf{This is direct
+evidence that the effect is fold reuse specifically, not adaptive selection in
+general} --- a conclusion the previous version of this control was not entitled
+to draw. Two disclosed confounds remain, both of which cut against the control
+rather than for it: it trains on $85\%$ of LEAKY's data (the
+\texttt{ES\_HOLD\_FRACTION}$=0.15$ carve-out), and it selects against a
+$67$-sample carve-out versus LEAKY's $112$-sample fold (Appendix A.3).
 
 \textbf{Is the measured severity small only because the pipeline averages it
 away?} The harness --- like MultiHaluDet's own \texttt{run\_pipeline.py:108}
@@ -655,7 +736,10 @@ it significant at all four rather than two. We keep both readings: the averaged
 number is the correct estimate of inflation in what the audited pipeline
 actually reports, so the table above stands as this paper's primary estimate,
 while the un-averaged number is the correct estimate of the mechanism's
-severity at its source, about $3\times$ larger. The honest summary is therefore
+severity at its source, larger at every capacity by the
+$2.3$--$5.8\times$ quoted above (mean $3.9\times$, median $3.7\times$; we quote
+the range rather than a central value because the four capacities disagree
+by more than a factor of two). The honest summary is therefore
 narrower than ``this mechanism is small'': it is small \emph{as reported},
 partly because a downstream ensembling step attenuates it, and a pipeline with
 the same leak but without that step should be expected to show more
@@ -757,33 +841,83 @@ Everything above ports only MultiHaluDet's final ``keep the best-val-AUROC
 checkpoint'' decision. Its real trainer also steps a \texttt{ReduceLROnPlateau}
 scheduler on that same fold's AUROC every epoch and ties early stopping to the
 same signal --- a continuous reactive coupling, not a single argmax. Porting
-that mechanic in, with a control that keeps the same scheduler and
-early-stopping mechanic but feeds it a genuinely disjoint carve-out
-(\texttt{code/49}), gives LEAKY beating that control by
-$\Delta_{\text{real}}=+0.0338$ (BCa 95\% CI $[+0.0279,+0.0405]$, Wilcoxon
-$p=6.2\times10^{-15}$, permutation $p<0.0001$, $n=100$ seeds, capacity 128) ---
-about $3.6\times$ the checkpoint-selection-only harness's $+0.0093$ on the same
-features under the same calibration, at an operating point that now matches it
-closely (LEAKY mean $0.9424$ versus $0.9403$).
+that mechanic in (\texttt{code/49}) gives
+$\Delta_{\text{real}}=\mathbf{+0.0250}$ (BCa 95\% CI $[+0.0192,+0.0314]$,
+Wilcoxon $p=1.5\times10^{-11}$, permutation $p<0.0001$, $n=100$ seeds, capacity
+128), against a control that keeps the same scheduler and early-stopping
+mechanic, is fed a genuinely disjoint carve-out, and is matched to LEAKY's
+training budget. The operating points match closely (LEAKY mean $0.9424$
+versus the checkpoint-only harness's $0.9403$).
 
-\textbf{Two scope limits on this number.} \emph{(i)} The two arms differ in
+\textbf{A previously-reported version of this number, and why it was too large.}
+An earlier revision reported $+0.0338$ here, and quoted it as $3.6\times$ the
+checkpoint-selection-only harness's $+0.0093$, attributing the increase to the
+continuity of the coupling. An independent review found that attribution
+unsupported, and it does not survive two controls added in response.
+
+\emph{(a) The control was not budget-matched, and most of the increase was the
+control falling rather than the leak rising.} \texttt{code/43}'s CLEAN\_MATCHED
+retrains on the full \texttt{tr\_idx}; this harness's control trained on
+\texttt{tr2\_idx}, $\approx$$85\%$ of it. Arm by arm between the two harnesses,
+LEAKY moves only $+0.0022$ while the control moves $-0.0224$ and the placebo
+$-0.0284$. Matching the budget (retraining on the full \texttt{tr\_idx} while
+replaying the disjoint-carve-out run's own per-epoch learning-rate trajectory,
+so the control keeps an adaptive schedule rather than reverting to a constant
+one) recovers $+0.0089$ of that and gives the $+0.0250$ above. The residual
+control movement of $-0.0135$ is a property of the harness change --- optimizer,
+batching, scaler, learning rate --- not of the leak.
+
+\emph{(b) The isolating control refutes the coupling-continuity attribution
+outright.} Comparing across two harnesses could never isolate coupling, because
+those harnesses differ in four other things. The within-harness test is an arm
+with this script's repo-faithful optimizer and data pipeline, reusing the same
+validation fold, but with \emph{only} a final-checkpoint argmax --- no
+\texttt{ReduceLROnPlateau}, no early stopping. Adding continuous coupling on top
+of that argmax \textbf{lowers} the leaky arm's AUROC, by $-0.0159$ (BCa 95\% CI
+$[-0.0209,-0.0124]$, Wilcoxon $p=2.8\times10^{-13}$): $0.9424$ with the
+scheduler and early stopping against $0.9583$ with the argmax alone. The
+mechanism is visible in the kept-checkpoint depth --- early stopping at the
+repo's \texttt{patience}$=15$ truncates the leaky arm to a mean epoch of
+$29.14$ where the argmax-only arm reaches $40.73$. \textbf{We therefore retract
+the claim that coupling continuity is what raises this number.} As the audited
+trainer implements it, continuous coupling does not add severity over a one-shot
+argmax within this harness; it subtracts, by undertraining the arm. The
+$+0.0250$ remains a valid severity estimate \emph{for this harness} --- both its
+arms have the ported optimizer and an adaptive schedule, and differ only in
+which fold drives it --- but the like-for-like ratio against the
+checkpoint-selection-only harness, now $2.7\times$ rather than $3.6\times$, is a
+statement about two harnesses, not about coupling.
+
+\textbf{A sanity check we now run on every severity estimate.}
+$(\text{LEAKY}-\text{CLEAN\_MATCHED})/(\text{CLEAN\_MATCHED}-\text{PLACEBO})$
+should be a fraction: the placebo has adaptive selection driven by pure noise,
+so the denominator is what an honest signal is worth and the numerator is what
+reusing the fold adds on top. Across this paper's other eight harness/capacity
+cells that ratio spans $0.06$--$0.85$. The superseded, non-budget-matched
+control put this harness at $\mathbf{1.60}$ --- outside that band, which is
+itself the signature of a degraded control. The budget-matched control puts it
+at $\mathbf{0.83}$, inside the band and next to \texttt{code/43}'s own $0.85$ at
+capacity 384.
+
+\textbf{Two remaining scope limits.} \emph{(i)} The two arms still differ in
 training depth as well as in validation signal --- LEAKY's kept checkpoint sits
 at a mean epoch of $\mathbf{29.14}$ against the control's $\mathbf{19.75}$,
-$+47.6\%$ (Wilcoxon $p=7.2\times10^{-13}$), with the placebo arm stopping
-earliest at $7.95$. We report rather than equalize this, because that depth is
-chosen by the same signal and choosing when to stop \emph{is} the leaked
-decision this extension models; but the arms are not matched on it.
+$+47.6\%$ (Wilcoxon $p=7.2\times10^{-13}$), with the placebo stopping earliest
+at $7.95$. We report rather than equalize this, because that depth is chosen by
+the same signal and choosing when to stop \emph{is} the leaked decision this
+extension models; but the arms are not matched on it.
 \emph{(ii)} ``Fidelity'' here means fidelity of the validation-signal coupling
 and the optimizer schedule, not of the loss or the model: a review found this
 extension silently differed from the audited trainer on most of its optimizer
 and data-pipeline settings, which are now ported and verified against the
 pinned commit, while the weight EMA, the composite objective, the class
 rebalancing and augmentation, and the model class itself remain unported. So
-this estimates how much continuous scheduler and early-stopping coupling adds
-over a final-checkpoint argmax \emph{within this paper's own harness}, not
-MultiHaluDet's own reported number's inflation. Appendix A.8 gives the
+this estimates a fold-reuse severity \emph{within this paper's own harness} at
+that harness's operating point, not MultiHaluDet's own reported number's
+inflation. It is also the one severity estimate in this paper measured at a
+single capacity; §6 names that as a limitation. Appendix A.8 gives the
 exhaustive ported/not-ported list and the $2\times2$ ablation separating this
-extension's two most recent corrections.
+extension's earlier corrections.
 
 \subsubsection{A pre-registered decision rule, and the bottom line}
 
@@ -805,7 +939,8 @@ with real anisotropic covariance and under a leak-free real-feature harness
 ($+0.0077$ to $+0.0093$ AUROC at that harness's own $\approx0.94$-$0.95$
 operating point, which is not comparable in magnitude to the synthetic sweep's
 $0.80$). Of the two alternative explanations tested, ``any adaptive selection
-helps'' is not supported, though the control testing it is underpowered; and
+helps'' is rejected by a control that retains $94.2\%$ of honest selection's
+placebo-relative benefit and is still beaten by LEAKY ($p=0.0008$); and
 cross-model feature averaging \emph{is} attenuating the measured number, by
 $2.3$--$5.8\times$. None of this settles MultiHaluDet's own 98.55\% AUROC's
 exact inflation: their real architecture (6 transformer layers, multi-scale,
@@ -848,7 +983,8 @@ three rotations, is the winner's-curse estimate.
 report around that rather than through it.} Whenever all three rotations select
 the same layer the rotation estimate is pinned to exactly zero \emph{for any
 data}: the per-rotation values are $1.5\times$ the held-out seed's deviation
-from the seed mean, pure noise that sums to zero by construction. In those
+from the seed mean, and those three deviations sum to zero as an algebraic
+identity, whatever the data. In those
 cells the estimator is not measuring a small effect; it is measuring nothing.
 \texttt{code/45} therefore detects and declares degeneracy per cell, reports
 the headline over the $17$ non-degenerate cells only with the $7$ degenerate
@@ -862,16 +998,40 @@ degenerate cells fall in the non-saturated subgroup, the subgroup §5 leans on
 
 \textbf{The corrected numbers.} Over the $17$ non-degenerate cells,
 $\Delta_{\text{wc}}=+0.0076$ AUROC (BCa 95\% CI $[+0.0048,+0.0134]$, Wilcoxon
-$p=1.5\times10^{-5}$; max $+0.0347$). The $7$ degenerate cells are excluded and
-are exactly $0.0000$ by construction; their permutation null averages
-$+0.0179$, i.e.\ \emph{above} the non-degenerate cells' observed mean --- so
-those exact zeros reflect a stable argmax defeating the estimator, not an
+$p=1.5\times10^{-5}$), with all $17$ positive, $3$ of them above $+0.01$, and a
+maximum of $+0.0347$; dropping that largest cell gives $+0.0059$. All $24$
+per-cell values are in Table~\ref{tab:cs4-cells}. The $7$ degenerate cells are
+excluded and are exactly $0.0000$ by construction; their permutation null
+averages $+0.0179$, i.e.\ \emph{above} the non-degenerate cells' observed mean
+--- so those exact zeros reflect a stable argmax defeating the estimator, not an
 absent selection effect. The contaminated all-24-cell mean is $+0.0054$ (CI
 $[+0.0031,+0.0101]$, $p=0.00029$), which we retain only for continuity with
 the previous revision and label as contaminated wherever it appears. The
-bootstrap max-bias cross-check agrees in sign everywhere and averages
-$+0.0027$ over the non-degenerate cells, smaller than the rotation estimate as
-expected at three seeds.
+bootstrap max-bias cross-check agrees in sign on every cell but is $2.8\times$
+smaller in magnitude, averaging $+0.0027$ over the non-degenerate cells; at
+three seeds we treat the agreement in sign as the informative part and do not
+claim the two estimators agree in size.
+
+\textbf{The same permutation null cuts against us too, and we report that.}
+The null quoted above for the degenerate cells is favourable to our reading.
+Run on \emph{all} $24$ cells it is not: \textbf{no cell reaches $p<0.05$
+against its own null --- $0$ of the $24$} (minimum $p=0.277$, median
+$p=1.000$), and the
+non-degenerate cells' own null mean of $+0.0118$ likewise sits \emph{above}
+their observed $+0.0076$. A previous revision reported only the favourable
+half. This does not disturb the degeneracy result, which is an exact algebraic
+identity and depends on no null, nor the reading of the seven exact zeros as
+artifacts. What it does disturb is any claim that $+0.0076$ is
+\emph{statistically established}: against this null it is not. The null is a
+hard reference by design --- shuffling within layers destroys the structure
+that makes an argmax stable, putting the estimator in its
+maximal-winner's-curse regime --- so a real but modest effect on a stable
+argmax is expected to sit below it, which is what makes it diagnostic for the
+degenerate cells and a poor significance test elsewhere. With three seeds per
+cell no sharper null is available from the shipped arrays. We therefore report
+$+0.0076$ as a point estimate with an interval, resting on the uniform
+positivity across $17$ independently-published files rather than on a
+$p$-value against this null (Appendix~\ref{sec:cs4-percell}).
 
 \textbf{Excluding the degenerate cells is itself a selection, and we state which
 way it cuts.} A cell is degenerate exactly when its argmax is stable across all
@@ -1057,11 +1217,22 @@ estimator is non-degenerate ($+0.0157$ on the non-saturated, non-degenerate
 five; §4.4). Mechanism 5's effect on AUROC is exactly zero by construction,
 while its effect on the threshold-dependent metrics the same pipeline reports
 is $+0.021$ to $+0.034$ in F1 at $n_{\text{test}}=140$ (and about a third of
-that at $n_{\text{test}}=2000$; §4.5). That is a spread of roughly $0.000$ to
-$0.034$ AUROC across four structurally unrelated leakage surfaces in two
+that at $n_{\text{test}}=2000$; §4.5). That is a spread of $+0.0011$ to
+$+0.0255$ AUROC across four structurally unrelated leakage surfaces in two
 independent published pipelines --- all small, and none separated from the
 others by anything like the margin an ``it depends which leak you have''
 framing would need.
+
+\textbf{A caveat on the word ``narrow,'' since this paper elsewhere calls a
+$48.6\times$ ratio large.} On a ratio scale $+0.0011$ to $+0.0255$ is a
+$23\times$ span, which is not narrow. The claim being made is on the
+\emph{absolute} scale that matters for the practical question --- whether a
+reader should expect a leak of this kind to move a reported AUROC by hundredths
+or by tenths --- and the answer is hundredths in every case we measured. Where
+this paper uses ratios (§5.3, §5.4) it is comparing one quantity to itself
+under a controlled change, which is a different question. We flag the two
+scales explicitly because an earlier revision moved between them without
+saying so.
 
 \subsection{Two continuous quantities move severity far more than mechanism identity does}
 
@@ -1072,8 +1243,25 @@ AUROC):
 
 \begin{itemize}
 \item \textbf{Candidate count.} Sweeping $K\in\{1,\ldots,225\}$ moves the
-  gap monotonically from $+0.0000$ to $+0.0052$, well described by
-  $\text{gap}=a+b\ln K$ ($R^2=0.970$). This is an empirical logarithmic
+  gap monotonically from $+0.0000$ to $+0.0052$. \textbf{The fit is taken over
+  the non-degenerate cells only} ($K\geq15$): at $K=1$, $3$, $5$ and $10$ the
+  LEAKY and CLEAN\_MATCHED models come out bitwise identical in
+  $100\%$/$97\%$/$90\%$/$65\%$ of (seed, fold) pairs, because too few epochs
+  elapse for the two selection rules to land on different epochs, so those
+  cells' near-zero gaps are a construction artifact rather than a measurement.
+  On the six surviving cells $\text{gap}=a+b\ln K$ gives $a=-0.00042$,
+  $b=0.00110$, $R^2=\mathbf{0.939}$. \emph{An earlier revision fit all nine
+  $K>1$ cells and reported $R^2=0.970$ with $b=0.00104$; that fit is now
+  labelled contaminated wherever it appears.} The slope is essentially
+  unchanged ($+6\%$), which is why the law stands --- but the apparent dynamic
+  range is not: over the fitted cells the gap spans $2.31\times$
+  ($+0.00226$ to $+0.00522$), against the $6.10\times$ the contaminated fit
+  showed, so most of the range the original headline displayed was supplied by
+  cells with no contrast to measure. The gate used is the one
+  \texttt{code/57} already ships for the joint grid (bitwise-identical fraction
+  $\leq0.50$), read at runtime rather than re-chosen here; on this sweep no cell
+  is near it, retained cells sitting at $\leq0.36$ and excluded ones at
+  $\geq0.65$. This is an empirical logarithmic
   regularity and \emph{not} a confirmation of the
   $\sigma_{\text{val}}\sqrt{2\ln K}$ extreme-value form --- but neither is it a
     refutation of one, and an earlier version of this paper claimed the latter:
@@ -1087,16 +1275,24 @@ AUROC):
   $0.7574$ at $K=225$, so the full-range fit is partly confounded with the
   operating-point relationship below --- but the law survives restriction to
   $K\geq10$, where that drift spans only $0.7565$--$0.7616$ ($b=0.00107$,
-  $R^2=0.955$, versus $b=0.00104$, $R^2=0.970$ over the full range), which is
-  why we disclose the confound rather than qualify the result.
+  $R^2=0.955$, against $b=0.00104$, $R^2=0.970$ over the full contaminated
+  range), which is why we disclose the confound rather than qualify the result.
+  Note this restriction and the degeneracy restriction above are separate and
+  nearly coincident: $K\geq10$ was chosen to flatten the operating-point drift,
+  $K\geq15$ falls out of the bitwise-identity gate, and the two agree on
+  everything except $K=10$ --- which the degeneracy gate excludes at $65\%$
+  identical folds and which the reported $R^2=0.939$ fit therefore drops.
 \item \textbf{Operating point.} This is the largest effect measured
   \emph{inside this harness}. Holding the mechanism, $K$, and $n_{\text{val}}$
   fixed and varying only the calibrated difficulty of the task, the gap falls
   from $+0.0093$ at AUROC$_0=0.70$ to $+0.0036$/$+0.0011$/$+0.0007$ at
   $0.80$/$0.90$/$0.95$ and to $+0.0002$ at $0.985$ --- a
-  \textbf{$48.6\times$ decline}, one and a half orders of magnitude,
-  driven by nothing but where on the difficulty curve the pipeline
-  operates. \textbf{This decline does not transport outside the harness that
+  \textbf{$48.6\times$ decline}, nearly two orders of magnitude, with
+  nothing varying but where on the difficulty curve the pipeline
+  operates. That ratio's denominator is itself not distinguishable from zero
+  ($p=0.219$; Appendix A.11 gives the per-cell $p$-values), so the honest
+  reading is ``the gap falls to the floor,'' not ``the gap falls by exactly
+  $48.6$.'' \textbf{This decline does not transport outside the harness that
   produced it, and §5.4 is the test of that} --- a test an earlier version of
   this paper omitted while nonetheless promoting the $48.6\times$ figure as
   though it were general.
@@ -1123,7 +1319,7 @@ AUROC):
   (per-cell values in Appendix A.11).
 \end{itemize}
 
-\subsection{Does the operating-point relationship transport? No --- by a factor of 14 to 52}
+\subsection{Does the operating-point relationship transport? No --- by a factor of 14 to 38}
 
 A later independent review observed that we promote the $48.6\times$ decline
 to the abstract, the contributions list and the Conclusion, at one point as
@@ -1143,7 +1339,7 @@ Harness & Leakage mechanic & Achieved AUROC & Gap \\
 \midrule
 Synthetic Sweep C (\texttt{code/47}) & checkpoint argmax only & $0.9433$ & $+0.00065$ \\
 Real features (\texttt{code/43}, cap.\ 128) & checkpoint argmax only & $0.9403$ & $+0.0093$ \\
-Fidelity extension (\texttt{code/49}, cap.\ 128) & argmax $+$ LR sched.\ $+$ ES & $0.9424$ & $+0.0338$ \\
+Fidelity extension (\texttt{code/49}, cap.\ 128) & argmax $+$ LR sched.\ $+$ ES & $0.9424$ & $+0.0250$ \\
 \bottomrule
 \end{tabular}
 \caption{The operating-point relationship does not transport. Three harnesses
@@ -1153,11 +1349,11 @@ magnitude.}
 
 Taking Sweep C's cell as ``what the relationship predicts at $\approx0.94$,''
 the real-feature checkpoint-only harness comes in at $\mathbf{14.3\times}$
-that prediction and the fidelity extension at $\mathbf{51.8\times}$. Against a
+that prediction and the fidelity extension at $\mathbf{38.3\times}$. Against a
 probit-space log-linear interpolation of Sweep C evaluated at each harness's
 exact achieved operating point --- so the comparison cannot be dismissed as an
 artifact of rounding to the nearest grid cell --- the ratios are $15.1\times$
-and $56.9\times$.
+and $42.0\times$.
 
 \textbf{What we therefore claim, and what we withdraw.} We withdraw the
 general reading. The $48.6\times$ decline is a property of the synthetic
@@ -1167,7 +1363,7 @@ across harnesses or across mechanisms at a matched operating point. The
 sentence ``that single relationship moves severity more than any difference we
 measure between mechanisms'' is withdrawn: the table above is precisely a
 difference between mechanisms and harnesses, at a matched operating point,
-larger than the operating-point relationship predicts by $14$--$52\times$.
+larger than the operating-point relationship predicts by $14$--$38\times$.
 What survives, and what we do claim, is weaker and more useful: \textbf{the
 operating point is a strong severity modifier \emph{within} a harness, and two
 severity numbers measured at different operating points are not comparable
@@ -1195,8 +1391,11 @@ through the plane rather than a grid, and no cross can exhibit an interaction.
 \texttt{code/57} runs the missing cells: a full
 $K\in\{15,45,135,405\}\times\text{AUROC}_0\in\{0.70,0.80,0.90,0.95,0.985\}$
 factorial in the same harness, $n=100$ seeds per cell, $n_{\text{val}}$ held
-fixed at $112$ throughout (Sweep D shows it is not an independent third axis
-here). The $K=45$ column reproduces Sweep C exactly.
+fixed at $112$ throughout. Sweep D varies $n_{\text{val}}$ in isolation and
+finds the gap moves \emph{opposite} to the $1/\sqrt{n_{\text{val}}}$
+prediction, tracking the operating point instead; that is why we hold it fixed
+rather than folding it in as a third axis, and it is a limitation of this
+surface rather than a demonstration that $n_{\text{val}}$ does not matter. The $K=45$ column reproduces Sweep C exactly.
 
 \textbf{A degenerate corner of the first version of this grid, and why $K=3$ is
 no longer in it.} The grid originally ran $K\in\{3,15,45,135\}$, and on it the
@@ -1242,7 +1441,8 @@ within-operating-point regularity, not a general one.}
 
 Fitting the $20$ cell means with $z_0=\Phi^{-1}(\text{AUROC}_0)$ --- the
 coordinate in which this harness's own binormal calibration is linear, so a
-linear term in it is the parsimonious choice rather than a fitted one ---
+linear term in it is the parsimonious functional form to try first, rather
+than one chosen after seeing the residuals ---
 gives, reporting leave-one-cell-out predictive $R^2$ alongside in-sample
 $R^2$ because $20$ cells against $4$ parameters invites overfitting:
 $\text{gap}=a+b\ln K$ alone, $R^2=0.038$ (LOO $-0.192$); $a+cz_0$ alone,
@@ -1269,13 +1469,24 @@ operating-point coefficient and an unstable candidate-count exponent
 (Appendix C.2).
 
 \textbf{This forces a qualification of one of this paper's own headline
-numbers.} The $\text{gap}=a+b\ln K$ law with $R^2=0.970$ is measured along a
+numbers.} The $\text{gap}=a+b\ln K$ law with $R^2=0.939$ is measured along a
 single row of this grid, at $\text{AUROC}_0=0.80$. Across the grid as a whole
 $\ln K$ \emph{alone} explains essentially none of the variance ($R^2=0.038$,
 and at LOO $-0.192$ worse than predicting the mean), so the $K$-law is real
 \emph{within} an operating point and not a description of severity in general
---- the table shows a $4$--$7\times$ span across $K$ where there is headroom
-and essentially none at $\text{AUROC}_0=0.985$. This qualification is
+--- the table shows spans across $K$ of $1.8\times$, $4.2\times$, $7.1\times$,
+$4.3\times$ and $1.6\times$ at $\text{AUROC}_0=0.70$ through $0.985$. Two
+qualifications on those spans, since an earlier revision summarized them as
+``$4$--$7\times$ where there is headroom.'' That summary was wrong in both
+directions: the span is not monotone in headroom (it peaks in the middle, at
+$0.90$, and is \emph{smallest} at $0.70$, the row with the most headroom), and
+all three of the $4$--$7\times$ spans are set at their low end by the $K=15$
+column, which is the column carrying the least contrast in this grid
+($24$--$42\%$ bitwise-identical folds, worst exactly at $(K{=}15,
+\text{AUROC}_0{=}0.90)$, the cell that produces the $7.1\times$). Excluding
+that column the spans collapse to $1.2$--$1.4\times$. What survives is the
+qualitative point and not the multiplier: candidate count moves the gap where
+there is headroom and not at $\text{AUROC}_0=0.985$. This qualification is
 \emph{stronger} on the corrected grid than on the degenerate one it replaces
 ($R^2=0.038$ against $0.114$), so unlike the interaction claim it does not
 depend on the removed cells. Candidate count is a second-order modifier of a
@@ -1286,7 +1497,7 @@ synthetic harness with one mechanism held fixed at one fixed $n_{\text{val}}$,
 and it is an average, not an upper bound, so it cannot certify that any
 particular pipeline's inflation is below anything. It also does not transport
 across harnesses: §5.4 shows two real-feature harnesses exceeding this
-surface's own operating-point relationship by $14$--$52\times$ at a matched
+surface's own operating-point relationship by $14$--$38\times$ at a matched
 operating point. We report it because the review was right that the attempt was
 missing, and name a formally-derived bound as future work rather than claim
 this is one. \textbf{The out-of-sample check is also weaker than the previous
@@ -1373,11 +1584,11 @@ Use this checklist when & The specific result behind it \\
 \midrule
 You report AUROC (or any metric) from a pipeline that selects a checkpoint, layer, threshold or hyperparameter using a statistic computed on --- or reused from --- the data you then report on. & Q1--Q5 name which of the five mechanisms you have and where in the code to look. Three of the five are verified against pinned commits of published third-party code (§4), so this is a documented failure mode, not a hypothetical one. \\
 \addlinespace
-A validation-fold decision is coupled to something downstream: early stopping, LR scheduling on a reused fold, best-epoch or best-layer selection. & Q2 and Q4. §4.3 shows the \emph{continuity} of the coupling matters: porting a scheduler and epoch-by-epoch early stopping onto a checkpoint-selection harness raises the measured gap by $3.6\times$ over a single end-of-training argmax, on the same features at a matched calibration. \\
+A validation-fold decision is coupled to something downstream: early stopping, LR scheduling on a reused fold, best-epoch or best-layer selection. & Q2 and Q4. Ask about all of them: §4.3 measures $+0.0250$ on real features for a trainer that couples an LR scheduler and epoch-by-epoch early stopping to the reused fold. We specifically do \emph{not} claim the coupling's \emph{continuity} is what makes it worse --- an isolating control, same harness and same reused fold but a single end-of-training argmax, comes out $0.0159$ AUROC \emph{higher}, because early stopping truncates training. \\
 \addlinespace
 Your headline threshold-dependent numbers (F1, accuracy, MCC, Cohen's $\kappa$, or an ECE derived from thresholded predictions) come from a threshold chosen on the evaluation labels. & Q5, which nothing upstream will catch: AUROC is unaffected by construction, so an AUROC-only audit clears the pipeline while F1 and accuracy are still inflated ($+0.021$ to $+0.034$ at $n_{\text{test}}=140$, §4.5). \\
 \addlinespace
-You want to know, before publishing a severity estimate, whether it is confounded with the operating point or with how many candidates were tried. & §5 names the two quantities to report alongside it. Within one harness the gap grows as $a+b\ln K$ ($R^2=0.970$ at a fixed operating point) and falls $48.6\times$ from AUROC$_0=0.70$ to $0.985$; two severity numbers at different operating points are not comparable until it is matched. \\
+You want to know, before publishing a severity estimate, whether it is confounded with the operating point or with how many candidates were tried. & §5 names the two quantities to report alongside it. Within one harness the gap grows as $a+b\ln K$ ($R^2=0.939$ at a fixed operating point, over cells where the two arms are not bitwise identical) and falls $48.6\times$ from AUROC$_0=0.70$ to $0.985$; two severity numbers at different operating points are not comparable until it is matched. \\
 \addlinespace
 Your task is far from ceiling, or your test set is small. & This is where every effect we measure is largest, and where the checklist earns most: $+0.0093$ at AUROC$_0=0.70$ against $+0.0002$ at $0.985$, and Mechanism 5's F1 gap $+0.0212$ at $n_{\text{test}}=140$ against $+0.0034$ at $2000$. \\
 \bottomrule
@@ -1514,7 +1725,7 @@ entirely in correcting reported detection metrics. A detector deployed at a
 reported AUROC above its true value will, at a fixed threshold, pass more
 hallucinations to production and flag more correct outputs for unnecessary
 review than promised --- but the code-verified inflations measured here are on
-the order of $0.002$ to $0.034$ AUROC, not the tens of points an earlier
+the order of $0.001$ to $0.026$ AUROC, not the tens of points an earlier
 framing of this work implied. Practitioners should read this as: these
 mechanisms are real and worth fixing, because they are cheap to fix and because
 they corrupt comparisons between methods, but not as an argument that the
@@ -1522,12 +1733,14 @@ subfield's reported numbers are broadly wrong by large margins. We lack
 deployment-volume and review-cost data for any audited system, so we attempt no
 cost estimate. Where large gaps \emph{do} appear (Mechanism 5's $+0.021$ to
 $+0.034$), they are on threshold-dependent metrics, not AUROC, and are not
-directly comparable to the AUROC-scale numbers. The audit's central lesson
-recurs in related, independently-conducted work on adjacent areas of LLM
-evaluation, none sharing a leakage mechanism with the four case studies here:
-an initially plausible result substantially weakens or changes character once a
-specific confound is directly tested rather than merely acknowledged as
-possible.
+directly comparable to the AUROC-scale numbers. The audit's central lesson is
+one this paper can evidence from its own record rather than by appeal to
+unnamed work elsewhere: of the sixteen corrections in Appendix A, the ones that
+moved a number most were those in which a confound already \emph{acknowledged}
+in the text was subsequently \emph{tested} --- the adaptivity control (item 16)
+and the fidelity extension's budget match (item 15) both reversed or
+substantially resized a conclusion the previous revision had hedged rather than
+measured.
 
 \textbf{Limitations.} \emph{(1) Case Study 1 is not re-verifiable from this
 artifact} --- no supporting script, log or data ships with the paper, and its
@@ -1550,15 +1763,19 @@ dependence runs \emph{opposite} to the $1/\sqrt{n_{\text{sel}}}$ direction such
 a derivation would predict (§5.3, Sweep D). \emph{A second obstacle previously
 listed here is withdrawn:} we had also cited the extreme-value functional form
 as falsified here, but that test used a misspecified $\sigma$ and is
-uninformative in either direction --- a measurement gap, closed by a harness
+uninformative in either direction --- a measurement gap, closable by a harness
 instrumented to produce $\sigma$ across independent, exchangeable candidate
 evaluations. \emph{(3) The extreme-value account of $K$-scaling is therefore
 neither confirmed nor refuted by this paper:} we withdraw the previous
 version's ``falsified'' language, report an empirical logarithmic regularity
 instead, and have no mechanistic explanation for it (Appendix A.11).
-\emph{(4) The alternative-confound control for Mechanism 3 retains only
-$\sim$26--37\% of honest selection's placebo-relative benefit} and therefore
-has limited power (§4.3). \emph{(4a) The fixed-$d$ eigenspectrum experiment
+\emph{(4) The alternative-confound control for Mechanism 3 is now sharp
+($80$--$94\%$ placebo-relative retention) but is not budget-matched}: making its
+selection signal honest costs it $\approx15\%$ of LEAKY's training data and
+leaves it selecting on a $67$-sample carve-out against LEAKY's $112$-sample
+fold. Both differences bias against the control, so §4.3's $+0.0049$/$+0.0059$
+should be read as an upper bound on the fold-reuse effect. A variant sizing the
+carve-out to match the fold was not run. \emph{(4a) The fixed-$d$ eigenspectrum experiment
 separates covariance shape from dimensionality but not from operating point},
 because anisotropy lowers the achieved operating point even at a fixed
 Bayes-optimal $J$; separating them would need a generator holding the
@@ -1571,7 +1788,23 @@ averaging. \emph{(4c) Two arms of the fidelity extension differ in training
 depth ($47.6\%$) as well as in validation signal} --- reported rather than
 equalized, because when to stop \emph{is} the leaked decision --- and
 Mechanism 5's F1/accuracy gaps are measured at $n_{\text{test}}=140$ and fall
-by $6.2\times$ at $n_{\text{test}}=2000$ (§4.5). \emph{(4d) The scanner's
+by $6.2\times$ at $n_{\text{test}}=2000$ (§4.5).
+\emph{(4c-i) The fidelity extension is the only severity estimate in this paper
+measured at a single capacity} ($128$); every other synthetic and real-feature
+result is reported at $128$ and $384$, and two of those show capacity-dependent
+behaviour, so we cannot say whether its $+0.0250$ survives the one axis we
+otherwise always vary.
+\emph{(4c-ii) We cannot attribute the fidelity extension's severity to the
+\emph{continuity} of the validation coupling, and no longer try to.} The
+isolating arm --- same harness, same reused fold, single end-of-training argmax
+instead of scheduler-plus-early-stopping --- comes out $0.0159$ AUROC
+\emph{higher} than the coupled arm, because early stopping at the audited
+repo's \texttt{patience}$=15$ truncates training. So within this harness
+continuous coupling does not add severity over a one-shot argmax. What we
+cannot separate, and name here as the missing experiment, is coupling
+continuity from training depth: an arm with the scheduler's LR trajectory but
+without its early-stopping truncation, or one with early stopping forced to the
+argmax arm's depth, would isolate them. Neither was run. \emph{(4d) The scanner's
 classification rests on two raters, not a validated protocol} (§6): the primary
 rater is this paper's author and knew the ground truth, and while a second,
 blinded rater agreed $7/7$, Cohen's $\kappa$ is undefined on a single-category
@@ -1590,7 +1823,8 @@ explicitly multilingual; and even leak-free, no calibration of this feature
 set's between-class mean, at any strength, brings it onto the synthetic sweep's
 exact $0.80$ operating point, because a real portion of its discriminability
 lives in within-class structure the calibration cannot touch --- so its
-severity estimate, while now trustworthy, is reported at its own
+severity estimate, while now free of every defect sixteen rounds of review
+have found in it, is reported at its own
 ($\approx0.94$-$0.95$) operating point and the two are not numerically
 comparable. Whether the synthetic estimate transfers to real hidden states at
 the \emph{same} operating point --- on this dataset, non-English datasets, or
@@ -1625,7 +1859,7 @@ a measurement of what they cost in any deployed system. Those figures come from
 specific synthetic harnesses and two audited third-party pipelines, at operating
 points and test-set sizes we chose or inherited; §5.4 shows the operating-point
 relationship governing them does not transport even to this paper's own
-real-feature harnesses ($14$--$52\times$ at a matched operating point), and
+real-feature harnesses ($14$--$38\times$ at a matched operating point), and
 Mechanism 5's F1 gap falls $6.2\times$ between $n_{\text{test}}=140$ and
 $2000$. Severity in a system that is not one of these has to be measured there
 rather than read off this paper.
@@ -1658,12 +1892,13 @@ the claim.
 
 \textbf{What severity does track is continuous and mechanism-independent.}
 Holding the mechanism fixed and varying only the number of candidates selected
-among moves the gap monotonically, well fit by $a+b\ln K$ ($R^2=0.970$);
+among moves the gap monotonically, well fit by $a+b\ln K$ ($R^2=0.939$ over
+the cells where the two arms actually differ);
 varying only the operating point moves it by $48.6\times$, from $+0.0093$ at
 AUROC$_0=0.70$ to $+0.0002$ at $0.985$ (§5). Both effects are larger than any
 difference we measure between mechanisms \emph{inside that harness} --- though
 §5.4 shows the operating-point relationship does not transport outside it,
-exceeded by $14$--$52\times$ at a matched operating point in this paper's own
+exceeded by $14$--$38\times$ at a matched operating point in this paper's own
 real-feature harnesses, so it is a within-harness severity modifier and not a
 general law. A $K\times$AUROC$_0$ factorial fitting the two jointly shows the
 axes are not co-equal: across that grid $\ln K$ alone explains $R^2=0.038$,
@@ -1720,6 +1955,14 @@ Research (A Report from the NeurIPS 2019 Reproducibility Program).
 Varma, S., \& Simon, R. (2006). Bias in Error Estimation When Using
 Cross-Validation for Model Selection. \emph{BMC Bioinformatics}, 7(1), 91.
 
+Cawley, G. C., \& Talbot, N. L. C. (2010). On Over-fitting in Model
+Selection and Subsequent Selection Bias in Performance Evaluation.
+\emph{Journal of Machine Learning Research}, 11, 2079-2107. [The canonical
+treatment of Mechanism 2's failure mode: selecting over candidates on a
+cross-validation estimate and then reporting that same estimate as
+performance. Mechanism 2 is a specific instance of it; §4.2 and Appendix
+C.2 state what this paper adds.]
+
 Simpson, A. J., \& Fitter, M. J. (1973). What is the Best Index of
 Detectability? \emph{Psychological Bulletin}, 80(6), 481-488. [Source of
 the binormal identity $\text{AUROC}=\Phi(\sqrt{J/2})$ used to calibrate
@@ -1750,9 +1993,9 @@ reached, and additional robustness checks omitted from the main text for
 length.} §4.3 states the result directly; nothing below is required to
 verify it.
 
-\subsection{The fourteen corrections}
+\subsection{The sixteen corrections}
 
-\textbf{TL;DR.} Fourteen issues were found and fixed via iterative review while
+\textbf{TL;DR.} Sixteen issues were found and fixed via iterative review while
 deriving this case study's severity estimate (full table below). In
 order: (1) an uncalibrated
 synthetic sweep saturated at AUROC=1.0; (2) the calibration formula
@@ -1784,15 +2027,24 @@ instead of saturating; and (14) \textbf{the ``fidelity extension'' was not
 faithful to the audited trainer's optimizer or data pipeline} --- it ran at a
 $10\times$ learning rate, full-batch, with plain Adam, the wrong scaler and no
 warmup --- which is now ported and, for what remains unported, disclosed
-exhaustively.
+exhaustively; (15) \textbf{that same fidelity extension's control was not
+budget-matched to \texttt{code/43}'s convention, and the arm needed to isolate
+its headline ``coupling continuity'' claim did not exist} --- fixing the first
+moves the reported gap from $+0.0338$ to $+0.0250$, and adding the second
+retracts the coupling-continuity attribution outright; and (16) \textbf{the
+adaptivity control carved its ``held-out'' selection fold out of the very
+training set it then trained on}, so it measured convergence rather than
+selection --- rebuilt disjointly, it now retains $94.2\%$ of honest selection's
+placebo-relative benefit instead of $37.3\%$, and rejects the alternative it
+previously could only fail to support.
 
-\textbf{The numbers that survive all fourteen and are the ones §4.3
-actually reports} are stated in §4.3 and in items 9, 12, 13 and 14 of the
-table below. Two structural points about them: the two synthetic sweeps
+\textbf{The numbers that survive all sixteen and are the ones §4.3
+actually reports} are stated in §4.3 and in items 9, 12, 13, 14, 15 and 16 of
+the table below. Two structural points about them: the two synthetic sweeps
 (isotropic, anisotropic) remain the paper's primary severity estimate
 for this mechanism, since they share neither the architecture-mismatch
 (4) nor the split-leakage (8) problem the real-feature test needed fixing
-for; and the fidelity extension's move to $+0.0338$ is \emph{not}
+for; and the fidelity extension's move to $+0.0250$ is \emph{not}
 attributed to any one of (12), (13) or (14) alone --- a factorial
 $2\times2$ ablation (item 12), rerun under (14)'s fidelity port, shows the
 calibration fix rather than the patience fix is what moves it, and retracts
@@ -1945,7 +2197,7 @@ the cited script/result files, not below.
   systematically undershoots by $\sim0.04$-$0.05$ AUROC (a real,
   separately-documented regularization effect, not a bug -- see issue 5), so it
   instead checks the bias-corrected realized Fisher $J$ ratio directly, which
-  cleanly separates correct generators (ratio $0.33$-$1.83$ across 2000 seeds
+  separates correct generators (ratio $0.33$-$1.83$ across 2000 seeds
   and five operating points) from the $4\times$ bug (ratio never below
   $2.77$). At small $n_{\text{samples}}$ and low target AUROC (verified at
   $n_{\text{samples}}=350$, target $0.70$) the two distributions begin to
@@ -2007,14 +2259,21 @@ the cited script/result files, not below.
   bottom-right cell --- label-free calibration, repo-faithful patience 15,
   $+0.0338$ (BCa 95\% CI $[+0.0279,+0.0405]$, Wilcoxon
   $p=6.2\times10^{-15}$, paired permutation $p<0.0001$, 28 tied absolute
-  differences of 100 pairs, no exact zeros) --- is the only cell this paper
-  reports; the other three exist to make the decomposition checkable.
+  differences of 100 pairs, no exact zeros) --- is the cell this $2\times2$
+  is anchored on; the other three exist to make the decomposition checkable.
+  Note that all four cells here score LEAKY against the es-fed control, which
+  item 15 supersedes: the number §4.3 reports is $+0.0250$, against the
+  budget-matched control. The $2\times2$ is retained on the old control
+  because its purpose is to separate the calibration and patience corrections
+  from each other, and re-running it against a control that did not exist when
+  either correction was made would not make that separation cleaner.
 
   \textbf{Like-for-like against the checkpoint-selection-only harness.}
   Both harnesses now run on the same real features under the same
   label-free calibration ($\alpha=0.3359$), so at capacity 128 the fidelity
-  extension's $+0.0338$ against the checkpoint-selection-only harness's
-  $+0.0093$ (issue 9) is a ratio of $\mathbf{3.6\times}$. That replaces the
+  extension's $+0.0250$ against the checkpoint-selection-only harness's
+  $+0.0093$ (issue 9) is a ratio of $\mathbf{2.7\times}$. That replaces the
+  $3.6\times$ reported before the issue-15 budget-matching fix, the
   $2.4\times$ reported before the issue-14 fidelity port, the
   $5.2\times$ before that (which compared $+0.0111$ against
   $+0.0021$ under the superseded calibration), and the ``3-4$\times$'' of
@@ -2079,9 +2338,11 @@ the cited script/result files, not below.
   \emph{validation-signal coupling and optimizer schedule}, not of the
   objective or the architecture.
 
-  \textit{What it moved.} The reported gap rises from $+0.0221$ to
-  $\mathbf{+0.0338}$, the like-for-like ratio against the
-  checkpoint-selection-only harness from $2.4\times$ to $3.6\times$, and ---
+  \textit{What it moved.} The reported gap rose from $+0.0221$ to
+  $+0.0338$ (subsequently corrected to $\mathbf{+0.0250}$ by item 15's
+  budget-matching fix), the like-for-like ratio against the
+  checkpoint-selection-only harness from $2.4\times$ to $3.6\times$ (and then
+  to $2.7\times$), and ---
   helpfully --- the extension's LEAKY operating point from $0.9176$ to
   $0.9424$ (see item 12). It also \emph{costs} this appendix a claim: the
   $2\times2$ ablation's sign flip (item 12) does not survive the port and is
@@ -2091,6 +2352,58 @@ the cited script/result files, not below.
   \texttt{label\_free\_axis\_noising} even in the ablation cells that ran the
   superseded transform, mislabelling two of the four result files; the field
   now reports whichever transform actually ran.
+
+\item[15.] \textbf{The fidelity extension's control was not budget-matched,
+  and the arm that would isolate its headline claim was missing.} Two related
+  defects, both found by comparing arm means across harnesses rather than
+  reading gaps. \emph{(a)} \texttt{code/43}'s CLEAN\_MATCHED retrains on the
+  full \texttt{tr\_idx}; \texttt{code/49}'s control trained on
+  \texttt{tr2\_idx}, $\approx$$85\%$ of it. Between the two harnesses LEAKY
+  moves only $+0.0022$ while the control moves $-0.0224$ and the placebo
+  $-0.0284$ --- so most of the extension's larger gap was the controls falling,
+  not the leak rising, and reporting the resulting $3.6\times$ as isolating
+  ``scheduler coupling continuity'' was unsupported. \textit{Fix:} a
+  budget-matched control that retrains on the full \texttt{tr\_idx} while
+  replaying the disjoint-carve-out run's own per-epoch learning-rate
+  trajectory, so it keeps an adaptive schedule instead of reverting to the
+  constant-LR retrain that would re-open item 10's confound. \emph{(b)} The
+  claim being made --- that \emph{continuous} coupling is worse than a one-shot
+  argmax --- was tested by comparing two harnesses that differ in four other
+  respects. \textit{Fix:} an arm with this script's repo-faithful optimizer and
+  data pipeline, the same reused val fold, and \emph{only} a final-checkpoint
+  argmax.
+  \textit{What it moved.} The reported gap falls $+0.0338\to\mathbf{+0.0250}$
+  (BCa 95\% CI $[+0.0192,+0.0314]$, Wilcoxon $p=1.5\times10^{-11}$), the
+  like-for-like ratio $3.6\times\to2.7\times$, and the
+  $(\text{LEAKY}-\text{CM})/(\text{CM}-\text{PLACEBO})$ sanity ratio
+  $1.60\to0.83$, back inside the $0.06$--$0.85$ band this paper's other eight
+  harness/capacity cells occupy. \textit{What it costs.} The
+  coupling-continuity claim, retracted: the isolating arm scores $0.9583$
+  against the coupled arm's $0.9424$, i.e.\ adding continuous coupling
+  \emph{lowers} the leaky arm by $-0.0159$ (Wilcoxon $p=2.8\times10^{-13}$),
+  because early stopping at the repo's \texttt{patience}$=15$ truncates it to a
+  mean epoch of $29.14$ where the argmax-only arm reaches $40.73$.
+
+\item[16.] \textbf{The adaptivity control (\texttt{code/22}) selected its
+  checkpoint on data inside its own training set.} \texttt{es\_idx} was carved
+  out of \texttt{tr\_idx}, but the arm then trained on the full
+  \texttt{tr\_idx} --- so the ``held-out'' selection fold was in-sample
+  throughout, and the argmax simply ran to the end of the budget. The
+  kept-checkpoint epoch, now recorded, shows it directly: $39.4$ of $45$ at
+  capacity 128 against $20.8$--$21.4$ for the honest arms. The control
+  measured convergence, not adaptive selection, and could not test the
+  alternative explanation it existed to test. \textit{Fix:} train on
+  \texttt{tr2\_idx}, the complement of \texttt{es\_idx}, mirroring
+  \texttt{code/43}. \textit{What it moved.} The control's placebo-relative
+  retention rises $37.3\%\to\mathbf{94.2\%}$ (cap.\ 128) and
+  $25.7\%\to\mathbf{79.9\%}$ (cap.\ 384), so it now holds the adaptive
+  mechanism nearly fixed; LEAKY still beats it by $+0.0049$ ($p=0.0008$) and
+  $+0.0059$ ($p=0.0012$). \textit{What it changes in the paper.} §4.3
+  previously called the ``any adaptive selection helps'' alternative
+  ``directionally unsupported'' on the strength of an invalid control; with a
+  valid one the alternative is positively rejected, and the finding is
+  stronger than the sentence it replaces. The broken arm is still run and
+  shipped as \texttt{clean\_matched\_adaptive\_contaminated}.
 \end{description}
 
 \textbf{Issue 8 is the load-bearing finding of this appendix}, and the
@@ -2206,43 +2519,71 @@ $n=100$). The correction is applied within this four-capacity family only.
 fold reuse?} CLEAN\_MATCHED's full-budget retrain is a blind, fixed-epoch run
 rather than an adaptively-selected one, so an independent review proposed that
 LEAKY's advantage might reflect adaptivity itself. We tested this with a fifth
-condition, CLEAN\_MATCHED\_ADAPTIVE: full training budget and \emph{ongoing}
-adaptive checkpoint selection during that same run -- the identical mechanism
-LEAKY uses -- but selecting against the disjoint, honestly held-out carve-out
-instead of the reused fold
-(\texttt{code/22\_epoch\_forcing\_confound\_control.py}). If ``having adaptive
-selection'' were the true driver, CLEAN\_MATCHED\_ADAPTIVE should approach
-LEAKY. It does not: at capacity 128, LEAKY beats CLEAN\_MATCHED\_ADAPTIVE
-by $+0.0198$ ($p<0.0001$) -- larger than the original LEAKY$-$CLEAN\_MATCHED
-gap, not smaller -- and CLEAN\_MATCHED\_ADAPTIVE itself underperforms the
-blind CLEAN\_MATCHED control ($-0.0164$, $p<0.0001$). At capacity 384 the
-same pattern holds and is significant ($+0.0143$, $p<0.0001$), where the
-original comparison was only borderline.
+condition, CLEAN\_MATCHED\_ADAPTIVE: \emph{ongoing} adaptive checkpoint
+selection during training -- the identical mechanism LEAKY uses -- but driven
+by a carve-out disjoint from the reused fold
+(\texttt{code/22\_epoch\_forcing\_confound\_control.py}).
 
-\textbf{How much this control can actually settle.} Its own power is limited,
-and we quantify that rather than assert it. On the scale that matters here ---
-how much of honest checkpoint selection's benefit over the placebo the control
-still retains, $(\text{CLEAN\_MATCHED\_ADAPTIVE} -
-\text{PLACEBO})/(\text{CLEAN\_MATCHED} - \text{PLACEBO})$, from
-\texttt{results/epoch\_forcing\_confound\_control.json} --- it retains only
-$37.3\%$ at capacity 128 ($+0.0098$ of $+0.0262$) and $25.7\%$ at capacity
-384 ($+0.0040$ of $+0.0156$). A condition that has lost roughly two-thirds to
-three-quarters of the effect it was supposed to hold constant is not a sharp
-instrument. So: this test retains only $\sim$26--37\% of honest selection's
-placebo-relative benefit, is directionally inconsistent with the ``any
-adaptive selection helps'' alternative, and we do not treat it as having ruled
-that alternative out. CLEAN\_MATCHED\_ADAPTIVE's own underperformance against
-the blind control is itself unexpected; the most likely account is that
-adaptive selection against a small carve-out is a noisy selection signal, a
-different phenomenon from the fold-reuse question. \textbf{That carve-out is
-also a genuine confound with the LEAKY vs.\ CLEAN\_MATCHED\_ADAPTIVE
-comparison itself}: LEAKY selects against its full 112-sample validation fold
-($560/5$), while CLEAN\_MATCHED\_ADAPTIVE selects against only a 67-sample
-carve-out ($15\%$ of the $448$-sample training split) -- a $1.67\times$
-difference in selection-set size, whose noise would inflate, not just
-accompany, the gap this control reports. A cleaner version would size the
-carve-out to match the fold ($25\%$ of $448=112$); we did not rerun it at that
-setting, and flag this as an open robustness gap.
+\medskip\noindent\textbf{The first version of this control was invalid, and its
+numbers are retracted.} A later independent review found that its selection
+carve-out \texttt{es\_idx} was split out of \texttt{tr\_idx} but the arm was
+then trained on the \emph{full} \texttt{tr\_idx} --- so every point in the
+supposedly held-out selection set was inside that arm's own training set
+throughout. Selecting a checkpoint on data the model is concurrently fitting is
+not selection: in-sample AUROC is near-monotone in training, so the argmax
+simply runs to the end of the budget. \texttt{code/22} now records each arm's
+mean kept-checkpoint epoch, which shows this directly: the broken arm sits at
+$39.4$ of $45$ epochs at capacity 128 (and $19.9$ of $45$ at 384), against
+$20.8$ for LEAKY and $21.4$ for the honest arms (and $11.8$/$12.6$ at 384).
+It measured convergence, not adaptive selection, and therefore could not test
+the alternative it was built to test. Its previously-reported figures ---
+LEAKY beating it by $+0.0198$ (cap.\ 128) and $+0.0143$ (cap.\ 384), retaining
+$37.3\%$ and $25.7\%$ of honest selection's placebo-relative benefit --- are
+withdrawn. The arm is still run and shipped, under the explicit key
+\texttt{clean\_matched\_adaptive\_contaminated}, so the size of the artifact is
+a reproducible number rather than an assertion; no conclusion rests on it.
+
+\medskip\noindent\textbf{The rebuilt control, and what it now establishes.}
+CLEAN\_MATCHED\_ADAPTIVE now trains on \texttt{tr2\_idx}, the complement of
+\texttt{es\_idx} within \texttt{tr\_idx}, so training data and selection data
+are disjoint by construction. This mirrors \texttt{code/43}, whose
+corresponding arm already separated them correctly. Two consequences.
+
+First, the control is now sharp, on the same scale the previous version failed
+on: $(\text{CLEAN\_MATCHED\_ADAPTIVE} - \text{PLACEBO}) /
+(\text{CLEAN\_MATCHED} - \text{PLACEBO})$ is $94.2\%$ at capacity 128
+($+0.0247$ of $+0.0262$) and $79.9\%$ at capacity 384 ($+0.0125$ of $+0.0156$).
+The condition retains nearly all of the effect it is supposed to hold constant,
+which is what the previous version conspicuously did not do.
+
+Second, LEAKY still beats it at both capacities, and by \emph{more} than it
+beats the blind CLEAN\_MATCHED control: $+0.0049$ ($p=0.0008$, 58/100 seeds
+positive) at capacity 128 and $+0.0059$ ($p=0.0012$, 64/100) at 384, against
+LEAKY$-$CLEAN\_MATCHED of $+0.0034$ and $+0.0027$. Because the adaptive
+selection mechanism is now genuinely held fixed between the two arms, and they
+differ only in whether the fold driving that selection is the one later reused
+as out-of-fold features, this is direct evidence that the effect is
+\textbf{fold reuse specifically}. We state that as the finding, and note
+plainly that the previous revision's weaker phrasing --- ``directionally
+unsupported'' --- was the correct thing to say about an invalid control and is
+not what this one supports.
+
+\medskip\noindent\textbf{Remaining confounds, both of which disadvantage the
+control.} Making the selection signal honest costs training data: the arm
+trains on $448 \times 0.85 = 381$ samples against LEAKY's $448$, an
+$\approx$$15\%$ deficit. And it still selects against a $67$-sample carve-out
+where LEAKY selects against its full $112$-sample validation fold ($560/5$), a
+$1.67\times$ difference in selection-set size whose extra noise would inflate
+the reported gap rather than merely accompany it. Neither can be removed
+without giving up the other: an exact budget match and an honest selection
+signal cannot both be had inside one fold, because the selection points have to
+come from somewhere. A cleaner variant would size the carve-out to match the
+fold ($25\%$ of $448=112$) at the cost of a larger budget deficit; we did not
+run it, and flag it as an open robustness gap. Both confounds bias
+\emph{against} the control and therefore \emph{toward} the finding above, which
+is the direction that should be disclosed loudest: the $+0.0049$/$+0.0059$
+should be read as an upper bound on the fold-reuse effect, not a point estimate
+of it.
 
 \subsection{Alternative explanation 2: downstream feature averaging}
 
@@ -2280,7 +2621,8 @@ readings.
 The \emph{averaged} number is the correct estimate of inflation in
 what the audited pipeline actually reports, because averaging is what that
 pipeline does --- so §4.3's table stands unchanged as this paper's primary estimate. The \emph{un-averaged} number is the correct estimate of the
-mechanism's severity at its source, and it is about $3\times$ larger. The
+mechanism's severity at its source, and it is larger by
+$2.3$--$5.8\times$ (mean $3.9\times$). The
 honest summary is therefore narrower than ``this mechanism is small'': it is
 small \emph{as reported}, partly because a downstream ensembling step
 attenuates it, and a pipeline with the same leak but without that averaging
@@ -2365,7 +2707,7 @@ covariance the $d=414$ sweep uses.
 experiment buys one separation at the cost of another.} At capacity 128 the
 gap rises monotonically with anisotropy: $+0.0015$ ($\beta=0$, not
 significant), $+0.0038$, $+0.0044$, $+0.0104$ ($\beta=2$), with
-\texttt{real\_top64} at $+0.0048$ --- a roughly $7\times$ span driven by
+\texttt{real\_top64} at $+0.0048$ --- a roughly $7\times$ span across
 nothing but the eigenvalue profile. So the isotropic-vs-anisotropic difference
 above is \emph{not} purely a dimensionality artifact, which is what this
 experiment was built to establish. \textbf{But anisotropy and the achieved
@@ -2475,10 +2817,13 @@ information, stops earliest of all at $7.95$. (An earlier version of this
 harness tracked this and lost the tracking when the training loop was
 re-ported; it is restored in \texttt{code/49}'s \texttt{best\_epoch\_stats},
 and the difference under the fully-ported configuration is \emph{larger}, not
-smaller, than the version that went missing.) So the $+0.0338$ is measured
-across arms that differ in training depth by roughly half, on top of the
-separately-disclosed $\approx15\%$ data-budget difference (\texttt{tr2\_idx}
-versus \texttt{tr\_idx}, A.1 item 10). \textbf{We do not treat the depth
+smaller, than the version that went missing.) So the reported gap is measured
+across arms that differ in training depth by roughly half. The
+$\approx15\%$ data-budget difference that used to sit on top of this
+(\texttt{tr2\_idx} versus \texttt{tr\_idx}) is now removed for the reported
+number, which is computed against the budget-matched control
+(\texttt{clean\_matched\_budget\_matched}, A.1 item 15); the es-fed arm and its
+$+0.0338$ are retained for comparison only. \textbf{We do not treat the depth
 difference as a nuisance to be subtracted}: choosing when to stop \emph{is} the
 leaked decision this extension exists to model, and an arm forced to LEAKY's
 epoch count would no longer be reacting to its own honest signal --- which is
@@ -2617,7 +2962,9 @@ own measured $\sigma_K$ (\texttt{code/50\_evt\_scaling\_refit.py},
 $R^2=\mathbf{-0.399}$ --- worse than predicting the mean of the gaps.
 Two-parameter alternatives fit far better on the same nine cells: $a+b\ln K$
 with $a=-0.00012$, $b=0.00104$ gives $R^2=\mathbf{0.970}$, and $a\cdot K^{b}$
-with $a=0.00083$, $b=0.378$ gives $R^2=0.866$.
+with $a=0.00083$, $b=0.378$ gives $R^2=0.866$. \emph{Correction 4 below shows
+those nine cells include four that are largely degenerate, and refits the
+logarithmic law on the six that are not.}
 
 \textbf{Correction 3, which retracts Correction 2's verdict: this is not a
 falsification, because $\sigma$ is the wrong quantity.} A third independent
@@ -2648,16 +2995,63 @@ evaluations at a fixed point in training --- $K$ independently-seeded models,
 or repeated resampled validation splits at a fixed epoch --- which this
 harness does not produce. That is a measurement gap rather than a theoretical
 obstacle, and Limitations (2a) no longer lists it as an obstacle to deriving
-a formal bound. \textbf{What is unaffected:} the empirical law
-$\text{gap}=a+b\ln K$ at $R^2=0.970$ never references $\sigma$, and stands
-exactly as reported, as does every use this paper makes of it. We report all
-of this as a correction of the previous version's reported fit, which was an
-artifact of the constant-$\sigma$ substitution, not a finding.
+a formal bound. \textbf{What is unaffected by \emph{this} correction:} the
+empirical law $\text{gap}=a+b\ln K$ never references $\sigma$ and is untouched
+by the misspecification. It is, however, affected by a separate defect found
+later; see Correction 4. We report all of the above as a correction of the
+previous version's reported fit, which was an artifact of the
+constant-$\sigma$ substitution, not a finding.
+
+\textbf{Correction 4: the degeneracy gate had been applied to the joint grid
+but never to this sweep.} An earlier round added a bitwise
+\texttt{state\_dict}-identity check and wired it into \texttt{code/57}'s joint
+$K\times\text{AUROC}_0$ grid, where it caused the $K=3$ column to be dropped and
+a headlined interaction term to be retracted (C.1). A later independent review
+observed that \textbf{the same gate was never enabled at \texttt{code/47}'s own
+call sites}, even though Sweep A is what produces the $a+b\ln K$ law this paper
+quotes in its abstract. \texttt{code/47} now passes
+\texttt{degeneracy\_check=True} at every call site --- the check consumes no
+RNG and does not touch the training path, so every previously reported gap, arm
+mean, Wilcoxon $p$ and bootstrap CI reproduces bit for bit and only new fields
+are added. By the same criterion \texttt{code/57} uses (bitwise-identical
+fraction $\leq0.50$, read at runtime from that script rather than re-chosen),
+Sweep A's small-$K$ cells are largely degenerate:
+
+\begin{center}\small
+\begin{tabular}{lcccccccccc}
+\toprule
+$K$ & $1$ & $3$ & $5$ & $10$ & $15$ & $25$ & $45$ & $75$ & $135$ & $225$ \\
+\midrule
+identical frac. & $1.000$ & $0.973$ & $0.900$ & $0.645$ & $0.355$ & $0.060$ &
+$0.031$ & $0.026$ & $0.024$ & $0.020$ \\
+in the fit & --- & no & no & no & yes & yes & yes & yes & yes & yes \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent No cell sits near the threshold: the retained cells are at $0.36$ and
+below, the excluded ones at $0.65$ and above, so the partition does not depend
+on the exact cutoff. Refitting on the six non-degenerate cells gives
+$a=-0.00042$, $b=0.00110$, $R^2=\mathbf{0.939}$, against the contaminated
+nine-cell fit's $a=-0.00012$, $b=0.00104$, $R^2=0.970$. \textbf{What survives:}
+the slope, which moves by $6\%$, so the logarithmic regularity itself is not an
+artifact of the degenerate cells. \textbf{What does not:} the apparent dynamic
+range. Over the fitted cells the gap now spans $2.31\times$ ($+0.00226$ to
+$+0.00522$) rather than $6.10\times$ ($+0.00086$ to $+0.00522$) --- so roughly
+two-thirds of the range the original headline displayed came from cells in
+which the two arms were the same model. Both fits ship
+(\texttt{fits.log\_two\_parameter}, labelled contaminated, and
+\texttt{fits.log\_two\_parameter\_non\_degenerate}) with the per-cell
+degeneracy record beside them.
 
 \textbf{A dynamic-range observation, reported as suggestive rather than
 decisive.} Across $K=3\to225$ the measured gap grows by a factor of
 $6.10\times$ ($+0.00086\to+0.00522$), while the $\sqrt{2\ln K}$ factor grows by
-only $3.29/1.48=2.22\times$. If the true sampling-noise $\sigma$ were
+only $3.29/1.48=2.22\times$. (Correction 4 supplies a third reason this
+observation is not evidence: the $K=3$ endpoint anchoring the $6.10\times$ is
+$97\%$ degenerate, and across the non-degenerate cells the measured span is
+$2.31\times$ against the $\sqrt{2\ln K}$ factor's $1.41\times$ over the same
+range --- no longer a mismatch worth remarking on.) If the true sampling-noise $\sigma$ were
 approximately constant across the sweep --- which it arguably should be, since
 $n_{\text{val}}$ is held at $112$ throughout --- then even with the fitted $c$
 free to absorb any overall scale, the functional form would be off by nearly a
@@ -2676,7 +3070,8 @@ evidence.
 The scientifically interesting content survives, and is arguably more
 informative than a clean confirmation would have been: severity does rise with
 the number of candidates selected among, smoothly and monotonically, and a
-two-parameter logarithmic law describes it very well ($R^2=0.97$); whether it
+two-parameter logarithmic law describes it well ($R^2=0.94$ on the cells where
+the two arms are not the same model); whether it
 does so \emph{through} the $\sigma_{\text{val}}\sqrt{2\ln K}$ channel the
 winner's-curse heuristic posits, we neither confirm nor exclude.
 
@@ -2735,10 +3130,121 @@ strongest and cleanest of the three sweeps, and is promoted to a headline
 finding on that basis, \emph{with the scope limit §5.4 establishes}: it is
 measured inside this harness, it does not transport to the real-feature
 harnesses at a matched operating point (they exceed it by $14.3\times$ and
-$51.8\times$; \texttt{code/58}), and it licenses only the requirement that
+$38.3\times$; \texttt{code/58}), and it licenses only the requirement that
 operating points be matched before severities are compared. Full per-cell
 results: \texttt{results/selection\_multiplicity\_sweep.json}; refits:
 \texttt{results/evt\_scaling\_refit.json}.
+
+\subsection{Every constant in the harness, and whether it was derived}
+\label{sec:constants}
+
+A review asked, reasonably, why each hardcoded value is what it is. For several
+the answer is a mechanical one we can point at; for several others the honest
+answer is that the value was not derived, and saying so is more useful than
+constructing a rationale after the fact. Both kinds are listed. Where a value
+is undisclosed-arbitrary we also state what depends on it, so a reader can
+judge the exposure rather than take our word that it is small.
+
+\medskip\noindent\textbf{Derived, with the derivation stated.}
+\begin{itemize}\itemsep2pt
+\item \textbf{Early-stopping patience $15$; LR-scheduler patience $3$.} Both
+  read off the audited repository (\texttt{src/config.py:19} and
+  \texttt{src/training/trainer.py:76}); they are deliberately different because
+  MultiHaluDet uses two distinct thresholds against the same signal. Getting
+  this wrong was correction 12.
+\item \textbf{The other ported optimizer settings} --- learning rate $2\times
+  10^{-4}$, batch size $28$, warmup $5$ epochs, gradient clip $0.5$, minimum LR
+  $10^{-7}$, $45$ epochs, AdamW, \texttt{RobustScaler} --- each cite a specific
+  line of the pinned commit (correction 14, and the list in §4.3).
+\item \textbf{$n_{\text{val}}=112$}: derived as $560/5$ from the five-fold
+  structure, not chosen.
+\item \textbf{The $81$-point threshold grid} (Mechanism 5): ported verbatim
+  from the audited pipeline.
+\item \textbf{$n=100$ seeds}: chosen as $10\times$ the original capacity
+  sweep's $10$ specifically to resolve significance, which the smaller run
+  could not (\texttt{code/02c}'s own comment records this). The MDEs in A.2 are
+  computed \emph{at} $n=100$ and are therefore a description of what this
+  choice bought, not a justification of it.
+\item \textbf{Degeneracy gate at $0.50$ bitwise-identical folds}: set in
+  \texttt{code/57} against the observed distribution --- the dropped $K=3$
+  column ran at $0.87$--$1.00$ and every $K\geq15$ cell far below. It is now
+  also reused, unchanged and read at runtime from \texttt{code/57}, by
+  \texttt{code/50}'s corrected $K$-law fit, precisely so that a threshold is
+  not re-picked after seeing which cells it removes. On Sweep A no cell sits
+  near it: retained cells are at $\leq0.36$, excluded cells at $\geq0.65$.
+\item \textbf{Zero-snap at $10^{-12}$} (Case Study 4): the residues being
+  snapped are $\pm3.7\times10^{-17}$ and the smallest genuine estimate is
+  $+0.0002$, so any threshold across roughly thirteen orders of magnitude gives
+  the same partition.
+\item \textbf{$50$ reps} for $\Delta_{\text{sel}}$: bounded by the shipped
+  replay artifact's size ($\approx$$100$\,KB/rep, $4.0$\,MB at $50$), stated in
+  B.3. This is a preference about archive size, not a constraint, and we say so
+  there.
+\end{itemize}
+
+\medskip\noindent\textbf{Not derived. What each one exposes.}
+\begin{itemize}\itemsep2pt
+\item \textbf{$\text{AUROC}_0 = 0.80$}, the synthetic harness's calibration
+  target. This is the most consequential undisclosed choice in the paper, and
+  we flag it rather than defend it: §5 establishes that the operating point is
+  the strongest severity modifier we measure, so Mechanism 3's headline
+  $+0.0011$ to $+0.0036$ is \emph{conditional on} $0.80$ and would be roughly
+  $2.6\times$ larger at $0.70$ and $3.3\times$ smaller at $0.90$ (§5.3's own
+  numbers). The mitigation is that the sensitivity analysis a reviewer would
+  ask for is already the paper's Sweep C, run across
+  $\{0.70,0.80,0.90,0.95,0.985\}$ and reported in full; and that §4.3 declines
+  to compare the synthetic estimate's magnitude against the real-feature
+  harness's for exactly this reason. Had $0.80$ been chosen after seeing the
+  severities it produces, the whole estimate would be selection-optimistic in
+  the paper's own sense; it was not, but nothing in the artifact proves that,
+  and a reader should treat the operating-point-conditional reading as the
+  binding one.
+\item \textbf{Capacity grid $\{16,48,128,384\}$.} Roughly $3\times$ spacing
+  spanning under- to over-parameterized relative to $d=64$; the spacing is
+  conventional, not derived. What depends on it: the Holm--Bonferroni family in
+  A.2 is defined over exactly these four cells, so the multiplicity verdict
+  (one of four surviving) is a function of a grid size nobody derived. We
+  therefore report effect sizes with intervals as primary and the corrected
+  $p$-values as secondary, which is stated in §4.3 and is the right response to
+  this exposure rather than a coincidence.
+\item \textbf{$d=64$} for the isotropic synthetic features. Not derived. The
+  anisotropic sweep at $d=414$ exists partly to check that conclusions are not
+  a property of this value, and the fixed-$d$ eigenspectrum sweep (A.7)
+  separates dimension from covariance shape.
+\item \textbf{$\texttt{ES\_HOLD\_FRACTION}=0.15$.} Not derived, and it is the
+  single constant generating the most disclosed confounds in this paper: the
+  $\approx15\%$ budget deficit in every honest-selection arm, and the
+  $1.67\times$ selection-set size mismatch against LEAKY's $112$-sample fold.
+  $0.25$ would match the fold exactly at the cost of a larger budget deficit;
+  we did not run it, and A.3 flags that as an open robustness gap.
+\item \textbf{Saturation threshold $0.975$} (Case Study 4). Not derived. Its
+  exposure is the $12$/$12$ split it induces and the ceiling contrast §5.6
+  draws from it. Mitigation: a second, strictly stronger criterion (\emph{every}
+  layer above $0.975$, not just the selected one) is computed and reported
+  alongside it in B.7, and the qualitative conclusion is the same under both.
+\item \textbf{$K$ grid $\{1,3,5,10,15,25,45,75,135,225\}$ and
+  $\{15,45,135,405\}$; $\text{AUROC}_0$ grid
+  $\{0.70,0.80,0.90,0.95,0.985\}$.} Geometric-ish spacing, not derived, except
+  that $0.985$ matches MultiHaluDet's own reported operating point and that
+  $K=3$'s removal and $K=405$'s addition are justified in C.1. Note $0.70$ and
+  $0.985$ are the numerator and denominator of the $48.6\times$ headline, so
+  that ratio is partly a statement about where we put the endpoints; §5.3 now
+  reports it with the endpoint's own $p$-value attached.
+\item \textbf{$200$ seeds} for Sweep A and the Mechanism 5 $N$-sweep against
+  $100$ elsewhere. Not derived, and the mismatch is consequential: C.3 shows it
+  is why the joint fit's out-of-sample check compares two legitimately
+  different values of the same cell.
+\item \textbf{$10{,}000$ bootstrap resamples, $2{,}000$ permutations,
+  $2{,}000$ guardrail seeds, $20$ probe-configuration reps.} Conventional. The
+  first three are large enough that Monte Carlo error is well below the
+  reported precision; the fourth is small and its result is reported as a
+  robustness check rather than an estimate.
+\item \textbf{The AUROC $\geq0.90$ case-study inclusion criterion.} Circular,
+  and we say so in §3: it was derived from the observation that motivated the
+  paper, so it selects for the regime the paper is about and is not a random
+  sample of the literature. §6 lists the resulting non-representativeness as a
+  limitation.
+\end{itemize}
 
 \section{Extended Detail for Case Studies 2 and 4, and Mechanism 5}
 
@@ -2800,13 +3306,37 @@ order rather than a stable property of the selection procedure. Recomputing
 under randomized stratified $400/300$ splits, each rep evaluated at its own
 selected layer, gives $\Delta_{\text{sel}}=+0.0255$ (SD $0.0186$; one-sample
 $t=9.71$; Wilcoxon $p=7.7\times10^{-12}$) --- small but, for the first time,
-correctly measured and distinguishable from zero, about $7\times$ smaller than
-the sequential split's apparent $+0.188$. The selected layer spans 14 distinct
-layers from L5 to L23 across reps, which is itself the argmax instability the
-component measures. The \emph{general} CV-vs-held-out gap averaged across all
+correctly measured and distinguishable from zero. The selected layer spans 14
+distinct layers from L5 to L23 across reps, which is itself the argmax
+instability the component measures; the full distribution is
+L5:1, L10:4, L11:2, L12:1, L13:1, L14:12, L15:8, L16:5, L18:2, L19:7, L20:2,
+L21:1, L22:2, L23:2. \textbf{GUARDIAN's own selected layer, L11, is chosen in
+only $2$ of the $50$ randomized reps}; the modal choice is L14. Per rep,
+$\Delta_{\text{sel}}$ has median $+0.0269$, quartiles $+0.0150$ and $+0.0333$,
+range $-0.0261$ to $+0.0690$, and is positive in $47$ of $50$ reps --- so the
+mean is not carried by a few large reps, but three reps do come out negative
+and a reader should have that rather than only the SD. The \emph{general} CV-vs-held-out gap averaged across all
 32 layers is $+0.192$ under the sequential split but only $-0.0023$ (SD
 $0.0541$, $t=-0.30$, $p=0.76$) under the same randomized splits ---
 indistinguishable from zero.
+
+\textbf{The 32 per-layer gaps, since ``full 32-layer decomposition'' should
+mean more than a mean and an SD.} Under GUARDIAN's own sequential split the
+per-layer optimism gaps are, from L0 to L31:
+$0.067$, $0.067$, $0.114$, $0.111$, $0.133$, $0.148$, $0.153$, $0.165$,
+$0.158$, $0.184$, $0.178$, $\mathbf{0.188}$ (L11, the selected layer),
+$0.172$, $0.177$, $0.197$, $0.197$, $0.199$, $0.206$, $0.228$, $0.211$,
+$0.209$, $0.224$, $0.227$, $0.238$, $0.246$, $0.247$, $0.249$, $0.248$,
+$0.251$, $0.246$, $0.240$, $0.261$. Two things are visible here that the
+summary statistics hide. The gap rises close to monotonically with depth, from
+$0.067$ at L0 to $0.261$ at L31 --- so it is a property of \emph{where in the
+network you probe}, tracking how much the two population halves differ in the
+deeper representations, and not of the selection. And L11's $0.188$ sits below
+the $+0.192$ mean and is exceeded by $18$ of the other $31$ layers, which is
+the concrete form of the claim that the 18.8-point headline was not specific to
+the selected layer. This is the pattern the randomized-split correction was
+built to remove, and it is why the corrected $\Delta_{\text{sel}}$ is an order
+of magnitude smaller.
 
 \subsection{Case Study 2: replication count, and what the $p$-value means}
 
@@ -2932,6 +3462,96 @@ $\alpha=0.05$, $80\%$ power is $+0.0045$. The non-degenerate non-saturated
 subgroup is now $n=5$ and is plainly underpowered on its own; we report it
 descriptively and do not lean on its $p=0.0625$.
 
+\subsection{Case Study 4: every cell, and the permutation null in both directions}
+\label{sec:cs4-percell}
+
+An earlier revision reported this section's permutation null in one direction
+only. It reported --- correctly --- that the degenerate cells' null is centred
+well above the non-degenerate cells' observed mean, which is what licenses
+reading their exact zeros as estimator failure rather than as absent effect. It
+did not report that the same null is unfavourable in the other direction.
+\textbf{$0$ of the $24$ cells reach $p<0.05$ against their own permutation
+null} (minimum $p=0.277$, median $p=1.000$), and the non-degenerate cells' own
+null mean, $+0.0118$, also sits \emph{above} their observed mean of $+0.0076$.
+Both facts are now in Table~\ref{tab:cs4-cells}, cell by cell, together with
+the $24$ per-cell estimates themselves, which no previous revision published.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lllrrrrl}
+\toprule
+Model & Dataset & Probe & $\Delta_{\text{wc}}$ & Null mean & Perm.\ $p$ & Sel.\ AUROC & Flags \\
+\midrule
+llama3.1-8b & fever & linear & $+0.0000$ & $+0.0137$ & $1.000$ & $0.9548$ & D \\
+llama3.1-8b & fever & mlp & $+0.0176$ & $+0.0197$ & $0.616$ & $0.9561$ & --- \\
+llama3.1-8b & halueval\_qa & linear & $+0.0081$ & $+0.0171$ & $1.000$ & $0.9983$ & S \\
+llama3.1-8b & halueval\_qa & mlp & $+0.0027$ & $+0.0094$ & $1.000$ & $0.9979$ & S \\
+llama3.1-8b & synthetic & linear & $+0.0012$ & $+0.0021$ & $0.982$ & $1.0000$ & S \\
+llama3.1-8b & synthetic & mlp & $+0.0017$ & $+0.0027$ & $1.000$ & $1.0000$ & S \\
+llama3.1-8b & truthfulqa & linear & $+0.0000$ & $+0.0080$ & $1.000$ & $0.9137$ & D \\
+llama3.1-8b & truthfulqa & mlp & $+0.0040$ & $+0.0075$ & $1.000$ & $0.9139$ & --- \\
+mistral-7b & fever & linear & $+0.0000$ & $+0.0000$ & $1.000$ & $0.9598$ & D \\
+mistral-7b & fever & mlp & $+0.0055$ & $+0.0144$ & $1.000$ & $0.9597$ & --- \\
+mistral-7b & halueval\_qa & linear & $+0.0047$ & $+0.0122$ & $1.000$ & $0.9986$ & S \\
+mistral-7b & halueval\_qa & mlp & $+0.0058$ & $+0.0083$ & $0.868$ & $0.9987$ & S \\
+mistral-7b & synthetic & linear & $+0.0044$ & $+0.0076$ & $0.988$ & $0.9992$ & S \\
+mistral-7b & synthetic & mlp & $+0.0033$ & $+0.0110$ & $0.895$ & $0.9992$ & S \\
+mistral-7b & truthfulqa & linear & $+0.0000$ & $+0.0126$ & $1.000$ & $0.9039$ & D \\
+mistral-7b & truthfulqa & mlp & $+0.0000$ & $+0.0293$ & $1.000$ & $0.9081$ & D \\
+qwen2.5-7b & fever & linear & $+0.0347$ & $+0.0318$ & $0.277$ & $0.9265$ & --- \\
+qwen2.5-7b & fever & mlp & $+0.0165$ & $+0.0193$ & $0.897$ & $0.9310$ & --- \\
+qwen2.5-7b & halueval\_qa & linear & $+0.0044$ & $+0.0113$ & $1.000$ & $0.9971$ & S \\
+qwen2.5-7b & halueval\_qa & mlp & $+0.0053$ & $+0.0137$ & $1.000$ & $0.9980$ & S \\
+qwen2.5-7b & synthetic & linear & $+0.0002$ & $+0.0002$ & $1.000$ & $1.0000$ & S \\
+qwen2.5-7b & synthetic & mlp & $+0.0087$ & $+0.0121$ & $1.000$ & $1.0000$ & S \\
+qwen2.5-7b & truthfulqa & linear & $+0.0000$ & $+0.0271$ & $1.000$ & $0.9145$ & D \\
+qwen2.5-7b & truthfulqa & mlp & $+0.0000$ & $+0.0349$ & $1.000$ & $0.9250$ & D \\
+\bottomrule
+\end{tabular}
+\caption{All 24 Case Study 4 cells. $\Delta_{\text{wc}}$ is the
+leave-one-seed-out rotation estimate; ``Null mean'' is that cell's own
+per-layer-shuffle permutation null; ``Sel.\ AUROC'' is the naive
+selection AUROC. Flags: \textbf{D} = estimator degenerate (all three rotations
+picked the same layer, so the estimate is algebraically zero for any data);
+\textbf{S} = ceiling-saturated (selected layer at AUROC $\geq0.975$). No cell
+reaches $p<0.05$.}
+\label{tab:cs4-cells}
+\end{table}
+
+\textbf{What the disaggregation shows, including where it weakens the pooled
+number.} The $17$ non-degenerate estimates, sorted, are
+%
+\begin{center}\small
+$0.0002$, $0.0012$, $0.0017$, $0.0027$, $0.0033$, $0.0040$, $0.0044$, $0.0044$,
+$0.0047$,\\
+$0.0053$, $0.0055$, $0.0058$, $0.0081$, $0.0087$, $0.0165$, $0.0176$, $0.0347$.
+\end{center}
+%
+Every one
+is positive, which is the fact the pooled $+0.0076$ is really carrying. But
+only $3$ of $17$ exceed $+0.01$, and dropping the single largest cell
+(\texttt{qwen2.5-7b/fever/linear}, $+0.0347$) moves the mean to $+0.0059$.
+So the mean is not driven \emph{by} one cell, but it is roughly $22\%$ larger
+than it would be without it, and a reader should have both numbers. The
+uniform positivity across $17$ independently-published result files is the
+more robust statement, and is the one §4.4 leans on.
+
+\textbf{How to read the permutation null, given that it goes against us here.}
+The null shuffles seed labels independently within each layer, which destroys
+the layer $\times$ seed structure that makes an argmax stable and therefore
+puts the estimator in the regime where a winner's curse is \emph{largest}. It
+is a hard reference, not a conventional significance test: a real but modest
+selection effect measured on a stable argmax is expected to fall below it. That
+is exactly what makes it informative about the degenerate cells --- a cell whose
+null is centred well above zero cannot be exactly zero for want of an effect ---
+and simultaneously what makes it a poor significance test for the rest.
+\textbf{The consequence we accept: the $+0.0076$ is a point estimate with a BCa
+interval and a Wilcoxon test, and is \emph{not} significant against this null.}
+With three seeds per cell no sharper null is available from the shipped data,
+and we name that as the limitation rather than reporting the null only where it
+helps.
+
 \subsection{Case Study 4: ceiling composition of the 24 cells}
 
 \textbf{Ceiling composition of the 24 cells.} These cells are not comparable
@@ -3021,10 +3641,27 @@ cell.
 
 \textbf{The gate is not a clean bill of health for the whole corrected grid.}
 Degeneracy is a matter of degree and decays with $K$ rather than switching off:
-across the corrected grid the bitwise-identical fraction is $1$--$5\%$ for
-$K\in\{45,135,405\}$ but $24$--$42\%$ for $K=15$, worst at
-$(K{=}15,\text{AUROC}_0{=}0.90)$. $K=15$ therefore passes the gate but is the
-column carrying the least contrast. Every conclusion in §5.5 is accordingly refit five ways --- on all $20$ cells and with each $K$ column deleted in turn
+per column, across $\text{AUROC}_0\in\{0.70,0.80,0.90,0.95,0.985\}$ in that
+order, the bitwise-identical fraction is
+
+\begin{center}\small
+\begin{tabular}{lccccc}
+\toprule
+ & $0.70$ & $0.80$ & $0.90$ & $0.95$ & $0.985$ \\
+\midrule
+$K=15$  & $0.244$ & $0.362$ & $0.420$ & $0.406$ & $0.312$ \\
+$K=45$  & $0.024$ & $0.026$ & $0.024$ & $0.054$ & $0.038$ \\
+$K=135$ & $0.014$ & $0.018$ & $0.022$ & $0.054$ & $0.034$ \\
+$K=405$ & $0.010$ & $0.016$ & $0.022$ & $0.054$ & $0.032$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent so $1$--$5\%$ for $K\in\{45,135,405\}$ but $24$--$42\%$ for $K=15$,
+worst at $(K{=}15,\text{AUROC}_0{=}0.90)$. $K=15$ therefore passes the gate but
+is the column carrying the least contrast --- and, as §5.5 notes, it is also
+the column that sets the low end of the three largest $K$ spans this paper
+quotes, including the $7.1\times$ at $\text{AUROC}_0=0.90$. Every conclusion in §5.5 is accordingly refit five ways --- on all $20$ cells and with each $K$ column deleted in turn
 --- and we report the range rather than the single number
 (\texttt{drop\_one\_K\_column\_sensitivity} in the result JSON); the same
 deletion test is what exposed the old grid's headline. \emph{One further
@@ -3057,15 +3694,21 @@ axis and $K=15$ the column with least contrast. We quote $b$ as a range rather
 than a point wherever it matters.
 
 \textbf{This forces a qualification of one of this paper's own headline
-numbers.} The $\text{gap}=a+b\ln K$ law with $R^2=0.970$ reported above is
+numbers.} The $\text{gap}=a+b\ln K$ law with $R^2=0.939$ reported above is
 measured along a single row of this grid, at $\text{AUROC}_0=0.80$. Across the
 grid as a whole, $\ln K$ \emph{alone} explains essentially none of the variance
 ($R^2=0.038$, and at LOO $-0.192$ it is worse than predicting the mean). The
 $K$-law is therefore real \emph{within} an operating point and not a
-description of severity in general --- the table shows a $4$--$7\times$ span
-across $K$ where there is headroom and essentially none at
-$\text{AUROC}_0=0.985$, every cell there sitting between $+0.00012$ and
-$+0.00019$ regardless of whether $15$ or $405$ candidates were tried. This
+description of severity in general --- the table shows $K$ spans of
+$1.8\times$/$4.2\times$/$7.1\times$/$4.3\times$/$1.6\times$ at
+$\text{AUROC}_0=0.70$/$0.80$/$0.90$/$0.95$/$0.985$, i.e.\ a real effect where
+there is headroom and essentially none at $0.985$, every cell there sitting
+between $+0.00012$ and $+0.00019$ regardless of whether $15$ or $405$
+candidates were tried. §5.5 notes two caveats on those spans that we repeat
+here because they are easy to miss: the span is \emph{not} monotone in
+headroom, and each of the three largest is set at its low end by the $K=15$
+column, the least-contrastive column in the grid --- excluding it, the spans
+are $1.2$--$1.4\times$. This
 qualification is \emph{stronger} on the corrected grid than on the degenerate
 one it replaces ($R^2=0.038$ against $0.114$), so unlike the interaction claim
 it does not depend on the removed cells. Candidate count is a second-order
@@ -3119,14 +3762,20 @@ fit-then-score feature leakage) is an instance of L1.2, generalized from a
 preprocessing statistic to an entire fitted feature-extraction model, and
 Mechanism 3 (per-fold checkpoint selection) is a narrower-bandwidth variant
 of the same pattern, restricted to which training iterate is kept. Mechanism
-2 (CV-based layer/hyperparameter selection optimism, i.e.\ Varma \& Simon's
-problem) does not map cleanly onto any single one of the eight leaf types:
+2 (CV-based layer/hyperparameter selection optimism --- Varma \& Simon's
+problem, and the subject of Cawley \& Talbot's (2010) canonical treatment)
+does not map cleanly onto any single one of the eight leaf types:
 it is closest in spirit to L1.2/L1.3 but is really a distinct,
 model-selection-specific pattern their taxonomy does not name explicitly.
-That asymmetry --- three of this paper's five mechanisms are instances of an
-existing general taxonomy, while Case Study 2's pattern is not one of its
-eight named types --- is consistent with this paper's claim that hidden-state
-probing's two-stage structure surfaces at least one leakage pattern general
+The asymmetry to read off this is about the taxonomies, not about the
+mechanism: three of this paper's five mechanisms are instances of an existing
+general \emph{leakage} taxonomy, while Case Study 2's pattern is not one of its
+eight named types even though the \emph{model-selection} literature has
+characterized it since 2010. So the pattern is not unnamed in the field at
+large; it is unnamed by the two leakage instruments this literature is most
+likely to reach for. That is consistent with this paper's claim that
+hidden-state probing's two-stage structure surfaces at least one leakage
+pattern general
 cross-field taxonomies do not yet enumerate by name.
 
 \textbf{Benchmarking against REFORMS and the ML Reproducibility Checklist.}
@@ -3154,7 +3803,7 @@ This paper's own reproducibility practice (full per-seed result arrays,
 vendored external repositories, BCa bootstrap/permutation tests on every
 severity gap) satisfies the bulk of the Pineau checklist's disclosure items
 as a byproduct of the statistical rigor the severity claims already require
---- but that checklist would not, on its own, have caught any of the fourteen
+--- but that checklist would not, on its own, have caught any of the sixteen
 issues this paper's own Appendix A documents finding and fixing in its own
 instrument. Reporting-practice checklists and leakage-detection checklists
 are complementary, not interchangeable, and a paper can satisfy the former

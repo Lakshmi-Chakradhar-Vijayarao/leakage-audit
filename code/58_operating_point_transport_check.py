@@ -94,10 +94,15 @@ def main():
          "harness": "real Mistral-7B/HaluEval features, checkpoint argmax only",
          "achieved_operating_point": float(np.mean(rf["aucs"]["leaky"])),
          "gap": rf["leaky_minus_clean_matched"]["mean"]},
+        # Uses the BUDGET-MATCHED control (code/49's 6th correction). The
+        # previous key, ..._minus_clean_matched_plus_lrsched, compared against a
+        # control trained on only ~85% of tr_idx, so most of its larger gap was
+        # the control falling rather than the leaky arm rising -- which would
+        # have entered this transport check as a spurious transport failure.
         {"name": "fidelity extension (code/49), capacity 128",
          "harness": "real features, argmax + LR scheduler + early stopping on the same fold",
          "achieved_operating_point": fx["means"]["leaky_plus_lrsched"],
-         "gap": fx["leaky_plus_lrsched_minus_clean_matched_plus_lrsched"]["gap_mean"]},
+         "gap": fx["leaky_plus_lrsched_minus_clean_matched_budget_matched"]["gap_mean"]},
     ]
     for o in observations:
         o["ratio_vs_sweep_C_matched_cell"] = o["gap"] / ref["gap"]

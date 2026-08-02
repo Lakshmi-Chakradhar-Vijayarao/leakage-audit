@@ -79,6 +79,41 @@ Also retained from the previous revision: BCa bootstrap 95% CIs and Wilcoxon
 signed-rank tests (this section previously carried neither), and an explicit
 ceiling-saturation audit -- many cells sit at AUROC >= 0.975 at every layer,
 where there is no room for a selection effect to appear.
+
+──────────────────────────────────────────────────────────────────────────────
+CORRECTION 3 (a further independent adversarial review; this revision). THE
+PERMUTATION NULL WAS DISCLOSED IN ONLY ONE DIRECTION. Point (2) above was
+reported, correctly, for the DEGENERATE cells -- their null sits well above the
+non-degenerate cells' observed mean, which supports reading their exact zeros
+as estimator failure rather than as absent effect. What was NOT reported is
+that the same null is unfavourable in the other direction, and just as plainly:
+
+  * ZERO of the 24 cells reach p < 0.05 against their own permutation null.
+  * The NON-DEGENERATE cells' own null mean (+0.0118) also sits ABOVE their
+    observed mean (+0.0076), so on this null the observed winner's curse is
+    not merely non-significant, it is smaller than what a noise-driven argmax
+    would have produced.
+
+Reporting only the half that supported the argument was the defect. Both halves
+are now computed for ALL 24 cells and aggregated explicitly
+(`permutation_significance_audit`, and per-group null-vs-observed comparisons
+inside every `summarize()` record), so neither direction can be read out of the
+shipped JSON while the other stays hidden.
+
+WHAT THIS DOES AND DOES NOT OVERTURN. It does not overturn the algebraic
+degeneracy result: the proof in CORRECTION 2 is exact and does not depend on
+any null. Nor does it overturn reading the seven exact zeros as estimator
+artifacts. What it does overturn is any reading of the non-degenerate cells'
++0.0076 as a statistically established effect. Against the per-layer-shuffle
+null it is not one. The honest statement is that this null is a HARD reference:
+it puts the estimator in the maximal-winner's-curse regime by destroying the
+layer x seed structure that makes an argmax stable, so a real but modest
+selection effect measured on a stable argmax is expected to fall below it. That
+makes the null informative about the degenerate cells (its original purpose)
+and a poor significance test for the rest -- which is a limitation of the
+available data (3 seeds per cell), and is now stated as one instead of being
+navigated around.
+──────────────────────────────────────────────────────────────────────────────
 """
 import json
 import zlib
@@ -289,13 +324,24 @@ def summarize(name, cells):
             [c["permutation_null_mean"] for c in cells])),
         "bootstrap_max_bias_mean_over_group": float(np.mean(
             [c["bootstrap_max_bias"] for c in cells])),
+        # CORRECTION 3: the null is now reported in BOTH directions for every
+        # group, not only where it favours the argument.
+        "n_cells_perm_p_below_05": int(sum(c["permutation_p_one_sided"] < 0.05 for c in cells)),
+        "min_perm_p_in_group": float(min(c["permutation_p_one_sided"] for c in cells)),
+        "median_perm_p_in_group": float(np.median(
+            [c["permutation_p_one_sided"] for c in cells])),
+        "observed_minus_null_mean": float(
+            np.mean(vals) - np.mean([c["permutation_null_mean"] for c in cells])),
     }
     print(f"\n{name} (n={s['n_cells']} cells, {n_degen} degenerate):")
     print(f"  mean winner's-curse = {s['mean']:+.4f}  BCa 95% CI {ci}  Wilcoxon p={p} "
           f"(n_nonzero={s['n_nonzero_for_wilcoxon']})")
     print(f"  median {s['median']:+.4f}  min {s['min']:+.4f}  max {s['max']:+.4f}")
     print(f"  permutation-null mean {s['permutation_null_mean_over_group']:+.4f}  "
+          f"(observed - null = {s['observed_minus_null_mean']:+.4f})  "
           f"bootstrap max-bias {s['bootstrap_max_bias_mean_over_group']:+.4f}")
+    print(f"  permutation p: {s['n_cells_perm_p_below_05']}/{s['n_cells']} cells reach p<0.05 "
+          f"(min p={s['min_perm_p_in_group']:.4f}, median p={s['median_perm_p_in_group']:.4f})")
     return s
 
 
@@ -363,6 +409,52 @@ def main():
             "whose null sits well above zero are cells where the exact zero reflects a "
             "STABLE argmax defeating the estimator, not an absent selection effect."),
     }
+    # ── CORRECTION 3: the permutation null, reported in BOTH directions ──────
+    all_p = {k: v["permutation_p_one_sided"] for k, v in out["per_cell"].items()}
+    sig = sorted(k for k, p in all_p.items() if p < 0.05)
+    nd_obs = float(np.mean([c["winners_curse_estimate"] for c in nondegen]))
+    nd_null = float(np.mean([c["permutation_null_mean"] for c in nondegen]))
+    dg_null = float(np.mean([c["permutation_null_mean"] for c in degen])) if degen else None
+    out["permutation_significance_audit"] = {
+        "n_cells_total": len(all_p),
+        "n_cells_p_below_05": len(sig),
+        "cells_p_below_05": sig,
+        "min_p_over_all_cells": float(min(all_p.values())),
+        "median_p_over_all_cells": float(np.median(list(all_p.values()))),
+        "per_cell_permutation_p": dict(sorted(all_p.items())),
+        "non_degenerate_observed_mean": nd_obs,
+        "non_degenerate_null_mean": nd_null,
+        "non_degenerate_observed_minus_null": nd_obs - nd_null,
+        "degenerate_null_mean": dg_null,
+        "statement": (
+            f"{len(sig)} of {len(all_p)} cells reach p < 0.05 against their own per-layer-shuffle "
+            f"permutation null. The non-degenerate cells' null mean ({nd_null:+.4f}) also sits "
+            f"ABOVE their observed mean ({nd_obs:+.4f}), i.e. the null is unfavourable in the "
+            f"same direction there as it is favourable for the degenerate cells. Both facts are "
+            f"reported; the previous revision reported only the second."),
+        "interpretation": (
+            "This null is a HARD reference, not a conventional significance test. Shuffling seed "
+            "labels independently within each layer destroys the layer x seed structure that "
+            "makes an argmax stable, which puts the estimator in the regime where a winner's "
+            "curse is LARGEST. A real but modest selection effect measured on a stable argmax is "
+            "therefore expected to fall below it. That is what makes the null informative about "
+            "the DEGENERATE cells -- a cell whose null is centred well above zero cannot have an "
+            "exact zero for want of an effect -- and simultaneously makes it a poor significance "
+            "test for the rest. The consequence for the paper is that the non-degenerate cells' "
+            "+0.0076 must be reported as a point estimate with its BCa CI and its Wilcoxon test, "
+            "and NOT as significant against this null, which it is not. With 3 seeds per cell no "
+            "sharper null is available from the shipped data."),
+    }
+    print(f"\n=== permutation-null significance audit (all {len(all_p)} cells) ===")
+    print(f"  cells with p < 0.05: {len(sig)}/{len(all_p)}"
+          + (f"  -> {sig}" if sig else "  (none)"))
+    print(f"  min p = {min(all_p.values()):.4f}, median p = {np.median(list(all_p.values())):.4f}")
+    print(f"  non-degenerate: observed {nd_obs:+.4f} vs own null {nd_null:+.4f} "
+          f"(observed - null = {nd_obs - nd_null:+.4f})")
+    if dg_null is not None:
+        print(f"  degenerate cells' null mean {dg_null:+.4f} (above the non-degenerate observed "
+              f"mean, which is why their exact zeros read as estimator failure)")
+
     out["per_model_layer_counts"] = LAYER_COUNTS
     out["method_notes"] = {
         "n_permutations": N_PERM,

@@ -26,9 +26,9 @@ transport failure (§5.4) — rather than in a general view of good practice.
 | Your situation | What this checklist gives you, and on what evidence |
 |---|---|
 | You report AUROC (or any metric) from a pipeline that selects a checkpoint, layer, threshold or hyperparameter using a statistic computed on — or reused from — the data you then report on. | Q1–Q5 name which of the five mechanisms you have and where in the code to look. Three of the five are verified against pinned commits of published third-party code (§4), so this is a documented failure mode, not a hypothetical one. |
-| A validation-fold decision is coupled to something downstream: early stopping, LR scheduling on a reused fold, best-epoch or best-layer selection. | Q2 and Q4. §4.3 shows the *continuity* of the coupling matters: porting a scheduler and epoch-by-epoch early stopping onto a checkpoint-selection harness raises the measured gap by **3.6x** over a single end-of-training argmax, on the same features at a matched calibration. |
+| A validation-fold decision is coupled to something downstream: early stopping, LR scheduling on a reused fold, best-epoch or best-layer selection. | Q2 and Q4. Ask about all of them: §4.3 measures **+0.0250** on real features for a trainer coupling an LR scheduler and epoch-by-epoch early stopping to the reused fold. We specifically do *not* claim the coupling's *continuity* is what makes it worse — an isolating control (same harness, same reused fold, single end-of-training argmax) comes out 0.0159 AUROC *higher*, because early stopping truncates training. |
 | Your headline threshold-dependent numbers (F1, accuracy, MCC, Cohen's kappa, or an ECE derived from thresholded predictions) come from a threshold chosen on the evaluation labels. | Q5, which nothing upstream will catch: AUROC is unaffected by construction, so an AUROC-only audit clears the pipeline while F1 and accuracy are still inflated (+0.021 to +0.034 at n_test = 140; §4.5). |
-| You want to know, before publishing a severity estimate, whether it is confounded with the operating point or with how many candidates were tried. | §5 names the two quantities to report alongside it. Within one harness the gap grows as `a + b ln K` (R^2 = 0.970 at a fixed operating point) and falls **48.6x** from AUROC_0 = 0.70 to 0.985; two severity numbers measured at different operating points are not comparable until it is matched. |
+| You want to know, before publishing a severity estimate, whether it is confounded with the operating point or with how many candidates were tried. | §5 names the two quantities to report alongside it. Within one harness the gap grows as `a + b ln K` (R^2 = 0.939 at a fixed operating point, over cells where the two arms are not bitwise identical) and falls **48.6x** from AUROC_0 = 0.70 to 0.985; two severity numbers measured at different operating points are not comparable until it is matched. |
 
 ### Does not directly apply, or needs adaptation
 
@@ -150,21 +150,38 @@ table does establish is that the *calibration* fix, not the patience fix,
 moves this number: +0.0081 -> +0.0342 at patience 3 and +0.0052 -> +0.0338
 at patience 15.
 
-The reported cell is the bottom right: **+0.0338** (BCa 95% CI
+The bottom-right cell of that 2x2 is **+0.0338** (BCa 95% CI
 [+0.0279, +0.0405], Wilcoxon p=6.2e-15, paired permutation p<0.0001, 28
-tied absolute differences of 100 pairs). Against the
-checkpoint-selection-only harness run on the same features under the same
-label-free calibration (+0.0093 at capacity 128), that is a genuinely
-like-for-like ratio of **3.6x**. The earlier "roughly 3-4x larger than
-the checkpoint-selection-only estimate" claim in this document, the
-intermediate "5.2x", and the "2.4x" that preceded the fidelity port are all
-**superseded**: the first two compared across
-differently-calibrated harnesses at different operating points, which
-this paper's own Appendix A says is invalid. The residual non-equivalence
-this document used to disclose — the two harnesses landing at LEAKY
-operating points of ~0.918 and ~0.940 — has largely closed under the
-fidelity port (now 0.9424 vs 0.9403), so 3.6x is no longer reported as an
-upper bound on that account. **What "fidelity" does not cover, stated so it
+tied absolute differences of 100 pairs). **That is no longer the reported
+number.** A later review found the control it is scored against was not
+budget-matched: `code/43`'s CLEAN_MATCHED retrains on the full `tr_idx`
+while this harness's control trained on `tr2_idx`, ~85% of it. Arm by arm
+between the two harnesses, LEAKY moves only +0.0022 while the control moves
+-0.0224 and the placebo -0.0284 — most of the larger gap was the controls
+falling, not the leak rising. Against a budget-matched control (full
+`tr_idx`, replaying the disjoint carve-out run's own per-epoch LR
+trajectory so it keeps an adaptive schedule) the gap is **+0.0250** (BCa
+95% CI [+0.0192, +0.0314], Wilcoxon p=1.5e-11), and the like-for-like ratio
+against the checkpoint-selection-only harness (+0.0093 at capacity 128) is
+**2.7x**. That supersedes the 3.6x above, the "5.2x" before it, the "2.4x"
+that preceded the fidelity port, and the original "roughly 3-4x".
+
+**The coupling-continuity claim is retracted.** Comparing across two
+harnesses could never isolate coupling, since they differ in optimizer,
+batching, scaler and learning rate as well. The within-harness test — same
+repo-faithful optimizer, same reused fold, but only a final-checkpoint
+argmax, no scheduler and no early stopping — scores **0.9583** against the
+coupled arm's **0.9424**. Adding continuous coupling *lowers* the leaky arm
+by -0.0159 (Wilcoxon p=2.8e-13), because early stopping at the repo's
+patience=15 truncates it to a mean kept epoch of 29.14 where the
+argmax-only arm reaches 40.73. A sanity ratio makes the same point from the
+other side: (LEAKY - CM)/(CM - PLACEBO) is 1.60 against the old control —
+outside the 0.06-0.85 band this paper's other eight harness/capacity cells
+occupy — and 0.83 against the budget-matched one, inside it.
+
+The residual non-equivalence this document used to disclose — the two
+harnesses landing at LEAKY operating points of ~0.918 and ~0.940 — has
+largely closed under the fidelity port (now 0.9424 vs 0.9403). **What "fidelity" does not cover, stated so it
 is not over-read:** the audited trainer's EMA, its composite
 BCE/focal/asymmetric/contrastive objective, class rebalancing, label
 smoothing, mixup, cutmix and its 6-layer transformer are all *not* ported.

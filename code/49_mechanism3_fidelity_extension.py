@@ -135,6 +135,56 @@ one; §4.3 discloses it alongside the data-budget confound.
   a final-checkpoint argmax, holding this paper's own harness architecture
   fixed; it is not an estimate of MultiHaluDet's own reported number's
   inflation, which would require their model and loss as well.
+
+──────────────────────────────────────────────────────────────────────────────
+SIXTH CORRECTION (a further independent adversarial review; this revision). TWO
+DEFECTS, BOTH IN HOW THIS HARNESS'S HEADLINE NUMBER WAS ATTRIBUTED.
+
+(A) THE CONTROL WAS NOT BUDGET-MATCHED, AND THE HEADLINE MOVED BECAUSE OF IT.
+    Comparing arm means between the checkpoint-only harness (code/43) and this
+    one, LEAKY moves only +0.002, while CLEAN_MATCHED drops -0.022 and PLACEBO
+    drops -0.028. Almost none of the increase in the reported gap comes from the
+    leaky arm getting better; most of it comes from the controls getting worse.
+    The cause is a convention mismatch that Appendix A previously disclosed only
+    by halves: code/43's CLEAN_MATCHED retrains on the FULL tr_idx (a
+    budget-matching fix from an earlier round), whereas this script's control
+    trained on tr2_idx, ~85% of it. Reporting the resulting ratio in the
+    abstract as if it isolated "scheduler coupling continuity" was therefore
+    unsupported.
+
+    FIX: a budget-matched control, CLEAN_MATCHED_BUDGET_MATCHED, is added and is
+    now the arm the reported gap is computed against. Naively applying code/43's
+    convention verbatim -- retrain on the full tr_idx at constant LR for the
+    selected epoch count -- would re-open the confound the FIRST correction
+    above closed, because LEAKY has an active scheduler and the control would
+    not. So the control instead REPLAYS, on the full tr_idx, the exact per-epoch
+    learning-rate trajectory and epoch count that the scheduler produced when it
+    was driven by the disjoint es_idx carve-out. The control then matches LEAKY
+    on training-set size, on epoch count and on LR schedule shape, and differs
+    from it in exactly one respect: whether the fold that drove the adaptation
+    is the one later reused as out-of-fold features. The es_idx-fed arm is
+    retained unchanged under its original key so the two conventions can be
+    compared directly rather than swapped silently.
+
+(B) THE ISOLATING ARM FOR THE "COUPLING CONTINUITY" CLAIM WAS MISSING.
+    The claim this harness is quoted for is that CONTINUOUS, epoch-by-epoch
+    coupling (LR scheduling + early stopping) is worse than a single
+    end-of-training argmax. Testing that requires an arm with this script's
+    repo-faithful optimizer and data pipeline but with ONLY the final-checkpoint
+    argmax -- no ReduceLROnPlateau, no early stopping. Without it, the
+    comparison ran across two different harnesses (code/43's and this one),
+    which differ in optimizer, batching, scaler and LR as well as in coupling,
+    so the difference could not be attributed to coupling. That arm,
+    LEAKY_ARGMAX_ONLY, is now included. LEAKY_PLUS_LRSCHED minus
+    LEAKY_ARGMAX_ONLY is the within-harness isolation of coupling continuity;
+    everything else is held fixed between them.
+
+    A sanity ratio is also computed and reported: (LEAKY - CLEAN_MATCHED) /
+    (CLEAN_MATCHED - PLACEBO). This paper's other synthetic and real harnesses
+    span 0.06-0.85 on that ratio. A value far outside that band is a signal that
+    the control, not the leak, is doing the work, and is disclosed as such
+    rather than left for a reader to reconstruct.
+──────────────────────────────────────────────────────────────────────────────
 """
 import json
 import os
@@ -285,12 +335,16 @@ def train_with_scheduler_and_earlystop(X_tr, y_tr, X_sel, y_sel, hidden, max_epo
     shuffle_gen = torch.Generator().manual_seed(seed)
     best_auc, best_state, best_epoch = -1.0, None, 0
     patience_counter = 0
+    lr_trajectory = []
     for ep in range(max_epochs):
         # trainer.py:88-91 -- linear LR warmup, applied before the epoch's steps.
         if ep < WARMUP_EPOCHS:
             warmup_lr = LEARNING_RATE * (ep + 1) / WARMUP_EPOCHS
             for pg in opt.param_groups:
                 pg["lr"] = warmup_lr
+        # Recorded BEFORE the epoch's steps, so replaying this list reproduces
+        # the LR in force during each epoch exactly (6th correction, part A).
+        lr_trajectory.append(float(opt.param_groups[0]["lr"]))
         model.train()
         perm = torch.randperm(n_tr, generator=shuffle_gen)
         for start in range(0, n_tr, BATCH_SIZE):
@@ -320,6 +374,102 @@ def train_with_scheduler_and_earlystop(X_tr, y_tr, X_sel, y_sel, hidden, max_epo
         if patience_counter >= ES_PATIENCE:
             break
     model.load_state_dict(best_state)
+    return model, best_epoch, lr_trajectory
+
+
+def train_replay_lr_schedule(X_tr, y_tr, hidden, lr_trajectory, seed):
+    """Budget-matched control (6th correction, part A).
+
+    Retrains on the FULL tr_idx -- code/43's budget convention -- for exactly
+    as many epochs as the disjoint-carve-out run kept, REPLAYING that run's
+    per-epoch learning rates instead of running at a constant LR. Replaying
+    rather than dropping the schedule is what keeps this a test of WHICH FOLD
+    drove the adaptation, rather than a test of whether an adaptive schedule
+    exists at all -- the confound the 1st correction above closed.
+
+    Everything else (AdamW, weight decay, batch size, shuffle stream, grad
+    clipping) is identical to `train_with_scheduler_and_earlystop`, and the
+    torch seed is the same, so the two runs start from the same initialization.
+    """
+    torch.manual_seed(seed)
+    model = SweepMLP(X_tr.shape[1], hidden)
+    opt = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+    crit = nn.BCEWithLogitsLoss()
+    Xt = torch.tensor(X_tr, dtype=torch.float32)
+    yt = torch.tensor(y_tr, dtype=torch.float32)
+    n_tr = Xt.shape[0]
+    shuffle_gen = torch.Generator().manual_seed(seed)
+    for lr in lr_trajectory:
+        for pg in opt.param_groups:
+            pg["lr"] = lr
+        model.train()
+        perm = torch.randperm(n_tr, generator=shuffle_gen)
+        for start in range(0, n_tr, BATCH_SIZE):
+            bidx = perm[start:start + BATCH_SIZE]
+            opt.zero_grad()
+            loss = crit(model(Xt[bidx]), yt[bidx])
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            opt.step()
+    model.eval()
+    return model
+
+
+def train_argmax_only(X_tr, y_tr, X_sel, y_sel, hidden, max_epochs, seed):
+    """The isolating arm for the coupling-continuity claim (6th correction, part B).
+
+    Identical to `train_with_scheduler_and_earlystop` in optimizer (AdamW),
+    learning rate, weight decay, batch size, warmup, gradient clipping, epoch
+    budget, shuffle stream and initialization -- and identical to it in reusing
+    the leaky val fold as the selection signal -- but with NO
+    ReduceLROnPlateau and NO early stopping. The only coupling to the
+    validation fold is the single end-of-training argmax over checkpoints.
+
+    LEAKY_PLUS_LRSCHED minus this arm is therefore the incremental severity of
+    CONTINUOUS, epoch-by-epoch coupling over a one-shot argmax, measured inside
+    one harness with everything else held fixed. The previous version of that
+    comparison ran across code/43's harness and this one, which differ in
+    optimizer, batching, scaler and learning rate as well as in coupling.
+    """
+    torch.manual_seed(seed)
+    model = SweepMLP(X_tr.shape[1], hidden)
+    opt = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+    crit = nn.BCEWithLogitsLoss()
+    Xt = torch.tensor(X_tr, dtype=torch.float32)
+    yt = torch.tensor(y_tr, dtype=torch.float32)
+    Xs = torch.tensor(X_sel, dtype=torch.float32)
+    n_tr = Xt.shape[0]
+    shuffle_gen = torch.Generator().manual_seed(seed)
+    best_auc, best_state, best_epoch = -1.0, None, 0
+    for ep in range(max_epochs):
+        if ep < WARMUP_EPOCHS:
+            warmup_lr = LEARNING_RATE * (ep + 1) / WARMUP_EPOCHS
+            for pg in opt.param_groups:
+                pg["lr"] = warmup_lr
+        elif ep == WARMUP_EPOCHS:
+            for pg in opt.param_groups:
+                pg["lr"] = LEARNING_RATE
+        model.train()
+        perm = torch.randperm(n_tr, generator=shuffle_gen)
+        for start in range(0, n_tr, BATCH_SIZE):
+            bidx = perm[start:start + BATCH_SIZE]
+            opt.zero_grad()
+            loss = crit(model(Xt[bidx]), yt[bidx])
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            opt.step()
+        model.eval()
+        with torch.no_grad():
+            probs = torch.sigmoid(model(Xs)).numpy()
+        try:
+            auc = roc_auc_score(y_sel, probs)
+        except ValueError:
+            auc = 0.5
+        if auc > best_auc:
+            best_auc = auc
+            best_state = {k: v.clone() for k, v in model.state_dict().items()}
+            best_epoch = ep + 1
+    model.load_state_dict(best_state)
     return model, best_epoch
 
 
@@ -347,7 +497,9 @@ def run_one_seed(X, y, hidden, seed):
     skf = StratifiedKFold(n_splits=N_INNER_FOLDS, shuffle=True, random_state=seed)
     feat_dim_out = hidden // 2
     n_tr = len(y_train)
-    conditions = ["leaky_plus_lrsched", "clean_matched_plus_lrsched", "placebo_plus_lrsched"]
+    conditions = ["leaky_plus_lrsched", "clean_matched_plus_lrsched",
+                  "clean_matched_budget_matched", "leaky_argmax_only",
+                  "placebo_plus_lrsched"]
     oof = {k: np.zeros((n_tr, feat_dim_out)) for k in conditions}
     test_feat = {k: np.zeros((len(y_test), feat_dim_out)) for k in conditions}
 
@@ -357,12 +509,24 @@ def run_one_seed(X, y, hidden, seed):
         fold_seed = seed * 100 + fold
 
         # LEAKY: scheduler+early-stop react to the SAME val fold later scored as OOF.
-        model_leaky, be_leaky = train_with_scheduler_and_earlystop(
+        model_leaky, be_leaky, _ = train_with_scheduler_and_earlystop(
             X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_train[val_idx], hidden, MAX_EPOCHS, fold_seed,
         )
         oof["leaky_plus_lrsched"][val_idx] = extract_features(model_leaky, X_train[val_idx])
         test_feat["leaky_plus_lrsched"] += extract_features(model_leaky, X_test)
         best_epochs["leaky_plus_lrsched"].append(be_leaky)
+
+        # LEAKY_ARGMAX_ONLY (6th correction, part B): same repo-faithful
+        # optimizer and data pipeline, same reused val fold, but the ONLY
+        # coupling is the end-of-training checkpoint argmax -- no LR scheduling,
+        # no early stopping. Isolates coupling continuity within one harness.
+        model_leaky_argmax, be_leaky_argmax = train_argmax_only(
+            X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_train[val_idx],
+            hidden, MAX_EPOCHS, fold_seed,
+        )
+        oof["leaky_argmax_only"][val_idx] = extract_features(model_leaky_argmax, X_train[val_idx])
+        test_feat["leaky_argmax_only"] += extract_features(model_leaky_argmax, X_test)
+        best_epochs["leaky_argmax_only"].append(be_leaky_argmax)
 
         # CLEAN_MATCHED: scheduler+early-stop react to a genuine, disjoint
         # ES-holdout carved from tr_idx (never touches val_idx). FIXED
@@ -376,15 +540,28 @@ def run_one_seed(X, y, hidden, seed):
         tr2_idx, es_idx = train_test_split(
             tr_idx, test_size=ES_HOLD_FRACTION, stratify=y_train[tr_idx], random_state=fold_seed,
         )
-        model_clean_matched, be_cm = train_with_scheduler_and_earlystop(
+        model_clean_matched, be_cm, lr_traj_cm = train_with_scheduler_and_earlystop(
             X_train[tr2_idx], y_train[tr2_idx], X_train[es_idx], y_train[es_idx], hidden, MAX_EPOCHS, fold_seed,
         )
         oof["clean_matched_plus_lrsched"][val_idx] = extract_features(model_clean_matched, X_train[val_idx])
         test_feat["clean_matched_plus_lrsched"] += extract_features(model_clean_matched, X_test)
         best_epochs["clean_matched_plus_lrsched"].append(be_cm)
 
+        # CLEAN_MATCHED_BUDGET_MATCHED (6th correction, part A): code/43's
+        # budget convention -- retrain on the FULL tr_idx for the epoch count
+        # the honest, disjoint es_idx signal selected -- but replaying that
+        # run's per-epoch LR trajectory rather than dropping to a constant LR,
+        # so the control keeps an adaptive schedule and the contrast with LEAKY
+        # remains "which fold drove the adaptation," not "was there any."
+        model_cm_budget = train_replay_lr_schedule(
+            X_train[tr_idx], y_train[tr_idx], hidden, lr_traj_cm[:be_cm], fold_seed,
+        )
+        oof["clean_matched_budget_matched"][val_idx] = extract_features(model_cm_budget, X_train[val_idx])
+        test_feat["clean_matched_budget_matched"] += extract_features(model_cm_budget, X_test)
+        best_epochs["clean_matched_budget_matched"].append(be_cm)
+
         y_val_permuted = rng.permutation(y_train[val_idx])
-        model_placebo, be_plc = train_with_scheduler_and_earlystop(
+        model_placebo, be_plc, _ = train_with_scheduler_and_earlystop(
             X_train[tr_idx], y_train[tr_idx], X_train[val_idx], y_val_permuted, hidden, MAX_EPOCHS, fold_seed,
         )
         oof["placebo_plus_lrsched"][val_idx] = extract_features(model_placebo, X_train[val_idx])
@@ -436,11 +613,168 @@ def tie_diagnostics(a, b):
     }
 
 
+def _harness_ratio(leaky, clean_matched, placebo):
+    """(LEAKY - CLEAN_MATCHED) / (CLEAN_MATCHED - PLACEBO).
+
+    A leak-vs-control gap should be a fraction of the control-vs-placebo gap:
+    the placebo has an adaptive selection mechanism driven by pure noise, so
+    CLEAN_MATCHED - PLACEBO measures what an honest signal is worth, and
+    LEAKY - CLEAN_MATCHED measures what reusing the fold adds on top. A ratio
+    far above the band this paper's other harnesses occupy is evidence that
+    the control has been degraded, not that the leak is unusually large."""
+    denom = clean_matched - placebo
+    return float("nan") if abs(denom) < 1e-12 else float((leaky - clean_matched) / denom)
+
+
+def _comparator_ratios():
+    """The same ratio in every other harness in this repo that reports all
+    three arms, so this harness's value can be read against a measured band
+    rather than an asserted one."""
+    out = {}
+    p43 = ROOT / "results" / "real_feature_test_train_only_calibrated.json"
+    if p43.exists():
+        d = json.load(open(p43))
+        for cap, v in d["capacities"].items():
+            m = {k: float(np.mean(a)) for k, a in v["aucs"].items()}
+            out[f"code/43 real features, capacity {cap}"] = _harness_ratio(
+                m["leaky"], m["clean_matched"], m["placebo"])
+    p02d = ROOT / "results" / "corrected_capacity_placebo_sweep.json"
+    if p02d.exists():
+        d = json.load(open(p02d))["by_capacity"]
+        for cap, v in d.items():
+            m = {k: float(np.mean(a)) for k, a in v["aucs"].items()}
+            if {"leaky", "clean_matched", "placebo"} <= set(m):
+                out[f"code/02d synthetic, capacity {cap}"] = _harness_ratio(
+                    m["leaky"], m["clean_matched"], m["placebo"])
+    p22 = ROOT / "results" / "epoch_forcing_confound_control.json"
+    if p22.exists():
+        d = json.load(open(p22))["by_capacity"]
+        for cap, v in d.items():
+            m = {k: float(np.mean(a)) for k, a in v["aucs"].items()}
+            out[f"code/22 synthetic, capacity {cap}"] = _harness_ratio(
+                m["leaky"], m["clean_matched"], m["placebo"])
+    return out
+
+
+def _sixth_correction_block(results):
+    """Arm-mean breakdown, cross-harness arm-mean deltas, sanity ratios, and the
+    within-harness isolation of coupling continuity. See the module docstring's
+    SIXTH CORRECTION."""
+    means = {k: float(np.mean(v)) for k, v in results.items()}
+
+    # (b) Where does any gap come from -- the leaky arm moving, or the controls?
+    cross = {}
+    p43 = ROOT / "results" / "real_feature_test_train_only_calibrated.json"
+    if p43.exists():
+        m43 = {k: float(np.mean(a)) for k, a in
+               json.load(open(p43))["capacities"][str(HIDDEN)]["aucs"].items()}
+        cross = {
+            "code43_arm_means": m43,
+            "this_harness_arm_means": means,
+            "delta_leaky": means["leaky_plus_lrsched"] - m43["leaky"],
+            "delta_clean_matched_es_fed": means["clean_matched_plus_lrsched"] - m43["clean_matched"],
+            "delta_clean_matched_budget_matched": (
+                means["clean_matched_budget_matched"] - m43["clean_matched"]),
+            "delta_placebo": means["placebo_plus_lrsched"] - m43["placebo"],
+            "note": (
+                "Arm-by-arm movement between the checkpoint-selection-only harness (code/43) "
+                "and this fidelity extension, at the same capacity and the same calibration. "
+                "A gap that grows mainly because the CONTROLS fall is not a larger leak. "
+                "delta_clean_matched_budget_matched is the one to read: it uses code/43's own "
+                "full-tr_idx budget convention, so it is not confounded with the ~15% "
+                "training-set difference the es-fed arm carries."),
+        }
+
+    # (c) sanity ratio, this harness vs every other harness in the repo
+    ratios = {
+        "this_harness_vs_budget_matched_control": _harness_ratio(
+            means["leaky_plus_lrsched"], means["clean_matched_budget_matched"],
+            means["placebo_plus_lrsched"]),
+        "this_harness_vs_es_fed_control_superseded": _harness_ratio(
+            means["leaky_plus_lrsched"], means["clean_matched_plus_lrsched"],
+            means["placebo_plus_lrsched"]),
+    }
+    comparators = _comparator_ratios()
+    finite = [v for v in comparators.values() if np.isfinite(v)]
+    ratios["comparator_harnesses"] = comparators
+    ratios["comparator_band"] = [min(finite), max(finite)] if finite else None
+    ratios["budget_matched_ratio_inside_comparator_band"] = bool(
+        finite and min(finite) <= ratios["this_harness_vs_budget_matched_control"] <= max(finite))
+
+    # (d) the isolating arm: continuous coupling vs one-shot argmax, same harness
+    a = np.asarray(results["leaky_plus_lrsched"])
+    b = np.asarray(results["leaky_argmax_only"])
+    _, p_couple = wilcoxon(a, b)
+    coupling = {
+        "gap_mean": float((a - b).mean()),
+        "bca_ci_95": bca_ci(a, b),
+        "wilcoxon_p": float(p_couple),
+        "paired_permutation_p": paired_permutation_p(a, b),
+        "leaky_plus_lrsched_mean": means["leaky_plus_lrsched"],
+        "leaky_argmax_only_mean": means["leaky_argmax_only"],
+        "note": (
+            "LEAKY_PLUS_LRSCHED minus LEAKY_ARGMAX_ONLY. Both reuse the same val fold and "
+            "share optimizer, learning rate, batching, warmup, grad clipping, scalers, epoch "
+            "budget and initialization; they differ ONLY in whether the coupling to that fold "
+            "is continuous (ReduceLROnPlateau stepped every epoch + early stopping) or a "
+            "single end-of-training checkpoint argmax. This is the within-harness isolation "
+            "of the coupling-continuity claim; the previous cross-harness comparison against "
+            "code/43 also varied optimizer, batch size, scaler and learning rate."),
+    }
+
+    # Primary reported gap, against the budget-matched control.
+    cm = np.asarray(results["clean_matched_budget_matched"])
+    _, p_bm = wilcoxon(a, cm)
+    primary = {
+        "gap_mean": float((a - cm).mean()),
+        "bca_ci_95": bca_ci(a, cm),
+        "wilcoxon_p": float(p_bm),
+        "paired_permutation_p": paired_permutation_p(a, cm),
+        **tie_diagnostics(a, cm),
+    }
+    return {
+        "arm_means": means,
+        "leaky_plus_lrsched_minus_clean_matched_budget_matched": primary,
+        "coupling_continuity_isolation": coupling,
+        "cross_harness_arm_movement": cross,
+        "sanity_ratios": ratios,
+    }
+
+
+def _print_sixth_correction(out):
+    print("\n=== 6th correction: arm means ===")
+    for k, v in out["arm_means"].items():
+        print(f"  {k:36s} {v:.4f}")
+    c = out.get("cross_harness_arm_movement") or {}
+    if c:
+        print("\n=== arm movement vs code/43 (checkpoint-selection-only harness) ===")
+        for k in ["delta_leaky", "delta_clean_matched_es_fed",
+                  "delta_clean_matched_budget_matched", "delta_placebo"]:
+            print(f"  {k:36s} {c[k]:+.4f}")
+    p = out["leaky_plus_lrsched_minus_clean_matched_budget_matched"]
+    print(f"\n=== PRIMARY gap vs BUDGET-MATCHED control: {p['gap_mean']:+.4f} "
+          f"CI={[round(x, 4) for x in p['bca_ci_95']]} p={p['wilcoxon_p']:.4g}")
+    cc = out["coupling_continuity_isolation"]
+    print(f"=== coupling continuity ISOLATED (vs argmax-only, same harness): "
+          f"{cc['gap_mean']:+.4f} CI={[round(x, 4) for x in cc['bca_ci_95']]} "
+          f"p={cc['wilcoxon_p']:.4g}")
+    r = out["sanity_ratios"]
+    print(f"\n=== sanity ratio (LEAKY-CM)/(CM-PLACEBO) ===")
+    print(f"  this harness, budget-matched control : {r['this_harness_vs_budget_matched_control']:.3f}")
+    print(f"  this harness, es-fed control (old)   : {r['this_harness_vs_es_fed_control_superseded']:.3f}")
+    for k, v in r["comparator_harnesses"].items():
+        print(f"    {k:36s} {v:.3f}")
+    print(f"  comparator band: {r['comparator_band']}  -> inside: "
+          f"{r['budget_matched_ratio_inside_comparator_band']}")
+
+
 def main():
     X, y = load_raw_real_features()
     print(f"Loaded real features: X={X.shape}, y={y.shape}, hall_rate={y.mean():.3f}")
 
-    results = {k: [] for k in ["leaky_plus_lrsched", "clean_matched_plus_lrsched", "placebo_plus_lrsched"]}
+    results = {k: [] for k in ["leaky_plus_lrsched", "clean_matched_plus_lrsched",
+                               "clean_matched_budget_matched", "leaky_argmax_only",
+                               "placebo_plus_lrsched"]}
     best_epoch_by_seed = {k: [] for k in results}
     for seed in range(N_SEEDS):
         aucs, be = run_one_seed(X, y, HIDDEN, seed)
@@ -504,9 +838,11 @@ def main():
         },
         "best_epoch_stats": best_epoch_stats,
         "raw_per_seed": results,
+        **_sixth_correction_block(results),
     }
     with open(OUT_PATH, "w") as f:
         json.dump(out, f, indent=2)
+    _print_sixth_correction(out)
     print(f"\nLEAKY_PLUS_LRSCHED vs CLEAN_MATCHED_PLUS_LRSCHED: gap={gap_lp_cmp.mean():+.4f} "
           f"CI={ci_lp_cmp} p={p_lp_cmp:.4g}")
     print("Training-depth confound (mean kept-checkpoint epoch): "

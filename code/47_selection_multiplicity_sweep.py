@@ -44,6 +44,28 @@ Sweep D -- n_val ISOLATED, via the number of inner CV folds K_CV in
   strictly cleaner test of the 1/sqrt(n_val) prediction than Sweep B, and it
   costs nothing beyond the CV structure the harness already has.
 
+DEGENERACY INSTRUMENTATION (this revision; an independent adversarial review
+found the omission). `state_dicts_identical` and the per-cell degeneracy record
+below were added in an earlier round and wired into code/57's joint K x
+operating-point grid, which gates its fit on them -- but they were NEVER
+ENABLED AT THIS SCRIPT'S OWN CALL SITES, even though Sweep A is what produces
+the headline `gap = a + b ln K` law. By that same bitwise check the small-K
+cells of Sweep A are largely degenerate: at K=3, 5, 10 the LEAKY and
+CLEAN_MATCHED models come out bitwise identical in roughly 98%, 90% and 65% of
+(seed, fold) pairs respectively, because three to ten full-batch epochs are too
+few for the two selection rules to land on different epochs. A cell like that
+contributes a gap that is near-zero BY CONSTRUCTION, and feeding it to a
+log-linear fit manufactures most of the fit's apparent dynamic range.
+
+`degeneracy_check=True` is now passed at EVERY call site (Sweeps A, B, C and D),
+so every cell this script ships carries an auditable degeneracy record. The
+check consumes no RNG and does not touch the training path, so every previously
+reported gap, arm mean, Wilcoxon p and bootstrap CI reproduces bit for bit; only
+new fields are added. code/50 consumes these records and reports the K law both
+as originally fit (all K > 1 cells, now labelled contaminated) and refit on the
+non-degenerate cells only, using the SAME threshold code/57 already ships
+(identical_state_dict_frac <= 0.50).
+
 Everything else -- SweepMLP, the isotropic-Gaussian generative process,
 LEAKY/CLEAN/CLEAN_MATCHED/PLACEBO logic -- is an exact port of
 code/02d_corrected_capacity_placebo_sweep.py, with the single `seed`
@@ -306,7 +328,7 @@ def run_sweep_D(out, n_seeds, t0):
     n_train = int(DEFAULT_N_SAMPLES * (1 - TEST_SIZE))
     for k_cv in [2, 3, 5, 10]:
         r = run_sweep_cell(n_seeds, CAPACITY, DEFAULT_EPOCHS, DEFAULT_N_SAMPLES,
-                           DEFAULT_TARGET_AUROC, n_inner_folds=k_cv)
+                           DEFAULT_TARGET_AUROC, n_inner_folds=k_cv, degeneracy_check=True)
         n_val = n_train // k_cv
         out.setdefault("sweep_D_n_val_isolated", {})[str(k_cv)] = {
             **r, "k_cv": k_cv, "n_val_exact": n_val,
@@ -366,10 +388,13 @@ def main():
     SWEEP_A_K_VALUES = [1, 3, 5, 10, 15, 25, 45, 75, 135, 225]
     SWEEP_A_N_SEEDS = 200
     for K in SWEEP_A_K_VALUES:
-        r = run_sweep_cell(SWEEP_A_N_SEEDS, CAPACITY, K, DEFAULT_N_SAMPLES, DEFAULT_TARGET_AUROC)
+        r = run_sweep_cell(SWEEP_A_N_SEEDS, CAPACITY, K, DEFAULT_N_SAMPLES, DEFAULT_TARGET_AUROC,
+                           degeneracy_check=True)
         out["sweep_A_K"][str(K)] = r
         print(f"  K={K}: gap={r['gap_mean']:+.4f} CI={r['gap_bca_ci_95']} p={r['wilcoxon_p']:.4g} "
-              f"val_auc_std={r['mean_val_auc_std']:.4f}  elapsed={time.time()-t0:.0f}s", flush=True)
+              f"val_auc_std={r['mean_val_auc_std']:.4f} "
+              f"identical={r['degeneracy']['identical_state_dict_frac']:.3f}  "
+              f"elapsed={time.time()-t0:.0f}s", flush=True)
 
     # Fit gap ~ c * sigma_val * sqrt(2 ln K)
     Ks = np.array(SWEEP_A_K_VALUES, dtype=float)
@@ -390,7 +415,8 @@ def main():
 
     print("\n=== Sweep B: TOTAL SAMPLE SIZE (N_SAMPLES) -- NOT an isolated n_val sweep ===", flush=True)
     for n_samples in [350, 700, 2800]:
-        r = run_sweep_cell(N_SEEDS, CAPACITY, DEFAULT_EPOCHS, n_samples, DEFAULT_TARGET_AUROC)
+        r = run_sweep_cell(N_SEEDS, CAPACITY, DEFAULT_EPOCHS, n_samples, DEFAULT_TARGET_AUROC,
+                           degeneracy_check=True)
         n_val_approx = int(n_samples * (1 - TEST_SIZE) / N_INNER_FOLDS)
         out["sweep_B_sample_size"][str(n_samples)] = {
             **r, "n_val_approx": n_val_approx,
@@ -411,7 +437,8 @@ def main():
 
     print("\n=== Sweep C: operating point (TARGET_AUROC) ===", flush=True)
     for target_auroc in [0.70, 0.80, 0.90, 0.95, 0.985]:
-        r = run_sweep_cell(N_SEEDS, CAPACITY, DEFAULT_EPOCHS, DEFAULT_N_SAMPLES, target_auroc)
+        r = run_sweep_cell(N_SEEDS, CAPACITY, DEFAULT_EPOCHS, DEFAULT_N_SAMPLES, target_auroc,
+                           degeneracy_check=True)
         out["sweep_C_operating_point"][str(target_auroc)] = r
         print(f"  TARGET_AUROC={target_auroc}: gap={r['gap_mean']:+.4f} CI={r['gap_bca_ci_95']} "
               f"p={r['wilcoxon_p']:.4g}  elapsed={time.time()-t0:.0f}s", flush=True)

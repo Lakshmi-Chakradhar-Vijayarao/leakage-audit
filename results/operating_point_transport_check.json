@@ -1,6 +1,6 @@
 {
   "verdict": "HARNESS_SPECIFIC_NOT_A_TRANSPORTABLE_LAW",
-  "summary": "Three measurements of the same LEAKY-minus-CLEAN_MATCHED contrast at achieved operating points spanning only 0.0030 AUROC differ in gap by 51.8x. The 48.6x operating-point decline measured in code/47's Sweep C is therefore a property of that synthetic harness and its single fixed mechanism, not a severity law that transports across harnesses or mechanisms. The operating point remains a strong severity MODIFIER within a harness and must be matched before two severity numbers are compared; it is not a predictor of severity across them.",
+  "summary": "Three measurements of the same LEAKY-minus-CLEAN_MATCHED contrast at achieved operating points spanning only 0.0030 AUROC differ in gap by 38.3x. The 48.6x operating-point decline measured in code/47's Sweep C is therefore a property of that synthetic harness and its single fixed mechanism, not a severity law that transports across harnesses or mechanisms. The operating point remains a strong severity MODIFIER within a harness and must be matched before two severity numbers are compared; it is not a predictor of severity across them.",
   "sweep_C_operating_point_relationship": {
     "cells": [
       {
@@ -67,14 +67,14 @@
         "name": "fidelity extension (code/49), capacity 128",
         "harness": "real features, argmax + LR scheduler + early stopping on the same fold",
         "achieved_operating_point": 0.9424265165728579,
-        "gap": 0.03384615384615384,
-        "ratio_vs_sweep_C_matched_cell": 51.82692307692271,
+        "gap": 0.024984365228267646,
+        "ratio_vs_sweep_C_matched_cell": 38.25730925578457,
         "sweep_C_interpolated_prediction_at_this_operating_point": 0.0005951644857954631,
-        "ratio_vs_sweep_C_interpolated": 56.868571048753
+        "ratio_vs_sweep_C_interpolated": 41.97892485952847
       }
     ],
     "operating_point_spread": 0.0030412860078364856,
-    "gap_spread_ratio": 51.82692307692271
+    "gap_spread_ratio": 38.25730925578457
   },
   "what_this_does_not_show": "This does not falsify the operating-point relationship. Within code/47's synthetic harness it is monotone and strongly fit, and it is reported as such. What fails is TRANSPORT: the relationship's slope and level are harness-specific. Two of the three measurements here also differ in leakage MECHANIC (argmax only versus argmax plus scheduler plus early stopping), so mechanism and harness are not separated by this comparison -- which is itself the point, since the paper had claimed the operating point moves severity more than mechanism differences do."
 }

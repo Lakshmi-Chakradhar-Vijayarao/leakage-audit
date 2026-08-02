@@ -165,11 +165,32 @@ MultiHaluDet's real trainer also steps an LR scheduler and ties early
 stopping to the same validation fold every epoch. Porting this mechanic
 in (after five rounds of its own control-construction, configuration and
 fidelity bugs, documented in main.tex Appendix A items 10, 12, 13 and 14)
-finds a larger gap: **+0.0338** (BCa 95% CI [+0.0279, +0.0405], Wilcoxon
-p=6.2e-15, paired permutation p<0.0001, n=100 seeds, capacity 128),
+finds a larger gap: **+0.0250** (BCa 95% CI [+0.0192, +0.0314], Wilcoxon
+p=1.5e-11, paired permutation p<0.0001, n=100 seeds, capacity 128),
 against **+0.0093** for the checkpoint-selection-only harness on the same
 features under the same label-free calibration — a like-for-like ratio of
-**3.6x**.
+**2.7x**.
+
+**A sixth correction, which cut this number and retracted a claim about it.**
+An earlier revision reported +0.0338 here and a ratio of 3.6x, and attributed
+the increase to the *continuity* of the coupling. Neither survives.
+(a) The control was not budget-matched: `code/43`'s CLEAN_MATCHED retrains on
+the full `tr_idx`, this harness's control trained on `tr2_idx` (~85%). Arm by
+arm across the two harnesses, LEAKY moves only +0.0022 while the control moves
+-0.0224 and the placebo -0.0284 — most of the extra gap was the controls
+falling. A budget-matched control (full `tr_idx`, replaying the disjoint
+carve-out run's own per-epoch LR trajectory so it keeps an adaptive schedule)
+gives the +0.0250 above. (b) The coupling-continuity claim was tested across
+two harnesses that also differ in optimizer, batching, scaler and learning
+rate. The within-harness isolating arm — same optimizer, same reused fold,
+only a final-checkpoint argmax — scores **0.9583** against the coupled arm's
+**0.9424**, i.e. adding continuous coupling *lowers* the leaky arm by -0.0159
+(p=2.8e-13), because early stopping at patience=15 truncates it to a mean kept
+epoch of 29.14 against the argmax-only arm's 40.73. **The claim that
+continuity is what raises this number is withdrawn.** Sanity check:
+(LEAKY - CM)/(CM - PLACEBO) is 1.60 against the old control (outside the
+0.06-0.85 band the paper's other eight cells occupy) and 0.83 against the
+budget-matched one (inside it).
 
 **What "fidelity extension" covers, and what it does not.** Ported from the
 pinned commit: learning rate 2e-4 (the harness had used 2e-3), AdamW,
@@ -200,8 +221,8 @@ patience correction shrinks the gap at both calibrations (-0.0029 and
 still show that the *calibration* fix, not the patience fix, is what moves
 this number. The operating-point non-equivalence previously disclosed here
 (~0.918 vs ~0.940) has also largely closed: the two harnesses now sit at
-0.9424 and 0.9403, so 3.6x is no longer reported as an upper bound on that
-account.
+0.9424 and 0.9403, so the ratio is no longer reported as an upper bound on
+that account.
 
 ## Why this matters for the paper's framing
 
@@ -257,23 +278,27 @@ size.**
 >    **+0.0093** (capacity 128, BCa 95% CI [+0.0060, +0.0134], Wilcoxon
 >    p=7.3e-7, paired permutation p<0.0001) and **+0.0077** (capacity 384,
 >    CI [+0.0050, +0.0109], Wilcoxon p=1.4e-5, permutation p<0.0001), at
->    an achieved operating point of ~0.94-0.95; and **+0.0338** for the
->    LR-scheduler fidelity extension (CI [+0.0279, +0.0405]). These
+>    an achieved operating point of ~0.94-0.95; and **+0.0250** for the
+>    LR-scheduler fidelity extension (CI [+0.0192, +0.0314], against a
+>    budget-matched control). These
 >    supersede the +0.0021 / +0.0022 previously reported under the
 >    superseded label-conditional calibration.
 >
 > **The "severity spectrum" framing below is also retracted.** Measured
 > against matched controls, the mechanisms do *not* differ sharply: every
 > mechanism in this paper with a code-verified AUROC-scale estimate falls
-> between roughly 0.000 and +0.034 AUROC. What moves severity is the
+> between +0.0011 and +0.0255 AUROC, with a fifth exactly zero on AUROC by
+> construction. What moves severity is the
 > number of candidates selected among and the operating point — a 48.6x
 > swing from AUROC_0=0.70 to 0.985 *within this paper's synthetic harness*.
 > **The clause "larger than any between-mechanism difference measured here"
 > that this note previously carried is withdrawn.** `main.tex` §5 now tests
 > it against this paper's own shipped data and it fails: three measurements
 > of the same contrast at achieved operating points within 0.003 AUROC of
-> each other differ by 14.3x and 51.8x from what the relationship predicts,
-> because they differ in harness and in leakage mechanic. The operating point
+> each other differ by 14.3x and 38.3x from what the relationship predicts.
+> Those harnesses differ in leakage mechanic *and* in harness, which the
+> design does not separate, so the transport failure is reported without
+> being attributed. The operating point
 > is a strong severity modifier *within* a harness — enough that two severity
 > numbers cannot be compared until it is matched — and is not a law that
 > transports across harnesses or mechanisms. See `main.tex` §5 and

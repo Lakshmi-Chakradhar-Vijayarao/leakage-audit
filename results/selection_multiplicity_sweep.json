@@ -10,7 +10,14 @@
       "mean_val_auc_std": 0.0,
       "leaky_mean": 0.6268938775510204,
       "clean_matched_mean": 0.6268938775510204,
-      "placebo_mean": 0.6268938775510204
+      "placebo_mean": 0.6268938775510204,
+      "degeneracy": {
+        "identical_state_dict_frac": 1.0,
+        "max_param_abs_diff": 0.0,
+        "leaky_argmax_is_last_epoch_frac": 1.0,
+        "clean_argmax_is_last_epoch_frac": 1.0,
+        "seeds_with_exactly_zero_gap_frac": 1.0
+      }
     },
     "3": {
       "gap_mean": 0.000856122448979591,
@@ -22,7 +29,14 @@
       "mean_val_auc_std": 0.038891895848943536,
       "leaky_mean": 0.6872112244897959,
       "clean_matched_mean": 0.6863551020408164,
-      "placebo_mean": 0.6591602040816327
+      "placebo_mean": 0.6591602040816327,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.973,
+        "max_param_abs_diff": 0.004009909927845001,
+        "leaky_argmax_is_last_epoch_frac": 0.996,
+        "clean_argmax_is_last_epoch_frac": 0.977,
+        "seeds_with_exactly_zero_gap_frac": 0.87
+      }
     },
     "5": {
       "gap_mean": 0.0018816326530612193,
@@ -34,7 +48,14 @@
       "mean_val_auc_std": 0.0465924388587541,
       "leaky_mean": 0.7265918367346939,
       "clean_matched_mean": 0.7247102040816327,
-      "placebo_mean": 0.6887102040816326
+      "placebo_mean": 0.6887102040816326,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.9,
+        "max_param_abs_diff": 0.008043546229600906,
+        "leaky_argmax_is_last_epoch_frac": 0.982,
+        "clean_argmax_is_last_epoch_frac": 0.9179999999999999,
+        "seeds_with_exactly_zero_gap_frac": 0.56
+      }
     },
     "10": {
       "gap_mean": 0.0022622448979591836,
@@ -46,7 +67,14 @@
       "mean_val_auc_std": 0.049363126421573866,
       "leaky_mean": 0.7564551020408163,
       "clean_matched_mean": 0.7541928571428571,
-      "placebo_mean": 0.7225214285714285
+      "placebo_mean": 0.7225214285714285,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.645,
+        "max_param_abs_diff": 0.018300361931324005,
+        "leaky_argmax_is_last_epoch_frac": 0.861,
+        "clean_argmax_is_last_epoch_frac": 0.731,
+        "seeds_with_exactly_zero_gap_frac": 0.135
+      }
     },
     "15": {
       "gap_mean": 0.002262244897959178,
@@ -58,7 +86,14 @@
       "mean_val_auc_std": 0.04762161521722726,
       "leaky_mean": 0.7615632653061223,
       "clean_matched_mean": 0.7593010204081634,
-      "placebo_mean": 0.733008163265306
+      "placebo_mean": 0.733008163265306,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.355,
+        "max_param_abs_diff": 0.028882019221782684,
+        "leaky_argmax_is_last_epoch_frac": 0.619,
+        "clean_argmax_is_last_epoch_frac": 0.507,
+        "seeds_with_exactly_zero_gap_frac": 0.025
+      }
     },
     "25": {
       "gap_mean": 0.003088775510204072,
@@ -70,7 +105,14 @@
       "mean_val_auc_std": 0.04212517304502082,
       "leaky_mean": 0.7605183673469388,
       "clean_matched_mean": 0.7574295918367346,
-      "placebo_mean": 0.7349755102040817
+      "placebo_mean": 0.7349755102040817,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.06,
+        "max_param_abs_diff": 0.049183763563632965,
+        "leaky_argmax_is_last_epoch_frac": 0.12899999999999998,
+        "clean_argmax_is_last_epoch_frac": 0.145,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      }
     },
     "45": {
       "gap_mean": 0.004155102040816322,
@@ -82,7 +124,14 @@
       "mean_val_auc_std": 0.03426495207741105,
       "leaky_mean": 0.7587979591836735,
       "clean_matched_mean": 0.7546428571428571,
-      "placebo_mean": 0.730645918367347
+      "placebo_mean": 0.730645918367347,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.031,
+        "max_param_abs_diff": 0.0897599458694458,
+        "leaky_argmax_is_last_epoch_frac": 0.024000000000000004,
+        "clean_argmax_is_last_epoch_frac": 0.035,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      }
     },
     "75": {
       "gap_mean": 0.004599999999999998,
@@ -94,7 +143,14 @@
       "mean_val_auc_std": 0.02855012917298226,
       "leaky_mean": 0.7578755102040817,
       "clean_matched_mean": 0.7532755102040816,
-      "placebo_mean": 0.7290673469387755
+      "placebo_mean": 0.7290673469387755,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.026000000000000002,
+        "max_param_abs_diff": 0.14399172365665436,
+        "leaky_argmax_is_last_epoch_frac": 0.007000000000000001,
+        "clean_argmax_is_last_epoch_frac": 0.017,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      }
     },
     "135": {
       "gap_mean": 0.005019387755102033,
@@ -106,7 +162,14 @@
       "mean_val_auc_std": 0.02274880376698725,
       "leaky_mean": 0.7576908163265307,
       "clean_matched_mean": 0.7526714285714285,
-      "placebo_mean": 0.7281
+      "placebo_mean": 0.7281,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.024000000000000004,
+        "max_param_abs_diff": 0.18577547371387482,
+        "leaky_argmax_is_last_epoch_frac": 0.0030000000000000005,
+        "clean_argmax_is_last_epoch_frac": 0.009000000000000001,
+        "seeds_with_exactly_zero_gap_frac": 0.005
+      }
     },
     "225": {
       "gap_mean": 0.005221428571428567,
@@ -118,75 +181,15 @@
       "mean_val_auc_std": 0.01858196072542402,
       "leaky_mean": 0.7574051020408163,
       "clean_matched_mean": 0.7521836734693877,
-      "placebo_mean": 0.7271500000000001
+      "placebo_mean": 0.7271500000000001,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.02,
+        "max_param_abs_diff": 0.23007728159427643,
+        "leaky_argmax_is_last_epoch_frac": 0.0030000000000000005,
+        "clean_argmax_is_last_epoch_frac": 0.0030000000000000005,
+        "seeds_with_exactly_zero_gap_frac": 0.005
+      }
     }
-  },
-  "sweep_C_operating_point": {
-    "0.7": {
-      "gap_mean": 0.009316326530612241,
-      "gap_bca_ci_95": [
-        0.0045051416916063215,
-        0.01409214705577566
-      ],
-      "wilcoxon_p": 0.00010772332971006228,
-      "mean_val_auc_std": 0.02557298372364563,
-      "leaky_mean": 0.6307551020408163,
-      "clean_matched_mean": 0.621438775510204,
-      "placebo_mean": 0.6111959183673469
-    },
-    "0.8": {
-      "gap_mean": 0.0036489795918367273,
-      "gap_bca_ci_95": [
-        0.0018591836734693757,
-        0.0057285714285714205
-      ],
-      "wilcoxon_p": 0.0012363190170634885,
-      "mean_val_auc_std": 0.03411711253916284,
-      "leaky_mean": 0.758587755102041,
-      "clean_matched_mean": 0.754938775510204,
-      "placebo_mean": 0.7371000000000001
-    },
-    "0.9": {
-      "gap_mean": 0.0010877551020408228,
-      "gap_bca_ci_95": [
-        0.00013175576406546736,
-        0.0021207749532383617
-      ],
-      "wilcoxon_p": 0.06660892449953998,
-      "mean_val_auc_std": 0.039471806193196464,
-      "leaky_mean": 0.8836326530612244,
-      "clean_matched_mean": 0.8825448979591836,
-      "placebo_mean": 0.8645959183673468
-    },
-    "0.95": {
-      "gap_mean": 0.0006530612244898004,
-      "gap_bca_ci_95": [
-        6.530612244898157e-05,
-        0.0012102040816326586
-      ],
-      "wilcoxon_p": 0.037005603355146195,
-      "mean_val_auc_std": 0.03805913603068167,
-      "leaky_mean": 0.9433102040816326,
-      "clean_matched_mean": 0.9426571428571426,
-      "placebo_mean": 0.9286612244897959
-    },
-    "0.985": {
-      "gap_mean": 0.00019183673469387984,
-      "gap_bca_ci_95": [
-        -8.571428571428232e-05,
-        0.00044693877551020756
-      ],
-      "wilcoxon_p": 0.21864939494907487,
-      "mean_val_auc_std": 0.03143922323620581,
-      "leaky_mean": 0.9831530612244898,
-      "clean_matched_mean": 0.9829612244897961,
-      "placebo_mean": 0.9764102040816327
-    }
-  },
-  "sweep_A_fit": {
-    "c_fit": 0.04166416560165224,
-    "r_squared": 0.7563634103739665,
-    "sigma_val_used": 0.03287400951343241
   },
   "sweep_B_sample_size": {
     "350": {
@@ -200,6 +203,13 @@
       "leaky_mean": 0.728661224489796,
       "clean_matched_mean": 0.7260734693877552,
       "placebo_mean": 0.6987591836734692,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.016,
+        "max_param_abs_diff": 0.08622581511735916,
+        "leaky_argmax_is_last_epoch_frac": 0.024000000000000004,
+        "clean_argmax_is_last_epoch_frac": 0.028000000000000004,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      },
       "n_val_approx": 56,
       "n_train_approx": 280,
       "n_test_approx": 70
@@ -215,6 +225,13 @@
       "leaky_mean": 0.758587755102041,
       "clean_matched_mean": 0.754938775510204,
       "placebo_mean": 0.7371000000000001,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.026000000000000006,
+        "max_param_abs_diff": 0.0897599458694458,
+        "leaky_argmax_is_last_epoch_frac": 0.02,
+        "clean_argmax_is_last_epoch_frac": 0.036000000000000004,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      },
       "n_val_approx": 112,
       "n_train_approx": 560,
       "n_test_approx": 140
@@ -230,24 +247,140 @@
       "leaky_mean": 0.790472831632653,
       "clean_matched_mean": 0.7899989795918368,
       "placebo_mean": 0.7725742346938776,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.094,
+        "max_param_abs_diff": 0.06946102529764175,
+        "leaky_argmax_is_last_epoch_frac": 0.002,
+        "clean_argmax_is_last_epoch_frac": 0.006000000000000001,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      },
       "n_val_approx": 448,
       "n_train_approx": 2240,
       "n_test_approx": 560
     }
+  },
+  "sweep_C_operating_point": {
+    "0.7": {
+      "gap_mean": 0.009316326530612241,
+      "gap_bca_ci_95": [
+        0.0045051416916063215,
+        0.01409214705577566
+      ],
+      "wilcoxon_p": 0.00010772332971006228,
+      "mean_val_auc_std": 0.02557298372364563,
+      "leaky_mean": 0.6307551020408163,
+      "clean_matched_mean": 0.621438775510204,
+      "placebo_mean": 0.6111959183673469,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.024000000000000004,
+        "max_param_abs_diff": 0.09830445051193237,
+        "leaky_argmax_is_last_epoch_frac": 0.07,
+        "clean_argmax_is_last_epoch_frac": 0.06,
+        "seeds_with_exactly_zero_gap_frac": 0.01
+      }
+    },
+    "0.8": {
+      "gap_mean": 0.0036489795918367273,
+      "gap_bca_ci_95": [
+        0.0018591836734693757,
+        0.0057285714285714205
+      ],
+      "wilcoxon_p": 0.0012363190170634885,
+      "mean_val_auc_std": 0.03411711253916284,
+      "leaky_mean": 0.758587755102041,
+      "clean_matched_mean": 0.754938775510204,
+      "placebo_mean": 0.7371000000000001,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.026000000000000006,
+        "max_param_abs_diff": 0.0897599458694458,
+        "leaky_argmax_is_last_epoch_frac": 0.02,
+        "clean_argmax_is_last_epoch_frac": 0.036000000000000004,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      }
+    },
+    "0.9": {
+      "gap_mean": 0.0010877551020408228,
+      "gap_bca_ci_95": [
+        0.00013175576406546736,
+        0.0021207749532383617
+      ],
+      "wilcoxon_p": 0.06660892449953998,
+      "mean_val_auc_std": 0.039471806193196464,
+      "leaky_mean": 0.8836326530612244,
+      "clean_matched_mean": 0.8825448979591836,
+      "placebo_mean": 0.8645959183673468,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.024000000000000004,
+        "max_param_abs_diff": 0.08292948454618454,
+        "leaky_argmax_is_last_epoch_frac": 0.013999999999999999,
+        "clean_argmax_is_last_epoch_frac": 0.014000000000000002,
+        "seeds_with_exactly_zero_gap_frac": 0.01
+      }
+    },
+    "0.95": {
+      "gap_mean": 0.0006530612244898004,
+      "gap_bca_ci_95": [
+        6.530612244898157e-05,
+        0.0012102040816326586
+      ],
+      "wilcoxon_p": 0.037005603355146195,
+      "mean_val_auc_std": 0.03805913603068167,
+      "leaky_mean": 0.9433102040816326,
+      "clean_matched_mean": 0.9426571428571426,
+      "placebo_mean": 0.9286612244897959,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.05400000000000001,
+        "max_param_abs_diff": 0.07213425636291504,
+        "leaky_argmax_is_last_epoch_frac": 0.004,
+        "clean_argmax_is_last_epoch_frac": 0.013999999999999999,
+        "seeds_with_exactly_zero_gap_frac": 0.01
+      }
+    },
+    "0.985": {
+      "gap_mean": 0.00019183673469387984,
+      "gap_bca_ci_95": [
+        -8.571428571428232e-05,
+        0.00044693877551020756
+      ],
+      "wilcoxon_p": 0.21864939494907487,
+      "mean_val_auc_std": 0.03143922323620581,
+      "leaky_mean": 0.9831530612244898,
+      "clean_matched_mean": 0.9829612244897961,
+      "placebo_mean": 0.9764102040816327,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.038,
+        "max_param_abs_diff": 0.07964923232793808,
+        "leaky_argmax_is_last_epoch_frac": 0.012000000000000002,
+        "clean_argmax_is_last_epoch_frac": 0.006000000000000001,
+        "seeds_with_exactly_zero_gap_frac": 0.04
+      }
+    }
+  },
+  "sweep_A_fit": {
+    "c_fit": 0.04166416560165224,
+    "r_squared": 0.7563634103739665,
+    "sigma_val_used": 0.03287400951343241
   },
   "sweep_B_confound_note": "CONFOUNDED, and relabelled from 'sweep_B_n_val' accordingly. Varying N_SAMPLES moves train, test AND validation set sizes together, so these gaps are not attributable to n_val alone and do not constitute a test of gap ~ 1/sqrt(n_val). See sweep_D_n_val_isolated, which holds N_SAMPLES (and hence train and test sizes) fixed and varies only the inner CV fold count.",
   "sweep_D_n_val_isolated": {
     "2": {
       "gap_mean": 0.008657142857142868,
       "gap_bca_ci_95": [
-        0.005779732366648389,
-        0.012397840036979671
+        0.00567469384648181,
+        0.01250408163265308
       ],
       "wilcoxon_p": 1.3823405655360142e-07,
       "mean_val_auc_std": 0.033065799711498596,
       "leaky_mean": 0.7474428571428572,
       "clean_matched_mean": 0.7387857142857145,
       "placebo_mean": 0.7103489795918366,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.03,
+        "max_param_abs_diff": 0.0825488343834877,
+        "leaky_argmax_is_last_epoch_frac": 0.005,
+        "clean_argmax_is_last_epoch_frac": 0.035,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      },
       "k_cv": 2,
       "n_val_exact": 280,
       "n_train_fold_exact": 280,
@@ -256,14 +389,21 @@
     "3": {
       "gap_mean": 0.0036224489795918325,
       "gap_bca_ci_95": [
-        0.0014114060305654482,
-        0.005877551020408148
+        0.001454431832672588,
+        0.005856618675980273
       ],
       "wilcoxon_p": 0.0018937853055294544,
       "mean_val_auc_std": 0.03389090776898368,
       "leaky_mean": 0.7523000000000001,
       "clean_matched_mean": 0.748677551020408,
       "placebo_mean": 0.7213367346938776,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.016666666666666666,
+        "max_param_abs_diff": 0.07369732111692429,
+        "leaky_argmax_is_last_epoch_frac": 0.006666666666666666,
+        "clean_argmax_is_last_epoch_frac": 0.02333333333333333,
+        "seeds_with_exactly_zero_gap_frac": 0.01
+      },
       "k_cv": 3,
       "n_val_exact": 186,
       "n_train_fold_exact": 374,
@@ -272,14 +412,21 @@
     "5": {
       "gap_mean": 0.0036489795918367273,
       "gap_bca_ci_95": [
-        0.0018541548198702778,
-        0.005766681341366641
+        0.0018684462386222768,
+        0.005689795918367351
       ],
       "wilcoxon_p": 0.0012363190170634885,
       "mean_val_auc_std": 0.03411711253916284,
       "leaky_mean": 0.758587755102041,
       "clean_matched_mean": 0.754938775510204,
       "placebo_mean": 0.7371000000000001,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.026000000000000006,
+        "max_param_abs_diff": 0.0897599458694458,
+        "leaky_argmax_is_last_epoch_frac": 0.02,
+        "clean_argmax_is_last_epoch_frac": 0.036000000000000004,
+        "seeds_with_exactly_zero_gap_frac": 0.0
+      },
       "k_cv": 5,
       "n_val_exact": 112,
       "n_train_fold_exact": 448,
@@ -288,14 +435,21 @@
     "10": {
       "gap_mean": 0.0005367346938775486,
       "gap_bca_ci_95": [
-        -0.0010494892289194702,
-        0.0019945538223449986
+        -0.0009959183673469375,
+        0.0019857142857142894
       ],
       "wilcoxon_p": 0.22317011472968284,
       "mean_val_auc_std": 0.03753972842394507,
       "leaky_mean": 0.7599387755102042,
       "clean_matched_mean": 0.7594020408163267,
       "placebo_mean": 0.7436081632653061,
+      "degeneracy": {
+        "identical_state_dict_frac": 0.03900000000000001,
+        "max_param_abs_diff": 0.08769767731428146,
+        "leaky_argmax_is_last_epoch_frac": 0.032,
+        "clean_argmax_is_last_epoch_frac": 0.031,
+        "seeds_with_exactly_zero_gap_frac": 0.01
+      },
       "k_cv": 10,
       "n_val_exact": 56,
       "n_train_fold_exact": 504,

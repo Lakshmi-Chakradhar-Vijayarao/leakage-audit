@@ -308,17 +308,164 @@ print(f"  {'OK  ' if _ok else 'FAIL'}  Sweep A's achieved operating-point drift 
 if not _ok:
     failures.append("Sweep A's achieved operating-point drift is not disclosed in main.tex")
 
+print("\n== K-law degeneracy gate (code/47 Sweep A -> code/50) ==")
+_sw = load("selection_multiplicity_sweep.json")
+checks += 1
+# P0-3: the gate must actually be ENABLED at code/47's own call sites, not just
+# defined. Every sweep must ship a per-cell degeneracy record.
+_missing = [f"{name}[{k}]" for name in ["sweep_A_K", "sweep_B_sample_size",
+                                        "sweep_C_operating_point", "sweep_D_n_val_isolated"]
+            for k, v in _sw[name].items() if "degeneracy" not in v]
+_ok = not _missing
+print(f"  {'OK  ' if _ok else 'FAIL'}  every cell of Sweeps A/B/C/D carries a degeneracy record"
+      + ("" if _ok else f" (missing: {_missing[:5]})"))
+if not _ok:
+    failures.append("code/47 no longer runs with degeneracy_check=True at every call site; "
+                    "Appendix A.11 Correction 4 and SS5.3's K-law both depend on the records")
+_ev = load("evt_scaling_refit.json")
+_nd = _ev["fits"]["log_two_parameter_non_degenerate"]
+_con = _ev["fits"]["log_two_parameter"]
+check("corrected K-law slope b", _nd["params"]["b"], "{:.5f}")
+check("corrected K-law R^2", _nd["r_squared"], "{:.3f}")
+check("contaminated K-law R^2 (quoted as superseded)", _con["r_squared"], "{:.3f}")
+checks += 1
+# The threshold must be READ from code/57, not re-picked here after seeing which
+# cells it removes. And no cell may sit near it.
+_ok = (_nd["degeneracy_threshold_identical_state_dict_frac"] == 0.50
+       and _nd["identical_frac_retained_max"] < 0.50 < _nd["identical_frac_excluded_min"]
+       and "code/57" in _nd["threshold_source"])
+print(f"  {'OK  ' if _ok else 'FAIL'}  gate threshold 0.50 read from code/57; retained cells "
+      f"<= {_nd['identical_frac_retained_max']:.3f}, excluded >= "
+      f"{_nd['identical_frac_excluded_min']:.3f} (no cell near the boundary)")
+if not _ok:
+    failures.append("the K-law degeneracy threshold is no longer inherited from code/57, or a "
+                    "cell now sits near it; Appendix A.11 claims both")
+checks += 1
+# The correction's honest content: the slope survives, the dynamic range does not.
+_slope_moved = abs(_nd["params"]["b"] - _con["params"]["b"]) / abs(_con["params"]["b"])
+_ok = (_slope_moved < 0.10
+       and _nd["dynamic_range_max_over_min"] < 0.5 * _con["dynamic_range_max_over_min"]
+       and f"{_nd['dynamic_range_max_over_min']:.2f}" in TEX
+       and f"{_con['dynamic_range_max_over_min']:.2f}" in TEX)
+print(f"  {'OK  ' if _ok else 'FAIL'}  slope survives the gate ({_slope_moved * 100:.0f}% move) "
+      f"but dynamic range falls {_con['dynamic_range_max_over_min']:.2f}x -> "
+      f"{_nd['dynamic_range_max_over_min']:.2f}x, and both are in the tex")
+if not _ok:
+    failures.append("SS5.3 and A.11 state that the K-law's slope survives the degeneracy gate "
+                    "while its dynamic range does not; that no longer holds or is not quoted")
+checks += 1
+_ok = _nd["K_values_excluded_as_degenerate"] == [3, 5, 10] and _nd["K_values_fit"] == [
+    15, 25, 45, 75, 135, 225]
+print(f"  {'OK  ' if _ok else 'FAIL'}  gate excludes K={_nd['K_values_excluded_as_degenerate']} "
+      f"and fits K={_nd['K_values_fit']}")
+if not _ok:
+    failures.append("the set of degenerate K cells changed; SS5.3 names 1/3/5/10 explicitly")
+
 print("\n== Adaptive-selection control power (code/22) ==")
 import numpy as np
 d = load("epoch_forcing_confound_control.json")["by_capacity"]
-for cap, want in [("128", 37.3), ("384", 25.7)]:
-    m = {k: float(np.mean(v)) for k, v in d[cap]["aucs"].items()}
-    ret = 100 * (m["clean_matched_adaptive"] - m["placebo"]) / (m["clean_matched"] - m["placebo"])
+# P0-1 fix: the CORRECTED arm trains on tr2_idx, disjoint from its es_idx
+# selection set (mirroring code/43). The superseded arm trained on the full
+# tr_idx while selecting on a subset of it. Both retentions are checked, and
+# both must appear in the tex -- the corrected one as the reported number, the
+# contaminated one as the disclosed artifact.
+for cap, want_fixed, want_contam in [("128", 94.2, 37.3), ("384", 79.9, 25.7)]:
+    r = d[cap]["placebo_relative_retention_pct"]
+    for arm, want in [("clean_matched_adaptive", want_fixed),
+                      ("clean_matched_adaptive_contaminated", want_contam)]:
+        checks += 1
+        got = r[arm]
+        ok = abs(got - want) < 0.15 and f"{got:.1f}" in TEX
+        print(f"  {'OK  ' if ok else 'FAIL'}  cap {cap} placebo-relative retention "
+              f"[{arm[:34]:34s}]: {got:.1f}%")
+        if not ok:
+            failures.append(f"retention cap {cap} {arm}: computed {got:.1f}%, "
+                            f"wanted ~{want}% and present in tex")
     checks += 1
-    ok = abs(ret - want) < 0.15 and f"{ret:.1f}" in TEX
-    print(f"  {'OK  ' if ok else 'FAIL'}  cap {cap} placebo-relative retention: {ret:.1f}%")
-    if not ok:
-        failures.append(f"retention cap {cap}: computed {ret:.1f}%, wanted ~{want}% and present in tex")
+    # The diagnostic that exposes the defect: an arm selecting in-sample runs to
+    # the end of the budget, an honest one does not.
+    be = d[cap]["best_epoch_stats"]["mean_best_epoch"]
+    _ok = (be["clean_matched_adaptive_contaminated"] > be["clean_matched_adaptive"] + 5
+           and abs(be["clean_matched_adaptive"] - be["clean_matched"]) < 1.0)
+    print(f"  {'OK  ' if _ok else 'FAIL'}  cap {cap} the contaminated arm runs deeper "
+          f"({be['clean_matched_adaptive_contaminated']:.1f}) than the corrected arm "
+          f"({be['clean_matched_adaptive']:.1f}), which tracks the honest arms "
+          f"({be['clean_matched']:.1f})")
+    if not _ok:
+        failures.append(f"code/22 cap {cap}: the training-depth signature of the "
+                        f"superseded control no longer reproduces; A.1 item 16 cites it")
+checks += 1
+# The corrected control must still be BEATEN by LEAKY -- that is the finding.
+_ok = all(d[c]["gaps"]["leaky_minus_clean_matched_adaptive"]["mean"] > 0
+          and d[c]["gaps"]["leaky_minus_clean_matched_adaptive"]["wilcoxon_p"] < 0.01
+          for c in ["128", "384"])
+print(f"  {'OK  ' if _ok else 'FAIL'}  LEAKY still beats the CORRECTED adaptive control at "
+      f"both capacities (p<0.01): "
+      + ", ".join(f"cap {c}: {d[c]['gaps']['leaky_minus_clean_matched_adaptive']['mean']:+.4f} "
+                  f"(p={d[c]['gaps']['leaky_minus_clean_matched_adaptive']['wilcoxon_p']:.4f})"
+                  for c in ["128", "384"]))
+if not _ok:
+    failures.append("code/22's corrected control no longer supports SS4.3's fold-reuse finding")
+
+print("\n== Fidelity extension: budget matching and coupling isolation (code/49) ==")
+d = load("mechanism3_fidelity_extension.json")
+check("gap vs BUDGET-MATCHED control",
+      d["leaky_plus_lrsched_minus_clean_matched_budget_matched"]["gap_mean"])
+check("gap vs superseded es-fed control",
+      d["leaky_plus_lrsched_minus_clean_matched_plus_lrsched"]["gap_mean"])
+check("coupling continuity, isolated within one harness",
+      d["coupling_continuity_isolation"]["gap_mean"])
+checks += 1
+# P0-2(d): the isolating arm must show that continuous coupling does NOT add
+# severity over a one-shot argmax. The paper retracts the opposite claim.
+_ok = d["coupling_continuity_isolation"]["gap_mean"] < 0
+print(f"  {'OK  ' if _ok else 'FAIL'}  continuous coupling does NOT beat a one-shot argmax "
+      f"({d['coupling_continuity_isolation']['gap_mean']:+.4f}); SS4.3 and the checklist "
+      f"table retract the claim that it does")
+if not _ok:
+    failures.append("code/49's isolating arm no longer refutes the coupling-continuity claim, "
+                    "which SS4.3 and Table checklist-scope both now state as retracted")
+checks += 1
+_r = d["sanity_ratios"]
+_ok = _r["budget_matched_ratio_inside_comparator_band"] and not (
+    _r["comparator_band"][0] <= _r["this_harness_vs_es_fed_control_superseded"]
+    <= _r["comparator_band"][1])
+print(f"  {'OK  ' if _ok else 'FAIL'}  (LEAKY-CM)/(CM-PLACEBO): budget-matched "
+      f"{_r['this_harness_vs_budget_matched_control']:.2f} is INSIDE the comparator band "
+      f"{[round(x, 2) for x in _r['comparator_band']]}, superseded "
+      f"{_r['this_harness_vs_es_fed_control_superseded']:.2f} is outside")
+if not _ok:
+    failures.append("code/49's sanity-ratio story changed; SS4.3 states the budget-matched "
+                    "ratio is inside the band and the superseded one outside")
+checks += 1
+_ratio = (d["leaky_plus_lrsched_minus_clean_matched_budget_matched"]["gap_mean"]
+          / load("statistical_rigor_retrofit.json")["real_feature_train_only_calibrated"]
+          ["by_capacity"]["128"]["leaky_minus_clean_matched"]["gap_mean"])
+_ok = f"{_ratio:.1f}" in TEX
+print(f"  {'OK  ' if _ok else 'FAIL'}  corrected like-for-like ratio {_ratio:.1f}x present in tex")
+if not _ok:
+    failures.append(f"corrected like-for-like ratio {_ratio:.1f}x missing from main.tex")
+
+print("\n== Case Study 4 permutation null, reported in BOTH directions (code/45) ==")
+d = load("case_study_4_winners_curse.json")["permutation_significance_audit"]
+checks += 1
+_ok = d["n_cells_p_below_05"] == 0 and "0 of the 24" in TEX.replace("$", "")
+print(f"  {'OK  ' if _ok else 'FAIL'}  {d['n_cells_p_below_05']}/{d['n_cells_total']} cells reach "
+      f"p<0.05 against their own permutation null, and the tex says so")
+if not _ok:
+    failures.append("main.tex must state plainly that 0 of the 24 Case Study 4 cells reach "
+                    "p<0.05 against their own permutation null")
+checks += 1
+# The unfavourable direction: the non-degenerate cells' own null sits ABOVE
+# their observed mean. Previously only the favourable direction was reported.
+_ok = d["non_degenerate_observed_minus_null"] < 0 and \
+    f"{d['non_degenerate_null_mean']:+.4f}".replace("+", "") in TEX
+print(f"  {'OK  ' if _ok else 'FAIL'}  the non-degenerate cells' null ({d['non_degenerate_null_mean']:+.4f}) "
+      f"sits above their observed mean ({d['non_degenerate_observed_mean']:+.4f}), and the tex "
+      f"discloses it")
+if not _ok:
+    failures.append("main.tex must disclose that the non-degenerate cells' own permutation null "
+                    "sits above their observed mean, not only the degenerate cells' favourable null")
 
 print("\n== Fidelity-extension 2x2 ablation (code/54) ==")
 d = load("fidelity_extension_2x2_ablation.json")
@@ -585,6 +732,25 @@ ALLOWED_NON_JSON_LITERALS = {
     # actually realized for a cell labelled 0.985 (Appendix A, issue 11).
     "0.99994",
 }
+
+# Quantiles of Case Study 2's per-rep Delta_sel are DERIVED from a shipped array
+# rather than stored as scalars, so the substring trace above cannot see them.
+# Recomputing them here is a stronger guarantee than allowlisting: if the array
+# changes, this fails rather than silently passing.
+_ssc = np.array(load("case_study_2_layer_decomposition.json")
+                ["randomized_stratified_splits"]["selection_specific_component_per_rep"])
+_q = np.percentile(_ssc, [0, 25, 50, 75, 100])
+for _v in _q:
+    ALLOWED_NON_JSON_LITERALS.add(f"{abs(_v):.4f}")
+checks += 1
+_ok = (all(f"{abs(v):.4f}" in TEX for v in _q)
+       and f"{int((_ssc > 0).sum())} of {len(_ssc)}" in TEX.replace("$", ""))
+print(f"  {'OK  ' if _ok else 'FAIL'}  Case Study 2's per-rep Delta_sel quantiles "
+      f"({', '.join(f'{v:+.4f}' for v in _q)}) and its "
+      f"{int((_ssc > 0).sum())}/{len(_ssc)} positive-rep count are in main.tex")
+if not _ok:
+    failures.append("Appendix B.2's per-rep Delta_sel disaggregation does not match the "
+                    "shipped per-rep array")
 
 _lits = set(re.findall(r"(?<![\d.])[+-]?0\.\d{4,5}(?![\d])", TEX))
 _untraced = sorted(L for L in _lits

@@ -1383,7 +1383,11 @@
     "wilcoxon_p_vs_zero": 1.52587890625e-05,
     "n_nonzero_for_wilcoxon": 17,
     "permutation_null_mean_over_group": 0.011796867268835307,
-    "bootstrap_max_bias_mean_over_group": 0.0027731171213013213
+    "bootstrap_max_bias_mean_over_group": 0.0027731171213013213,
+    "n_cells_perm_p_below_05": 0,
+    "min_perm_p_in_group": 0.2768615692153923,
+    "median_perm_p_in_group": 0.9995002498750625,
+    "observed_minus_null_mean": -0.004214332535116919
   },
   "summary_degenerate_excluded": {
     "n_cells": 7,
@@ -1399,7 +1403,11 @@
     "wilcoxon_p_vs_zero": 1.0,
     "n_nonzero_for_wilcoxon": 0,
     "permutation_null_mean_over_group": 0.01794236725334286,
-    "bootstrap_max_bias_mean_over_group": 0.00035820006551711477
+    "bootstrap_max_bias_mean_over_group": 0.00035820006551711477,
+    "n_cells_perm_p_below_05": 0,
+    "min_perm_p_in_group": 1.0,
+    "median_perm_p_in_group": 1.0,
+    "observed_minus_null_mean": -0.01794236725334286
   },
   "summary_non_saturated_non_degenerate": {
     "n_cells": 5,
@@ -1415,7 +1423,11 @@
     "wilcoxon_p_vs_zero": 0.0625,
     "n_nonzero_for_wilcoxon": 5,
     "permutation_null_mean_over_group": 0.018541275797373365,
-    "bootstrap_max_bias_mean_over_group": 0.005623806545757795
+    "bootstrap_max_bias_mean_over_group": 0.005623806545757795,
+    "n_cells_perm_p_below_05": 0,
+    "min_perm_p_in_group": 0.2768615692153923,
+    "median_perm_p_in_group": 0.896551724137931,
+    "observed_minus_null_mean": -0.002885657702730856
   },
   "summary_all_cells": {
     "n_cells": 24,
@@ -1431,7 +1443,11 @@
     "wilcoxon_p_vs_zero": 0.00029305252019248926,
     "n_nonzero_for_wilcoxon": 17,
     "permutation_null_mean_over_group": 0.013589304764316676,
-    "bootstrap_max_bias_mean_over_group": 0.0020687663133642613
+    "bootstrap_max_bias_mean_over_group": 0.0020687663133642613,
+    "n_cells_perm_p_below_05": 0,
+    "min_perm_p_in_group": 0.2768615692153923,
+    "median_perm_p_in_group": 1.0,
+    "observed_minus_null_mean": -0.00821834266126615
   },
   "summary_ceiling_saturated": {
     "n_cells": 12,
@@ -1447,7 +1463,11 @@
     "wilcoxon_p_vs_zero": 0.00048828125,
     "n_nonzero_for_wilcoxon": 12,
     "permutation_null_mean_over_group": 0.008986697048611115,
-    "bootstrap_max_bias_mean_over_group": 0.0015853298611111242
+    "bootstrap_max_bias_mean_over_group": 0.0015853298611111242,
+    "n_cells_perm_p_below_05": 0,
+    "min_perm_p_in_group": 0.8680659670164917,
+    "median_perm_p_in_group": 1.0,
+    "observed_minus_null_mean": -0.004767947048611109
   },
   "summary_non_saturated": {
     "n_cells": 12,
@@ -1463,7 +1483,11 @@
     "wilcoxon_p_vs_zero": 0.0625,
     "n_nonzero_for_wilcoxon": 5,
     "permutation_null_mean_over_group": 0.018191912480022235,
-    "bootstrap_max_bias_mean_over_group": 0.002552202765617398
+    "bootstrap_max_bias_mean_over_group": 0.002552202765617398,
+    "n_cells_perm_p_below_05": 0,
+    "min_perm_p_in_group": 0.2768615692153923,
+    "median_perm_p_in_group": 1.0,
+    "observed_minus_null_mean": -0.01166873827392119
   },
   "summary_all_layers_saturated": {
     "n_cells": 6,
@@ -1479,7 +1503,11 @@
     "wilcoxon_p_vs_zero": 0.03125,
     "n_nonzero_for_wilcoxon": 6,
     "permutation_null_mean_over_group": 0.012010677083333332,
-    "bootstrap_max_bias_mean_over_group": 0.001831111111111141
+    "bootstrap_max_bias_mean_over_group": 0.001831111111111141,
+    "n_cells_perm_p_below_05": 0,
+    "min_perm_p_in_group": 0.8680659670164917,
+    "median_perm_p_in_group": 1.0,
+    "observed_minus_null_mean": -0.006837065972222203
   },
   "summary_not_all_layers_saturated": {
     "n_cells": 18,
@@ -1495,7 +1523,11 @@
     "wilcoxon_p_vs_zero": 0.003345618115850882,
     "n_nonzero_for_wilcoxon": 11,
     "permutation_null_mean_over_group": 0.014115513991311121,
-    "bootstrap_max_bias_mean_over_group": 0.0021479847141153015
+    "bootstrap_max_bias_mean_over_group": 0.0021479847141153015,
+    "n_cells_perm_p_below_05": 0,
+    "min_perm_p_in_group": 0.2768615692153923,
+    "median_perm_p_in_group": 1.0,
+    "observed_minus_null_mean": -0.008678768224280797
   },
   "degeneracy_audit": {
     "n_cells_total": 24,
@@ -1513,6 +1545,45 @@
     "explanation": "A cell is degenerate when all 3 leave-one-seed-out rotations select the SAME layer. Then naive_r = (S - a_r)/2 and honest_r = a_r, so the rotation mean is (3/2)(abar - abar) = 0 identically, for any data. Such a cell measures nothing and is excluded from the headline. Every degenerate cell here falls in the NON-SATURATED subgroup (7 of its 12 cells), which is why that subgroup's contaminated mean understates the effect among cells the estimator can see.",
     "permutation_null_mean_over_degenerate_cells": 0.01794236725334286,
     "permutation_null_interpretation": "The per-layer-shuffle null is what this estimator reports when the layer ranking is noise, i.e. the regime of MAXIMAL winner's curse. Degenerate cells whose null sits well above zero are cells where the exact zero reflects a STABLE argmax defeating the estimator, not an absent selection effect."
+  },
+  "permutation_significance_audit": {
+    "n_cells_total": 24,
+    "n_cells_p_below_05": 0,
+    "cells_p_below_05": [],
+    "min_p_over_all_cells": 0.2768615692153923,
+    "median_p_over_all_cells": 1.0,
+    "per_cell_permutation_p": {
+      "llama3.1-8b__fever__linear": 1.0,
+      "llama3.1-8b__fever__mlp": 0.616191904047976,
+      "llama3.1-8b__halueval_qa__linear": 1.0,
+      "llama3.1-8b__halueval_qa__mlp": 1.0,
+      "llama3.1-8b__synthetic__linear": 0.9815092453773113,
+      "llama3.1-8b__synthetic__mlp": 1.0,
+      "llama3.1-8b__truthfulqa__linear": 1.0,
+      "llama3.1-8b__truthfulqa__mlp": 1.0,
+      "mistral-7b__fever__linear": 1.0,
+      "mistral-7b__fever__mlp": 0.9995002498750625,
+      "mistral-7b__halueval_qa__linear": 0.9995002498750625,
+      "mistral-7b__halueval_qa__mlp": 0.8680659670164917,
+      "mistral-7b__synthetic__linear": 0.9880059970014993,
+      "mistral-7b__synthetic__mlp": 0.8950524737631185,
+      "mistral-7b__truthfulqa__linear": 1.0,
+      "mistral-7b__truthfulqa__mlp": 1.0,
+      "qwen2.5-7b__fever__linear": 0.2768615692153923,
+      "qwen2.5-7b__fever__mlp": 0.896551724137931,
+      "qwen2.5-7b__halueval_qa__linear": 1.0,
+      "qwen2.5-7b__halueval_qa__mlp": 1.0,
+      "qwen2.5-7b__synthetic__linear": 1.0,
+      "qwen2.5-7b__synthetic__mlp": 1.0,
+      "qwen2.5-7b__truthfulqa__linear": 1.0,
+      "qwen2.5-7b__truthfulqa__mlp": 1.0
+    },
+    "non_degenerate_observed_mean": 0.007582534733718388,
+    "non_degenerate_null_mean": 0.011796867268835307,
+    "non_degenerate_observed_minus_null": -0.004214332535116919,
+    "degenerate_null_mean": 0.01794236725334286,
+    "statement": "0 of 24 cells reach p < 0.05 against their own per-layer-shuffle permutation null. The non-degenerate cells' null mean (+0.0118) also sits ABOVE their observed mean (+0.0076), i.e. the null is unfavourable in the same direction there as it is favourable for the degenerate cells. Both facts are reported; the previous revision reported only the second.",
+    "interpretation": "This null is a HARD reference, not a conventional significance test. Shuffling seed labels independently within each layer destroys the layer x seed structure that makes an argmax stable, which puts the estimator in the regime where a winner's curse is LARGEST. A real but modest selection effect measured on a stable argmax is therefore expected to fall below it. That is what makes the null informative about the DEGENERATE cells -- a cell whose null is centred well above zero cannot have an exact zero for want of an effect -- and simultaneously makes it a poor significance test for the rest. The consequence for the paper is that the non-degenerate cells' +0.0076 must be reported as a point estimate with its BCa CI and its Wilcoxon test, and NOT as significant against this null, which it is not. With 3 seeds per cell no sharper null is available from the shipped data."
   },
   "per_model_layer_counts": {
     "llama3.1-8b": 33,
